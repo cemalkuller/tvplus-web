@@ -1,0 +1,16 @@
+# Dependencies
+node_modules/
+
+# Environment and Credentials (ASLA COMMIT EDILMEZ)
+.env
+*.env
+.env.local
+
+# IPTV Caches and data dumps
+iptv_cache.json
+*.log
+npm-debug.log*
+
+# OS generated files
+.DS_Store
+Thumbs.db

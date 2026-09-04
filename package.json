@@ -1,0 +1,14 @@
+{
+  "name": "tvplus-web",
+  "version": "1.0.0",
+  "description": "Turkcell TV+ benzeri modern web IPTV oynatıcısı",
+  "main": "server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.19.2"
+  }
+}

@@ -1,0 +1,964 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TV+ | Canlı TV, Dizi & Film İzle</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 rx=%2220%22 fill=%22%23000000%22/><text y=%2270%22 x=%2212%22 font-size=%2255%22 font-weight=%22900%22 fill=%22%23FFFFFF%22>tv<tspan fill=%22%23FFC700%22>+</tspan></text></svg>">
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            tv: {
+              yellow: '#FFC700',
+              'yellow-hover': '#E5B300',
+              dark: '#000000',
+              surface: '#0E121B',
+              card: '#131926',
+              'card-hover': '#1C2436',
+              border: '#1E2738',
+              muted: '#8E9BAE'
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- HLS.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <!-- Custom Stylesheet -->
+  <link rel="stylesheet" href="styles.css?v=4.1">
+</head>
+<body class="bg-black text-gray-100 min-h-screen selection:bg-tv-yellow selection:text-black">
+
+  <!-- ======================================================== -->
+  <!-- 1. PROFİL SEÇİM EKRANI ("Kim izliyor?" - GÖRSEL 1)       -->
+  <!-- ======================================================== -->
+  <div id="profile-screen" class="fixed inset-0 z-50 profile-screen-bg flex flex-col justify-between p-8 sm:p-12 transition-opacity duration-500">
+    <!-- TV+ Logo -->
+    <div>
+      <div class="tvplus-logo">
+        tv<span class="plus">+</span>
+      </div>
+    </div>
+
+    <!-- Center Profile Picker -->
+    <div class="flex flex-col items-center justify-center space-y-8 text-center my-auto">
+      <h1 class="text-2xl sm:text-3xl font-semibold text-white tracking-tight">Kim izliyor?</h1>
+
+      <div class="flex items-center space-x-6 sm:space-x-10">
+        <!-- Cemal Profile Avatar (Yellow Smiling Mascot) -->
+        <div class="flex flex-col items-center space-y-3 cursor-pointer group" onclick="selectProfile('Cemal Küller')">
+          <div class="relative w-24 h-24 sm:w-28 sm:h-28 rounded-full avatar-mascot flex items-center justify-center overflow-hidden shadow-2xl">
+            <!-- Smiling TV+ Yellow Mascot Face -->
+            <div class="w-16 h-16 sm:w-20 sm:h-20 bg-tv-yellow rounded-full flex flex-col items-center justify-center relative shadow-inner">
+              <div class="flex space-x-3 mb-1">
+                <div class="w-2 h-2.5 bg-black rounded-full"></div>
+                <div class="w-2 h-2.5 bg-black rounded-full"></div>
+              </div>
+              <div class="w-4 h-2 border-b-2 border-black rounded-full"></div>
+            </div>
+            <!-- Star Badge at bottom right -->
+            <div class="absolute bottom-1 right-2 w-6 h-6 rounded-full bg-tv-surface border border-tv-yellow flex items-center justify-center text-[10px] text-tv-yellow">
+              ★
+            </div>
+          </div>
+          <span class="text-sm font-medium text-gray-200 group-hover:text-tv-yellow transition">Cemal Küller</span>
+        </div>
+
+        <!-- Add Profile Circle -->
+        <div class="flex flex-col items-center space-y-3 cursor-pointer group" onclick="selectProfile('Misafir')">
+          <div class="w-24 h-24 sm:w-28 sm:h-28 rounded-full border border-gray-600/70 hover:border-gray-400 bg-white/5 flex items-center justify-center transition hover:scale-105">
+            <i data-lucide="plus" class="w-8 h-8 text-gray-300"></i>
+          </div>
+          <span class="text-sm font-medium text-gray-400 group-hover:text-white transition">Profil Ekle</span>
+        </div>
+      </div>
+
+      <!-- Profilleri Düzenle Button -->
+      <div class="pt-4">
+        <button onclick="selectProfile('Cemal Küller')" class="px-6 py-2.5 rounded-full bg-white hover:bg-gray-200 text-black font-semibold text-xs transition transform hover:scale-105">
+          Profilleri Düzenle
+        </button>
+      </div>
+    </div>
+
+    <div class="text-center text-xs text-gray-500">
+      Turkcell TV+ Deneyimi
+    </div>
+  </div>
+
+
+  <!-- ======================================================== -->
+  <!-- 2. ANA UYGULAMA KABUĞU (GÖRSELLER 2, 3, 4)               -->
+  <!-- ======================================================== -->
+  <div id="main-app" class="hidden min-h-screen flex flex-col bg-black">
+
+    <!-- TOP NAVIGATION BAR (TV+ Orijinal Menü) -->
+    <header class="sticky top-0 z-40 bg-black/90 backdrop-blur-md border-b border-tv-border/50 px-4 lg:px-8 py-3.5 flex items-center justify-between">
+      <div class="flex items-center space-x-8">
+        <!-- Logo -->
+        <div class="tvplus-logo cursor-pointer" onclick="switchTab('live')">
+          tv<span class="plus">+</span>
+        </div>
+
+        <!-- Menu Links -->
+        <nav class="hidden md:flex items-center space-x-6 text-sm font-medium text-gray-300">
+          <button id="nav-live" onclick="switchTab('live')" class="text-white font-bold transition flex items-center space-x-1">
+            <span>Canlı TV</span>
+          </button>
+          <button id="nav-guide" onclick="switchTab('guide')" class="hover:text-white transition">
+            <span>Kanal Listesi</span>
+          </button>
+          <button id="nav-movies" onclick="switchTab('movies')" class="hover:text-white transition">
+            <span>Filmler</span>
+          </button>
+          <button id="nav-series" onclick="switchTab('series')" class="hover:text-white transition">
+            <span>Diziler</span>
+          </button>
+          <button id="nav-favs" onclick="showFavoritesTab()" class="hover:text-white transition flex items-center space-x-1">
+            <span>Favorilerim (<span id="fav-badge-count">0</span>)</span>
+          </button>
+          <button onclick="openTvModal()" class="hover:text-tv-yellow transition flex items-center space-x-1.5 text-xs font-semibold px-3 py-1 rounded-full bg-tv-yellow/10 border border-tv-yellow/30 text-tv-yellow hover:bg-tv-yellow/20">
+            <i data-lucide="tv" class="w-3.5 h-3.5"></i>
+            <span>TV Bağlantısı</span>
+          </button>
+          <button onclick="openSettingsModal()" title="IPTV Bağlantı Ayarları" class="hover:text-tv-yellow transition flex items-center space-x-1.5 text-xs font-semibold px-3 py-1 rounded-full bg-white/5 border border-white/10 hover:border-tv-yellow/40 text-gray-300">
+            <i data-lucide="settings" class="w-3.5 h-3.5"></i>
+            <span>Ayarlar</span>
+          </button>
+        </nav>
+      </div>
+
+      <!-- Search & Profile -->
+      <div class="flex items-center space-x-4">
+        <!-- Search Bar -->
+        <div class="relative w-44 sm:w-64">
+          <i data-lucide="search" class="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2"></i>
+          <input 
+            id="global-search-input" 
+            type="text" 
+            placeholder="Kanal veya program ara..." 
+            class="w-full bg-[#111622] border border-[#1E2738] rounded-full pl-9 pr-8 py-1.5 text-xs sm:text-sm text-gray-200 placeholder-gray-500 focus:outline-none focus:border-tv-yellow transition"
+          >
+          <button id="global-clear-search" class="hidden absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white">
+            <i data-lucide="x" class="w-3.5 h-3.5"></i>
+          </button>
+        </div>
+
+        <!-- Profile Avatar & Switcher -->
+        <div class="flex items-center space-x-2 cursor-pointer" onclick="showProfileScreen()" title="Profili Değiştir">
+          <div class="w-8 h-8 rounded-full bg-emerald-400 border border-tv-yellow flex items-center justify-center text-black font-bold text-xs">
+            <div class="w-5 h-5 bg-tv-yellow rounded-full flex items-center justify-center">
+              <span class="text-[9px]">★</span>
+            </div>
+          </div>
+          <span class="hidden sm:inline text-xs font-semibold text-gray-200" id="header-user-name">Cemal K.</span>
+        </div>
+      </div>
+    </header>
+
+
+    <!-- ====================================================== -->
+    <!-- TAB 1: CANLI TV & ANA SAYFA (GÖRSELLER 2 & 3)          -->
+    <!-- ====================================================== -->
+    <div id="view-live" class="flex-1 space-y-8 pb-16">
+
+      <!-- HERO BANNER SECTION (Görseller 2 & 3 Üst Alanı) -->
+      <section class="relative w-full h-[380px] sm:h-[460px] lg:h-[520px] overflow-hidden">
+        <!-- Hero Background Image -->
+        <div 
+          id="hero-backdrop" 
+          class="absolute inset-0 bg-cover bg-center transition-all duration-700 filter brightness-90"
+          style="background-image: url('https://images.unsplash.com/photo-1518791841217-8f162f1e1131?auto=format&fit=crop&w=1920&q=80');"
+        ></div>
+
+        <!-- Gradient Overlays -->
+        <div class="absolute inset-0 hero-gradient"></div>
+
+        <!-- Hero Content -->
+        <div class="absolute inset-0 max-w-7xl mx-auto px-6 sm:px-10 flex flex-col justify-end pb-12 sm:pb-16 space-y-3 sm:space-y-4">
+          <!-- Channel Logo / Badge -->
+          <div class="flex items-center space-x-3">
+            <span class="bg-red-600 text-white font-bold text-[11px] px-2.5 py-0.5 rounded-full flex items-center space-x-1 tracking-wider uppercase">
+              <span class="live-badge-dot"></span>
+              <span>CANLI</span>
+            </span>
+            <span id="hero-channel-badge" class="bg-white/10 backdrop-blur px-2 py-0.5 rounded text-xs text-gray-200 font-semibold uppercase">TRT 1 HD</span>
+            <span class="border border-gray-400/40 text-gray-300 text-[10px] px-1.5 py-0.5 rounded">FHD • 1080p</span>
+          </div>
+
+          <!-- Title -->
+          <h1 id="hero-title" class="text-3xl sm:text-4xl lg:text-5xl font-black text-white tracking-tight drop-shadow-lg max-w-2xl">
+            Bir Zamanlar Çukurova
+          </h1>
+
+          <!-- Meta tags -->
+          <p id="hero-meta" class="text-xs sm:text-sm text-gray-300 font-medium">
+            TR ⭐ ULUSAL • Kesintisiz Canlı Yayın Akışı
+          </p>
+
+          <!-- Description -->
+          <p id="hero-desc" class="text-xs sm:text-sm text-gray-400 max-w-xl line-clamp-2 drop-shadow">
+            Türkiye'nin en çok izlenen ulusal ve spor kanalları yüksek çözünürlüklü HLS kalitesiyle TV+ ayrıcalığıyla canlı yayında.
+          </p>
+
+          <!-- Play Button (Yellow TV+ Style) -->
+          <div class="pt-2 flex items-center space-x-4">
+            <button id="hero-play-btn" onclick="openPlayerWithHero()" class="px-6 py-2.5 rounded-md bg-tv-yellow hover:bg-tv-yellow-hover text-black font-bold text-sm transition transform hover:scale-105 flex items-center space-x-2 shadow-xl">
+              <i data-lucide="play" class="w-4 h-4 fill-current"></i>
+              <span>Hemen İzle</span>
+            </button>
+            <button onclick="switchTab('guide')" class="px-5 py-2.5 rounded-md bg-white/10 hover:bg-white/20 border border-white/20 text-white font-semibold text-sm transition">
+              Tüm Kanallar
+            </button>
+          </div>
+        </div>
+      </section>
+
+
+      <!-- "KANALLARIM" HORIZONTAL STRIP (GÖRSELLER 2 & 3) -->
+      <section class="max-w-7xl mx-auto px-4 sm:px-8 space-y-3 -mt-6 sm:-mt-8 relative z-20">
+        <div class="flex items-center justify-between">
+          <h3 class="text-base sm:text-lg font-bold text-white tracking-tight">Kanallarım</h3>
+          <button onclick="switchTab('guide')" class="text-xs font-semibold text-tv-yellow hover:underline">Tümünü Gör</button>
+        </div>
+
+        <!-- Horizontal Scrollable Channel Strip -->
+        <div id="channel-strip-container" class="flex items-center space-x-3 overflow-x-auto pb-3 pt-1 scrollbar-none">
+          <!-- Populated by JavaScript -->
+        </div>
+      </section>
+
+
+      <!-- POPÜLER KANALLAR CAROUSEL ROW -->
+      <section class="max-w-7xl mx-auto px-4 sm:px-8 space-y-3 pt-4">
+        <h3 class="text-base sm:text-lg font-bold text-white tracking-tight">Şu Anda Popüler</h3>
+        <div id="popular-channels-row" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+          <!-- Populated by JavaScript -->
+        </div>
+      </section>
+
+      <!-- SPOR KANALLARI CAROUSEL ROW -->
+      <section class="max-w-7xl mx-auto px-4 sm:px-8 space-y-3 pt-2">
+        <h3 class="text-base sm:text-lg font-bold text-white tracking-tight flex items-center space-x-2">
+          <span>Bugün Canlı Spor</span>
+          <span class="text-xs bg-red-600/90 text-white px-2 py-0.5 rounded-full font-bold">CANLI</span>
+        </h3>
+        <div id="sports-channels-row" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+          <!-- Populated by JavaScript -->
+        </div>
+      </section>
+
+    </div>
+
+
+    <!-- ====================================================== -->
+    <!-- TAB 2: KANAL LİSTESİ (BİREBİR media_1788548035534.png) -->
+    <!-- ====================================================== -->
+    <div id="view-guide" class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+
+      <!-- Centered Header & Search (Görsel Birebir) -->
+      <div class="flex flex-col items-center justify-center text-center space-y-4 pt-2">
+        <h1 class="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">Kanal Listesi</h1>
+
+        <!-- Centered Search Pill Input -->
+        <div class="relative w-full max-w-lg">
+          <i data-lucide="search" class="w-4 h-4 text-gray-400 absolute left-4 top-1/2 -translate-y-1/2"></i>
+          <input 
+            id="guide-search-input" 
+            type="text" 
+            placeholder="Kanal veya program ara..." 
+            class="w-full bg-[#10141F] border border-[#1E273A] rounded-full pl-11 pr-10 py-2.5 text-xs sm:text-sm text-gray-100 placeholder-gray-500 focus:outline-none focus:border-tv-yellow transition shadow-inner"
+          >
+          <button id="guide-clear-search" class="hidden absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white">
+            <i data-lucide="x" class="w-3.5 h-3.5"></i>
+          </button>
+        </div>
+
+        <!-- Horizontal Category Tabs (Görsel Birebir) -->
+        <div id="guide-categories-strip" class="flex items-center justify-start space-x-1 overflow-x-auto w-full pb-2 scrollbar-none pt-2 border-b border-[#1A2233]/70">
+          <!-- Populated by JavaScript -->
+        </div>
+      </div>
+
+      <!-- Channel Total Count Summary -->
+      <div id="guide-total-summary" class="text-xs text-gray-400 font-semibold px-1"></div>
+
+      <!-- 3-Column Channel Rows Grid (Birebir 3 Sütun) -->
+      <div id="guide-channels-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+        <!-- Populated by JavaScript -->
+      </div>
+
+      <!-- Load More Button -->
+      <div id="guide-load-more-container" class="hidden text-center py-6">
+        <button onclick="loadMoreGuideChannels()" class="px-8 py-2.5 rounded-full bg-[#10141F] hover:bg-[#1A2233] border border-[#1E273A] text-white text-xs font-bold transition shadow-lg">
+          Daha Fazla Kanal Göster
+        </button>
+      </div>
+
+    </div>
+
+    <!-- ====================================================== -->
+    <!-- TAB 3: FİLMLER & SİNEMA                                -->
+    <!-- ====================================================== -->
+    <div id="view-movies" class="hidden flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+
+      <!-- Header & Search -->
+      <div class="flex flex-col items-center justify-center text-center space-y-4 pt-2">
+        <div class="flex items-center space-x-2">
+          <span class="px-2.5 py-0.5 rounded-full bg-tv-yellow/10 border border-tv-yellow/30 text-tv-yellow font-bold text-xs">VOD SİNEMA</span>
+        </div>
+        <h1 class="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">Filmler</h1>
+
+        <!-- Centered Search Pill Input -->
+        <div class="relative w-full max-w-lg">
+          <i data-lucide="search" class="w-4 h-4 text-gray-400 absolute left-4 top-1/2 -translate-y-1/2"></i>
+          <input 
+            id="movies-search-input" 
+            type="text" 
+            placeholder="Film adı veya tür ara..." 
+            class="w-full bg-[#10141F] border border-[#1E273A] rounded-full pl-11 pr-10 py-2.5 text-xs sm:text-sm text-gray-100 placeholder-gray-500 focus:outline-none focus:border-tv-yellow transition shadow-inner"
+          >
+          <button id="movies-clear-search" class="hidden absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white">
+            <i data-lucide="x" class="w-3.5 h-3.5"></i>
+          </button>
+        </div>
+
+        <!-- Horizontal Category Tabs -->
+        <div id="movies-categories-strip" class="flex items-center justify-start space-x-2 overflow-x-auto w-full pb-2 scrollbar-none pt-2 border-b border-[#1A2233]/70">
+          <!-- Populated by JavaScript -->
+        </div>
+      </div>
+
+      <!-- Movies Count Summary -->
+      <div id="movies-total-summary" class="text-xs text-gray-400 font-semibold px-1"></div>
+
+      <!-- Movies Grid (Poster Cards) -->
+      <div id="movies-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+        <!-- Populated by JavaScript -->
+      </div>
+
+      <!-- Load More Button -->
+      <div id="movies-load-more-container" class="hidden text-center py-6">
+        <button onclick="loadMoreMovies()" class="px-8 py-2.5 rounded-full bg-[#10141F] hover:bg-[#1A2233] border border-[#1E273A] text-white text-xs font-bold transition shadow-lg">
+          Daha Fazla Film Göster
+        </button>
+      </div>
+
+    </div>
+
+    <!-- ====================================================== -->
+    <!-- TAB 4: DİZİLER                                         -->
+    <!-- ====================================================== -->
+    <div id="view-series" class="hidden flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+
+      <!-- Header & Search -->
+      <div class="flex flex-col items-center justify-center text-center space-y-4 pt-2">
+        <div class="flex items-center space-x-2">
+          <span class="px-2.5 py-0.5 rounded-full bg-tv-yellow/10 border border-tv-yellow/30 text-tv-yellow font-bold text-xs">DİZİ & SEZONLAR</span>
+        </div>
+        <h1 class="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">Diziler</h1>
+
+        <!-- Centered Search Pill Input -->
+        <div class="relative w-full max-w-lg">
+          <i data-lucide="search" class="w-4 h-4 text-gray-400 absolute left-4 top-1/2 -translate-y-1/2"></i>
+          <input 
+            id="series-search-input" 
+            type="text" 
+            placeholder="Dizi adı veya tür ara..." 
+            class="w-full bg-[#10141F] border border-[#1E273A] rounded-full pl-11 pr-10 py-2.5 text-xs sm:text-sm text-gray-100 placeholder-gray-500 focus:outline-none focus:border-tv-yellow transition shadow-inner"
+          >
+          <button id="series-clear-search" class="hidden absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white">
+            <i data-lucide="x" class="w-3.5 h-3.5"></i>
+          </button>
+        </div>
+
+        <!-- Horizontal Category Tabs -->
+        <div id="series-categories-strip" class="flex items-center justify-start space-x-2 overflow-x-auto w-full pb-2 scrollbar-none pt-2 border-b border-[#1A2233]/70">
+          <!-- Populated by JavaScript -->
+        </div>
+      </div>
+
+      <!-- Series Count Summary -->
+      <div id="series-total-summary" class="text-xs text-gray-400 font-semibold px-1"></div>
+
+      <!-- Series Grid (Poster Cards) -->
+      <div id="series-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+        <!-- Populated by JavaScript -->
+      </div>
+
+      <!-- Load More Button -->
+      <div id="series-load-more-container" class="hidden text-center py-6">
+        <button onclick="loadMoreSeries()" class="px-8 py-2.5 rounded-full bg-[#10141F] hover:bg-[#1A2233] border border-[#1E273A] text-white text-xs font-bold transition shadow-lg">
+          Daha Fazla Dizi Göster
+        </button>
+      </div>
+
+    </div>
+
+    <!-- AUTHENTIC TURKCELL TV+ FOOTER WITH NEON GLOWING PLUS WATERMARK -->
+    <footer class="relative overflow-hidden border-t border-[#18202F] bg-black pt-12 pb-14 px-6 lg:px-12 text-gray-400 text-xs">
+      <!-- Big Neon Yellow TV+ Watermark in bottom-right (Birebir Görsel) -->
+      <div class="absolute -bottom-8 right-2 lg:right-12 pointer-events-none opacity-20 select-none">
+        <svg width="280" height="280" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M50 15V85M15 50H85" stroke="#FFC700" stroke-width="12" stroke-linecap="round" stroke-linejoin="round" filter="drop-shadow(0 0 35px rgba(255, 199, 0, 0.9))"/>
+        </svg>
+      </div>
+
+      <div class="max-w-7xl mx-auto grid grid-cols-2 sm:grid-cols-4 gap-8 relative z-10 mb-10">
+        <!-- Col 1 -->
+        <div class="space-y-2.5">
+          <h4 class="text-white font-bold text-xs uppercase tracking-wider mb-3">Cihazlar</h4>
+          <p class="hover:text-white cursor-pointer transition">TV+ Box</p>
+          <p class="hover:text-white cursor-pointer transition">TV+ Smart TV</p>
+          <p class="hover:text-white cursor-pointer transition">TV+ Apple TV</p>
+          <p class="hover:text-white cursor-pointer transition">TV+ Web</p>
+        </div>
+
+        <!-- Col 2 -->
+        <div class="space-y-2.5">
+          <h4 class="text-white font-bold text-xs uppercase tracking-wider mb-3">Öne Çıkanlar</h4>
+          <p class="hover:text-white cursor-pointer transition">Canlı Spor</p>
+          <p class="hover:text-white cursor-pointer transition">Filmler</p>
+          <p class="hover:text-white cursor-pointer transition">Diziler</p>
+          <p class="hover:text-white cursor-pointer transition">Belgeseller</p>
+        </div>
+
+        <!-- Col 3 -->
+        <div class="space-y-2.5">
+          <h4 class="text-white font-bold text-xs uppercase tracking-wider mb-3">Yardım</h4>
+          <p class="hover:text-white cursor-pointer transition">Sıkça Sorulan Sorular</p>
+          <p class="hover:text-white cursor-pointer transition">TV+ Kullanım Kılavuzu</p>
+          <p class="hover:text-white cursor-pointer transition">İletişim</p>
+        </div>
+
+        <!-- Col 4 -->
+        <div class="space-y-3">
+          <h4 class="text-white font-bold text-xs uppercase tracking-wider mb-3">Uygulamayı İndir</h4>
+          <div class="flex flex-col space-y-2">
+            <div class="px-3 py-1.5 rounded-lg bg-[#111622] border border-[#1E2738] flex items-center space-x-2 text-[11px] text-white">
+              <i data-lucide="smartphone" class="w-4 h-4 text-tv-yellow"></i>
+              <span>App Store & Google Play</span>
+            </div>
+          </div>
+          <div class="flex items-center space-x-3 pt-2 text-gray-400">
+            <i data-lucide="twitter" class="w-4 h-4 hover:text-tv-yellow cursor-pointer transition"></i>
+            <i data-lucide="instagram" class="w-4 h-4 hover:text-tv-yellow cursor-pointer transition"></i>
+            <i data-lucide="facebook" class="w-4 h-4 hover:text-tv-yellow cursor-pointer transition"></i>
+            <i data-lucide="youtube" class="w-4 h-4 hover:text-tv-yellow cursor-pointer transition"></i>
+          </div>
+        </div>
+      </div>
+
+      <div class="max-w-7xl mx-auto pt-6 border-t border-[#18202F]/60 flex flex-col sm:flex-row items-center justify-between text-[11px] text-gray-500 relative z-10">
+        <div class="tvplus-logo text-sm">
+          tv<span class="plus">+</span>
+          <span class="ml-2 text-xs font-normal text-gray-400">© 2026 Turkcell TV+ Deneyimi</span>
+        </div>
+        <div class="mt-2 sm:mt-0">
+          <span>Gizli Yerel Proxy Akışı Aktif</span>
+        </div>
+      </div>
+    </footer>
+
+  </div>
+
+
+  <!-- ======================================================== -->
+  <!-- 3. TV+ DEDİCATED VİDEO PLAYER (GÖRSEL 5 BİREBİR)          -->
+  <!-- ======================================================== -->
+  <div id="tvplus-player-modal" class="hidden tvplus-player-modal">
+
+    <!-- Video Element -->
+    <video id="video-player" class="w-full h-full object-contain" playsinline></video>
+
+    <!-- Loading Spinner -->
+    <div id="player-loading" class="hidden absolute inset-0 bg-black/75 flex flex-col items-center justify-center space-y-3 z-30 pointer-events-none">
+      <div class="w-12 h-12 rounded-full border-4 border-white/20 border-t-tv-yellow animate-spin"></div>
+      <p class="text-sm font-semibold text-gray-200" id="loading-text">Yayın bağlanıyor...</p>
+    </div>
+
+    <!-- Error Screen Overlay -->
+    <div id="player-error" class="hidden absolute inset-0 bg-black/90 flex flex-col items-center justify-center space-y-3 z-30 p-6 text-center">
+      <i data-lucide="alert-circle" class="w-12 h-12 text-tv-yellow"></i>
+      <h3 class="text-lg font-bold text-white">Yayın Açılamadı</h3>
+      <p class="text-xs text-gray-400 max-w-md" id="error-message">Bu kanal şu anda yayın vermiyor olabilir.</p>
+      <div class="flex items-center space-x-3 pt-2">
+        <button onclick="retryCurrentStream()" class="px-5 py-2 rounded-md bg-tv-yellow text-black font-bold text-xs">Tekrar Dene</button>
+        <button onclick="playNextChannel()" class="px-5 py-2 rounded-md bg-white/10 border border-white/20 text-white text-xs">Sonraki Kanal</button>
+      </div>
+    </div>
+
+    <!-- PLAYER CONTROLS OVERLAY (GÖRSEL 5) -->
+    <div id="player-overlay" class="tvplus-player-overlay">
+
+      <!-- TOP BAR (Görsel 5 Sol & Sağ) -->
+      <div class="flex items-start justify-between w-full">
+        <!-- Top Left: Back, Channel Name, HD Badge, Program Title -->
+        <div class="flex items-center space-x-4">
+          <button onclick="closePlayer()" title="Kapat / Geri Dön" class="text-white hover:text-tv-yellow transition p-1">
+            <i data-lucide="chevron-left" class="w-7 h-7"></i>
+          </button>
+          <div>
+            <div class="flex items-center space-x-2">
+              <h2 id="player-channel-title" class="text-lg sm:text-xl font-extrabold text-white tracking-wide uppercase">
+                TRT 1 HD
+              </h2>
+              <span class="border border-white/40 text-[10px] text-white font-bold px-1.5 py-0.2 rounded">HD</span>
+            </div>
+            <p id="player-program-title" class="text-xs text-gray-300 font-medium">
+              Canlı Yayın Akışı
+            </p>
+          </div>
+        </div>
+
+        <!-- Top Right: Cast/PiP, Settings, Close -->
+        <div class="flex items-center space-x-4 text-white">
+          <button onclick="togglePiP()" title="Resim İçinde Resim (PiP)" class="hover:text-tv-yellow transition p-1">
+            <i data-lucide="airplay" class="w-5 h-5"></i>
+          </button>
+          <button onclick="openSettingsModal()" title="Ayarlar" class="hover:text-tv-yellow transition p-1">
+            <i data-lucide="settings" class="w-5 h-5"></i>
+          </button>
+          <button onclick="closePlayer()" title="Kapat (X)" class="hover:text-tv-yellow transition p-1">
+            <i data-lucide="x" class="w-6 h-6"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- CENTER CONTROLS: ⟲ 10 | ⏸ / ▶ | ⟳ 10 (Görsel 5 Merkez) -->
+      <div class="flex items-center justify-center space-x-10 sm:space-x-14 my-auto">
+        <!-- Rewind 10s -->
+        <button onclick="seekRelative(-10)" title="10 Saniye Geri" class="text-white/80 hover:text-white transition transform hover:scale-110 flex flex-col items-center">
+          <div class="relative w-12 h-12 flex items-center justify-center">
+            <i data-lucide="rotate-ccw" class="w-10 h-10"></i>
+            <span class="absolute text-[10px] font-extrabold font-mono">10</span>
+          </div>
+        </button>
+
+        <!-- Big Center Play / Pause -->
+        <button onclick="togglePlayPause()" id="btn-center-play-pause" title="Oynat / Duraklat" class="w-16 h-16 sm:w-20 sm:h-20 rounded-full flex items-center justify-center text-white hover:text-tv-yellow transition transform hover:scale-105">
+          <i data-lucide="pause" id="icon-center-play-pause" class="w-12 h-12 fill-current"></i>
+        </button>
+
+        <!-- Forward 10s -->
+        <button onclick="seekRelative(10)" title="10 Saniye İleri" class="text-white/80 hover:text-white transition transform hover:scale-110 flex flex-col items-center">
+          <div class="relative w-12 h-12 flex items-center justify-center">
+            <i data-lucide="rotate-cw" class="w-10 h-10"></i>
+            <span class="absolute text-[10px] font-extrabold font-mono">10</span>
+          </div>
+        </button>
+      </div>
+
+      <!-- BOTTOM CONTROLS & YELLOW TIMELINE (Görsel 1 & 2 Alt Alan) -->
+      <div class="w-full space-y-2 relative z-30">
+        <!-- Airing Time (Left) & Canlıya Dön + CANLI Badge + Clock (Right - Birebir Görsel) -->
+        <div class="flex items-center justify-between text-xs font-semibold">
+          <div class="text-gray-300 font-mono text-xs" id="player-time-range">
+            20:00 - 00:20
+          </div>
+          <div class="flex items-center space-x-2.5">
+            <button onclick="returnToLive()" class="btn-live-return flex items-center space-x-1">
+              <span>Canlıya dön</span>
+            </button>
+            <span class="bg-red-600 text-white font-bold text-[10px] px-2 py-0.5 rounded flex items-center space-x-1">
+              <span class="live-badge-dot"></span>
+              <span>CANLI</span>
+            </span>
+            <span id="player-live-clock" class="text-gray-300 font-mono text-xs">20:00</span>
+          </div>
+        </div>
+
+        <!-- TV+ Yellow Timeline Scrubber Bar -->
+        <div class="tv-progress-track" onclick="handleScrubberClick(event)">
+          <div class="tv-progress-fill" id="player-progress-fill">
+            <div class="tv-progress-knob"></div>
+          </div>
+        </div>
+
+        <!-- Bottom Action Row: Volume | Yayın Akışı & Kanal Listesi | Fullscreen -->
+        <div class="flex items-center justify-between pt-1">
+          <!-- Volume Control -->
+          <div class="flex items-center space-x-2">
+            <button onclick="toggleMute()" id="btn-player-mute" class="text-white hover:text-tv-yellow transition">
+              <i data-lucide="volume-2" class="w-5 h-5"></i>
+            </button>
+            <input 
+              id="player-vol-slider" 
+              type="range" 
+              min="0" 
+              max="1" 
+              step="0.05" 
+              value="1" 
+              class="w-16 sm:w-24 accent-tv-yellow cursor-pointer h-1 bg-gray-700 rounded"
+              oninput="setVolume(parseFloat(this.value))"
+            >
+          </div>
+
+          <!-- Center Buttons: Yayın Akışı & Kanal Listesi (Görsel 1 & 2 Butonları) -->
+          <div class="flex items-center space-x-6">
+            <button id="btn-toggle-epg" onclick="toggleEpgTray()" class="flex items-center space-x-1.5 text-xs text-gray-300 hover:text-white transition font-semibold">
+              <i data-lucide="tv" class="w-4 h-4"></i>
+              <span>Yayın akışı</span>
+            </button>
+            <button id="btn-toggle-switcher" onclick="toggleChannelSwitcher()" class="flex items-center space-x-1.5 text-xs text-gray-300 hover:text-white transition font-semibold">
+              <i data-lucide="layout-list" class="w-4 h-4"></i>
+              <span>Kanal Listesi</span>
+            </button>
+          </div>
+
+          <!-- Fullscreen Toggle -->
+          <div>
+            <button onclick="toggleFullscreen()" class="text-white hover:text-tv-yellow transition">
+              <i data-lucide="maximize" class="w-5 h-5"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ======================================================== -->
+    <!-- 1. EPG YAYIN AKIŞI ALT PANELİ (BİREBİR media_1788548297438.png) -->
+    <!-- ======================================================== -->
+    <div id="player-epg-tray" class="hidden player-epg-tray">
+      <!-- Tray Header: Title & Days row -->
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-white/10">
+        <h3 class="text-sm font-bold text-white flex items-center space-x-2">
+          <i data-lucide="calendar" class="w-4 h-4 text-tv-yellow"></i>
+          <span>Yayın Akışı</span>
+        </h3>
+        <!-- Days Carousel (Görsel 1 Birebir) -->
+        <div id="epg-days-row" class="flex items-center space-x-1.5 overflow-x-auto scrollbar-none pb-1">
+          <button class="epg-day-pill" onclick="filterEpgDay('28 Ağustos')">28 Ağustos</button>
+          <button class="epg-day-pill" onclick="filterEpgDay('29 Ağustos')">29 Ağustos</button>
+          <button class="epg-day-pill" onclick="filterEpgDay('30 Ağustos')">30 Ağustos</button>
+          <button class="epg-day-pill" onclick="filterEpgDay('31 Ağustos')">31 Ağustos</button>
+          <button class="epg-day-pill" onclick="filterEpgDay('01 Eylül')">01 Eylül</button>
+          <button class="epg-day-pill" onclick="filterEpgDay('02 Eylül')">02 Eylül</button>
+          <button class="epg-day-pill" onclick="filterEpgDay('Dün')">Dün</button>
+          <button class="epg-day-pill active" onclick="filterEpgDay('Bugün')">Bugün</button>
+        </div>
+        <button onclick="toggleEpgTray()" class="text-gray-400 hover:text-white p-1">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+      <!-- Horizontal Programs List (Görsel 1 Kartları) -->
+      <div id="epg-programs-container" class="flex items-stretch space-x-3.5 overflow-x-auto pt-3.5 pb-2 scrollbar-none">
+        <!-- Populated dynamically by JS -->
+      </div>
+    </div>
+
+    <!-- ======================================================== -->
+    <!-- 2. EKRAN İÇİ KANAL LİSTESİ PANELİ (BİREBİR media_1788548328969.png) -->
+    <!-- ======================================================== -->
+    <div id="player-channel-switcher" class="hidden player-channel-switcher">
+      <!-- Left Column: Search & Channel Cards -->
+      <div class="flex-1 flex flex-col min-w-0 p-3.5 border-r border-[#1C2538]">
+        <!-- Search input -->
+        <div class="relative mb-3">
+          <i data-lucide="search" class="w-3.5 h-3.5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2"></i>
+          <input 
+            id="switcher-search-input" 
+            type="text" 
+            placeholder="Kanal ara" 
+            class="w-full bg-[#131926] border border-[#212C42] rounded-lg pl-8 pr-3 py-1.5 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-tv-yellow"
+          >
+        </div>
+
+        <!-- Channels Scroll List (Görsel 2) -->
+        <div id="switcher-channels-container" class="flex-1 overflow-y-auto space-y-2 pr-1 scrollbar-none">
+          <!-- Populated by JS -->
+        </div>
+      </div>
+
+      <!-- Right Column: Vertical Categories Strip (Görsel 2) -->
+      <div class="w-28 flex-shrink-0 p-3 overflow-y-auto flex flex-col space-y-1.5 scrollbar-none border-l border-[#1C2538] bg-[#0A0D15]">
+        <button onclick="setSwitcherCat('all')" class="switcher-cat-btn active" id="sw-cat-all">Tümü</button>
+        <button onclick="setSwitcherCat('favorites')" class="switcher-cat-btn" id="sw-cat-favs">Favorilerim</button>
+        <button onclick="setSwitcherCat('genel')" class="switcher-cat-btn" id="sw-cat-genel">Genel Eğlence</button>
+        <button onclick="setSwitcherCat('haber')" class="switcher-cat-btn" id="sw-cat-haber">Haber</button>
+        <button onclick="setSwitcherCat('spor')" class="switcher-cat-btn" id="sw-cat-spor">Spor</button>
+        <button onclick="setSwitcherCat('sinema')" class="switcher-cat-btn" id="sw-cat-sinema">Film/Dizi</button>
+        <button onclick="setSwitcherCat('cocuk')" class="switcher-cat-btn" id="sw-cat-cocuk">Çocuk</button>
+        <button onclick="setSwitcherCat('muzik')" class="switcher-cat-btn" id="sw-cat-muzik">Müzik</button>
+        <button onclick="setSwitcherCat('belgesel')" class="switcher-cat-btn" id="sw-cat-belgesel">Belgesel</button>
+        <button onclick="setSwitcherCat('yasam')" class="switcher-cat-btn" id="sw-cat-yasam">Yaşam</button>
+        <button onclick="setSwitcherCat('yerel')" class="switcher-cat-btn" id="sw-cat-yerel">Yerel</button>
+      </div>
+
+      <!-- Close Switcher button -->
+      <button onclick="toggleChannelSwitcher()" class="absolute top-2.5 right-2.5 text-gray-400 hover:text-white z-50 p-1">
+        <i data-lucide="x" class="w-4 h-4"></i>
+      </button>
+    </div>
+
+  <!-- ======================================================== -->
+  <!-- 4. DİZİ DETAY & BÖLÜMLER MODALI                          -->
+  <!-- ======================================================== -->
+  <div id="series-modal" class="hidden fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-3 sm:p-6 overflow-y-auto">
+    <div class="bg-[#0E121B] border border-[#1E2738] rounded-2xl max-w-4xl w-full max-h-[92vh] flex flex-col shadow-2xl relative overflow-hidden my-auto">
+      <!-- Close Button -->
+      <button onclick="closeSeriesModal()" class="absolute top-4 right-4 z-20 text-gray-300 hover:text-white p-2 rounded-full bg-black/60 backdrop-blur transition">
+        <i data-lucide="x" class="w-5 h-5"></i>
+      </button>
+
+      <!-- Series Modal Header Banner -->
+      <div class="relative w-full h-56 sm:h-72 bg-cover bg-center flex-shrink-0" id="series-modal-backdrop">
+        <div class="absolute inset-0 bg-gradient-to-t from-[#0E121B] via-[#0E121B]/60 to-transparent"></div>
+        <div class="absolute bottom-4 left-4 right-4 flex items-end space-x-4">
+          <img id="series-modal-poster" src="" alt="" class="w-20 sm:w-28 rounded-lg shadow-2xl border border-white/20 aspect-[2/3] object-cover flex-shrink-0 bg-black">
+          <div class="space-y-1 text-white">
+            <div class="flex items-center space-x-2">
+              <span id="series-modal-rating" class="px-2 py-0.5 rounded bg-tv-yellow text-black text-[10px] font-black">★ 8.0</span>
+              <span id="series-modal-genre" class="text-xs text-gray-300 font-medium">Dram / Gerilim</span>
+            </div>
+            <h2 id="series-modal-title" class="text-xl sm:text-2xl font-black text-white line-clamp-2">Dizi Başlığı</h2>
+            <p id="series-modal-cast" class="text-[11px] text-gray-400 line-clamp-1">Oyuncular...</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Series Plot Summary & Episodes -->
+      <div class="p-4 sm:p-6 space-y-4 overflow-y-auto flex-1 scrollbar-none">
+        <p id="series-modal-plot" class="text-xs sm:text-sm text-gray-300 leading-relaxed max-w-3xl">
+          Dizi konusu...
+        </p>
+
+        <!-- Seasons Tab Selector -->
+        <div class="space-y-3 pt-2">
+          <div class="flex items-center justify-between border-b border-[#1E2738] pb-2">
+            <h3 class="text-sm font-bold text-white flex items-center space-x-2">
+              <i data-lucide="layers" class="w-4 h-4 text-tv-yellow"></i>
+              <span>Sezonlar & Bölümler</span>
+            </h3>
+            <span id="series-modal-ep-count" class="text-xs text-gray-400">0 Bölüm</span>
+          </div>
+
+          <div id="series-modal-season-tabs" class="flex items-center space-x-2 overflow-x-auto pb-2 scrollbar-none">
+            <!-- Populated by JS -->
+          </div>
+        </div>
+
+        <!-- Episodes List Grid -->
+        <div id="series-modal-episodes" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 pt-1">
+          <!-- Populated by JS -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================================================== -->
+  <!-- 5. SMART TV BAĞLANTI MODALI (TV VE DIŞ OYNATICILAR)      -->
+  <!-- ======================================================== -->
+  <div id="tv-connect-modal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
+    <div class="bg-[#0E121B] border border-[#1E2738] rounded-2xl max-w-xl w-full p-6 space-y-5 shadow-2xl relative">
+      <!-- Close Button -->
+      <button onclick="closeTvModal()" class="absolute top-4 right-4 text-gray-400 hover:text-white p-1">
+        <i data-lucide="x" class="w-5 h-5"></i>
+      </button>
+
+      <!-- Modal Header -->
+      <div class="flex items-center space-x-3">
+        <div class="w-10 h-10 rounded-xl bg-tv-yellow/10 border border-tv-yellow/30 flex items-center justify-center text-tv-yellow">
+          <i data-lucide="tv" class="w-5 h-5"></i>
+        </div>
+        <div>
+          <h3 class="text-base font-bold text-white">Televizyonda İzle (Smart TV & Programlar)</h3>
+          <p class="text-xs text-gray-400">Tüm yayınlar bilgisayarınız üzerinden güvenle ve kaynaksız aktarılır.</p>
+        </div>
+      </div>
+
+      <!-- Bilgi Rozetleri -->
+      <div class="grid grid-cols-2 gap-2 text-[11px]">
+        <div class="p-2.5 rounded-lg bg-green-500/10 border border-green-500/20 text-green-400 flex items-center space-x-2">
+          <i data-lucide="shield-check" class="w-4 h-4 flex-shrink-0"></i>
+          <span>Yetişkin İçerikler (%100) Filtrelendi</span>
+        </div>
+        <div class="p-2.5 rounded-lg bg-blue-500/10 border border-blue-500/20 text-blue-400 flex items-center space-x-2">
+          <i data-lucide="lock" class="w-4 h-4 flex-shrink-0"></i>
+          <span>Orijinal IPTV Bilgileri Gizli</span>
+        </div>
+      </div>
+
+      <!-- 1. M3U Playlist Linki -->
+      <div class="space-y-2">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-bold text-gray-200">1. Seçenek: M3U Çalma Listesi Linki</span>
+          <span class="text-[10px] text-gray-400">Smart IPTV, SS IPTV, VLC, GSE vb.</span>
+        </div>
+        <div class="flex items-center space-x-2">
+          <input 
+            id="tv-m3u-input" 
+            type="text" 
+            readonly 
+            value="http://192.168.1.112:3000/tv.m3u" 
+            class="flex-1 bg-[#131926] border border-[#212C42] rounded-lg px-3 py-2 text-xs text-tv-yellow font-mono focus:outline-none"
+          >
+          <button onclick="copyTvLink('tv-m3u-input')" class="px-4 py-2 bg-tv-yellow text-black font-bold text-xs rounded-lg hover:bg-tv-yellow-hover transition flex items-center space-x-1.5 flex-shrink-0">
+            <i data-lucide="copy" class="w-3.5 h-3.5"></i>
+            <span>Kopyala</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- 2. Xtream Codes Girişi -->
+      <div class="space-y-2">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-bold text-gray-200">2. Seçenek: Xtream Codes Girişi</span>
+          <span class="text-[10px] text-gray-400">TiviMate, IPTV Smarters Pro, XCIPTV vb.</span>
+        </div>
+        <div class="grid grid-cols-3 gap-2 text-xs">
+          <div class="bg-[#131926] border border-[#212C42] rounded-lg p-2">
+            <span class="text-[10px] text-gray-400 block">Sunucu Adresi</span>
+            <span class="font-mono text-white font-semibold select-all">http://192.168.1.112:3000</span>
+          </div>
+          <div class="bg-[#131926] border border-[#212C42] rounded-lg p-2">
+            <span class="text-[10px] text-gray-400 block">Kullanıcı Adı</span>
+            <span class="font-mono text-white font-semibold select-all">tvplus</span>
+          </div>
+          <div class="bg-[#131926] border border-[#212C42] rounded-lg p-2">
+            <span class="text-[10px] text-gray-400 block">Şifre</span>
+            <span class="font-mono text-white font-semibold select-all">123</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Önemli Not -->
+      <div class="text-[11px] text-gray-400 bg-white/5 border border-white/10 rounded-lg p-3 space-y-1">
+        <p class="text-gray-300 font-semibold flex items-center space-x-1">
+          <i data-lucide="info" class="w-3.5 h-3.5 text-tv-yellow"></i>
+          <span>Bağlantı Notu:</span>
+        </p>
+        <p>Televizyonunuz ile bu bilgisayarın <b>aynı ev internetine (Wi-Fi veya modem kablosuna)</b> bağlı olması gerekmektedir. Televizyondan izlerken bilgisayarınızdaki bu programın açık kalması yeterlidir.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================================================== -->
+  <!-- 6. IPTV & BAĞLANTI AYARLARI MODALI (.ENV YÖNETİMİ)       -->
+  <!-- ======================================================== -->
+  <div id="settings-modal" class="hidden fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
+    <div class="bg-[#0E121B] border border-[#1E2738] rounded-2xl max-w-xl w-full p-6 space-y-5 shadow-2xl relative my-auto">
+      <!-- Close Button -->
+      <button onclick="closeSettingsModal()" class="absolute top-4 right-4 text-gray-400 hover:text-white p-1">
+        <i data-lucide="x" class="w-5 h-5"></i>
+      </button>
+
+      <!-- Header -->
+      <div class="flex items-center space-x-3 border-b border-[#1E2738] pb-4">
+        <div class="w-10 h-10 rounded-xl bg-tv-yellow/10 border border-tv-yellow/30 flex items-center justify-center text-tv-yellow flex-shrink-0">
+          <i data-lucide="sliders" class="w-5 h-5"></i>
+        </div>
+        <div>
+          <h3 class="text-base font-bold text-white">IPTV & Bağlantı Ayarları</h3>
+          <p class="text-xs text-gray-400">Tüm bilgiler <span class="font-mono text-tv-yellow">.env</span> dosyasında güvenle saklanır ve anında uygulanır.</p>
+        </div>
+      </div>
+
+      <!-- Error / Alert Banner -->
+      <div id="settings-error-badge" class="hidden p-3 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 text-xs flex items-start space-x-2">
+        <i data-lucide="alert-circle" class="w-4 h-4 flex-shrink-0 mt-0.5"></i>
+        <span id="settings-error-text">Hata mesajı</span>
+      </div>
+
+      <!-- Success Banner -->
+      <div id="settings-success-badge" class="hidden p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs flex items-start space-x-2">
+        <i data-lucide="check-circle" class="w-4 h-4 flex-shrink-0 mt-0.5"></i>
+        <span id="settings-success-text">Başarılı</span>
+      </div>
+
+      <!-- Fast Setup with Full M3U Link -->
+      <div class="space-y-2 p-3.5 rounded-xl bg-gradient-to-r from-tv-yellow/10 via-tv-yellow/5 to-transparent border border-tv-yellow/30">
+        <div class="flex items-center justify-between">
+          <label class="text-xs font-bold text-tv-yellow flex items-center space-x-1.5">
+            <i data-lucide="zap" class="w-3.5 h-3.5"></i>
+            <span>Hızlı Kurulum (M3U Linki Yapıştırın)</span>
+          </label>
+          <span class="text-[10px] text-gray-400">Otomatik Ayrıştırır</span>
+        </div>
+        <input 
+          id="settings-m3u-input" 
+          type="text" 
+          placeholder="http://iptv-server.com:8080/get.php?username=kullanici&password=sifre&type=m3u&output=ts" 
+          class="w-full bg-[#131926] border border-[#212C42] focus:border-tv-yellow rounded-lg px-3 py-2 text-xs text-white placeholder-gray-500 focus:outline-none transition font-mono"
+          oninput="handleM3uLinkPaste(this.value)"
+        >
+        <p class="text-[10px] text-gray-400">M3U linkini buraya yapıştırdığınızda Sunucu, Kullanıcı Adı ve Şifre otomatik doldurulur.</p>
+      </div>
+
+      <!-- Detailed Form Fields -->
+      <div class="space-y-3.5">
+        <!-- Host -->
+        <div>
+          <label class="block text-xs font-semibold text-gray-300 mb-1">IPTV Sunucu Adresi (Host)</label>
+          <input 
+            id="settings-host-input" 
+            type="text" 
+            placeholder="http://iptv-server.com:8080" 
+            class="w-full bg-[#131926] border border-[#212C42] focus:border-tv-yellow rounded-lg px-3 py-2 text-xs text-white placeholder-gray-500 focus:outline-none transition font-mono"
+          >
+        </div>
+
+        <!-- Username -->
+        <div>
+          <label class="block text-xs font-semibold text-gray-300 mb-1">Kullanıcı Adı</label>
+          <input 
+            id="settings-username-input" 
+            type="text" 
+            placeholder="kullanici_adi" 
+            class="w-full bg-[#131926] border border-[#212C42] focus:border-tv-yellow rounded-lg px-3 py-2 text-xs text-white placeholder-gray-500 focus:outline-none transition font-mono"
+          >
+        </div>
+
+        <!-- Password -->
+        <div>
+          <label class="block text-xs font-semibold text-gray-300 mb-1">Şifre</label>
+          <div class="relative">
+            <input 
+              id="settings-password-input" 
+              type="password" 
+              placeholder="••••••••" 
+              class="w-full bg-[#131926] border border-[#212C42] focus:border-tv-yellow rounded-lg pl-3 pr-10 py-2 text-xs text-white placeholder-gray-500 focus:outline-none transition font-mono"
+            >
+            <button type="button" onclick="togglePasswordVisibility()" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white p-1">
+              <i data-lucide="eye" id="toggle-pwd-icon" class="w-4 h-4"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Buttons -->
+      <div class="flex items-center justify-end space-x-3 pt-2 border-t border-[#1E2738]">
+        <button onclick="closeSettingsModal()" class="px-4 py-2 rounded-lg bg-white/5 hover:bg-white/10 text-gray-300 text-xs font-semibold transition">
+          İptal
+        </button>
+        <button id="btn-save-settings" onclick="saveSettings()" class="px-6 py-2 rounded-lg bg-tv-yellow hover:bg-tv-yellow-hover text-black text-xs font-bold transition flex items-center space-x-2 shadow-lg">
+          <i data-lucide="check" class="w-4 h-4" id="save-icon"></i>
+          <span id="save-btn-text">Bağlantıyı Test Et & Kaydet</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- TOAST NOTIFICATION -->
+  <div id="toast" class="fixed bottom-6 right-6 z-50 transform translate-y-20 opacity-0 transition-all duration-300 pointer-events-none bg-[#131926] border border-tv-border text-white text-xs font-semibold px-4 py-3 rounded-xl shadow-2xl flex items-center space-x-2">
+    <i data-lucide="check" class="w-4 h-4 text-tv-yellow"></i>
+    <span id="toast-msg">İşlem başarılı</span>
+  </div>
+
+  <!-- Main Application Logic -->
+  <script src="app.js?v=4.2"></script>
+</body>
+</html>
