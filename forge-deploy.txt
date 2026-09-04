@@ -17,10 +17,10 @@ npm install --omit=dev --no-audit --no-fund
         MYSQL_ARGS=(--host="${DB_HOST:-127.0.0.1}" --port="${DB_PORT:-3306}" --user="$DB_USER")
         TABLE_COUNT=$(mysql "${MYSQL_ARGS[@]}" --batch --skip-column-names -e "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='tvplus_db';")
         if [ "$TABLE_COUNT" != "0" ]; then
-            echo "Import stopped: tvplus_db is not empty. Existing data was preserved."
+            echo "Import stopped: tvplus is not empty. Existing data was preserved."
             exit 1
         fi
-        mysql "${MYSQL_ARGS[@]}" tvplus_db < "$DUMP_FILE"
+        mysql "${MYSQL_ARGS[@]}" tvplus < "$DUMP_FILE"
         touch "$DONE_FILE"
         chmod 600 "$DUMP_FILE" "$DONE_FILE"
         echo "Database import completed. Future deployments will skip it."
