@@ -407,6 +407,102 @@
 
     </div>
 
+    <!-- ======================================================== -->
+    <!-- VIEW 5: DİZİ DETAY SAYFASI (TAM SAYFA - POPUP DEĞİL)      -->
+    <!-- ======================================================== -->
+    <div id="view-series-detail" class="hidden max-w-7xl mx-auto px-4 sm:px-8 py-6 space-y-8 animate-fade-in">
+      <!-- Back Navigation Button -->
+      <div>
+        <button onclick="goBackToSeries()" class="inline-flex items-center space-x-2 text-xs font-bold text-gray-300 hover:text-tv-yellow transition bg-[#131926]/90 hover:bg-[#1C2436] px-4 py-2 rounded-full border border-[#1E2738] shadow-lg">
+          <i data-lucide="arrow-left" class="w-4 h-4 text-tv-yellow"></i>
+          <span>Dizilere Dön</span>
+        </button>
+      </div>
+
+      <!-- Hero Banner Card -->
+      <div class="relative w-full rounded-3xl overflow-hidden border border-[#1E2738] shadow-2xl bg-[#0E121B]">
+        <!-- Backdrop Image Container -->
+        <div id="series-detail-backdrop" class="relative w-full h-64 sm:h-96 md:h-[420px] bg-cover bg-center">
+          <!-- Gradient Overlay -->
+          <div class="absolute inset-0 bg-gradient-to-t from-[#0E121B] via-[#0E121B]/60 to-transparent"></div>
+          <div class="absolute inset-0 bg-gradient-to-r from-[#0E121B] via-transparent to-transparent"></div>
+
+          <!-- Banner Bottom Content (Poster + Details) -->
+          <div class="absolute bottom-6 left-6 right-6 flex flex-col sm:flex-row sm:items-end gap-6 z-10">
+            <!-- Poster -->
+            <img 
+              id="series-detail-poster" 
+              src="" 
+              alt="Dizi Afişi" 
+              class="w-28 sm:w-44 aspect-[2/3] rounded-2xl shadow-2xl border-2 border-white/20 object-cover bg-black flex-shrink-0"
+              onerror="this.src='https://images.unsplash.com/photo-1522869635100-9f4c5e86aa37?auto=format&fit=crop&w=400&q=80'"
+            >
+
+            <!-- Metadata Info -->
+            <div class="space-y-2.5 text-white max-w-3xl flex-1">
+              <div class="flex flex-wrap items-center gap-2">
+                <span id="series-detail-rating" class="px-2.5 py-0.5 rounded-full bg-tv-yellow text-black text-xs font-black shadow flex items-center space-x-1">
+                  <span>★ 8.0</span>
+                </span>
+                <span id="series-detail-genre" class="px-3 py-0.5 rounded-full bg-white/10 backdrop-blur text-xs text-gray-200 font-medium">
+                  Dram / Gizem
+                </span>
+                <span id="series-detail-season-count" class="text-xs text-gray-400 font-semibold">
+                  1 Sezon • 5 Bölüm
+                </span>
+              </div>
+
+              <h1 id="series-detail-title" class="text-2xl sm:text-4xl font-black text-white tracking-tight leading-tight">
+                Dizi Başlığı
+              </h1>
+
+              <p id="series-detail-cast" class="text-xs text-gray-300 line-clamp-2">
+                Oyuncular: ...
+              </p>
+
+              <!-- Action Buttons: 1. Bölümü Oynat -->
+              <div class="pt-2 flex items-center space-x-3">
+                <button id="btn-series-play-first" onclick="playFirstEpisodeOfSeries()" class="inline-flex items-center space-x-2 px-6 py-2.5 rounded-xl bg-tv-yellow hover:bg-tv-yellow-hover text-black font-black text-xs sm:text-sm shadow-xl transition transform hover:scale-105">
+                  <i data-lucide="play" class="w-4 h-4 fill-current"></i>
+                  <span>1. Bölümü Başlat</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Plot Summary -->
+      <div class="bg-[#10141F] border border-[#1E2738] rounded-2xl p-6 space-y-2 shadow-lg">
+        <h3 class="text-xs font-bold text-tv-yellow uppercase tracking-wider">Konu & Özet</h3>
+        <p id="series-detail-plot" class="text-xs sm:text-sm text-gray-300 leading-relaxed max-w-4xl">
+          Dizi konusu...
+        </p>
+      </div>
+
+      <!-- Seasons & Episodes Section -->
+      <div class="space-y-4">
+        <!-- Header & Season Tabs -->
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#1E2738] pb-3">
+          <div class="flex items-center space-x-2.5">
+            <i data-lucide="layers" class="w-5 h-5 text-tv-yellow"></i>
+            <h2 class="text-base sm:text-lg font-bold text-white">Bölümler</h2>
+            <span id="series-detail-episodes-count" class="text-xs text-gray-400 font-semibold">(0 Bölüm)</span>
+          </div>
+
+          <!-- Season Tabs -->
+          <div id="series-detail-season-tabs" class="flex items-center space-x-2 overflow-x-auto pb-1 scrollbar-none">
+            <!-- Populated by JavaScript -->
+          </div>
+        </div>
+
+        <!-- Episodes Grid -->
+        <div id="series-detail-episodes-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 pt-1">
+          <!-- Populated by JavaScript -->
+        </div>
+      </div>
+    </div>
+
     <!-- AUTHENTIC TURKCELL TV+ FOOTER WITH NEON GLOWING PLUS WATERMARK -->
     <footer class="relative overflow-hidden border-t border-[#18202F] bg-black pt-12 pb-14 px-6 lg:px-12 text-gray-400 text-xs">
       <!-- Big Neon Yellow TV+ Watermark in bottom-right (Birebir Görsel) -->
@@ -771,61 +867,6 @@
           <i data-lucide="play" class="w-3.5 h-3.5 fill-current"></i>
           <span>Şimdi Oynat</span>
         </button>
-      </div>
-    </div>
-  </div>
-
-  <!-- ======================================================== -->
-  <!-- 4. DİZİ DETAY & BÖLÜMLER MODALI                          -->
-  <!-- ======================================================== -->
-  <div id="series-modal" class="hidden fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-3 sm:p-6 overflow-y-auto">
-    <div class="bg-[#0E121B] border border-[#1E2738] rounded-2xl max-w-4xl w-full max-h-[92vh] flex flex-col shadow-2xl relative overflow-hidden my-auto">
-      <!-- Close Button -->
-      <button onclick="closeSeriesModal()" class="absolute top-4 right-4 z-20 text-gray-300 hover:text-white p-2 rounded-full bg-black/60 backdrop-blur transition">
-        <i data-lucide="x" class="w-5 h-5"></i>
-      </button>
-
-      <!-- Series Modal Header Banner -->
-      <div class="relative w-full h-56 sm:h-72 bg-cover bg-center flex-shrink-0" id="series-modal-backdrop">
-        <div class="absolute inset-0 bg-gradient-to-t from-[#0E121B] via-[#0E121B]/60 to-transparent"></div>
-        <div class="absolute bottom-4 left-4 right-4 flex items-end space-x-4">
-          <img id="series-modal-poster" src="" alt="" class="w-20 sm:w-28 rounded-lg shadow-2xl border border-white/20 aspect-[2/3] object-cover flex-shrink-0 bg-black">
-          <div class="space-y-1 text-white">
-            <div class="flex items-center space-x-2">
-              <span id="series-modal-rating" class="px-2 py-0.5 rounded bg-tv-yellow text-black text-[10px] font-black">★ 8.0</span>
-              <span id="series-modal-genre" class="text-xs text-gray-300 font-medium">Dram / Gerilim</span>
-            </div>
-            <h2 id="series-modal-title" class="text-xl sm:text-2xl font-black text-white line-clamp-2">Dizi Başlığı</h2>
-            <p id="series-modal-cast" class="text-[11px] text-gray-400 line-clamp-1">Oyuncular...</p>
-          </div>
-        </div>
-      </div>
-
-      <!-- Series Plot Summary & Episodes -->
-      <div class="p-4 sm:p-6 space-y-4 overflow-y-auto flex-1 scrollbar-none">
-        <p id="series-modal-plot" class="text-xs sm:text-sm text-gray-300 leading-relaxed max-w-3xl">
-          Dizi konusu...
-        </p>
-
-        <!-- Seasons Tab Selector -->
-        <div class="space-y-3 pt-2">
-          <div class="flex items-center justify-between border-b border-[#1E2738] pb-2">
-            <h3 class="text-sm font-bold text-white flex items-center space-x-2">
-              <i data-lucide="layers" class="w-4 h-4 text-tv-yellow"></i>
-              <span>Sezonlar & Bölümler</span>
-            </h3>
-            <span id="series-modal-ep-count" class="text-xs text-gray-400">0 Bölüm</span>
-          </div>
-
-          <div id="series-modal-season-tabs" class="flex items-center space-x-2 overflow-x-auto pb-2 scrollbar-none">
-            <!-- Populated by JS -->
-          </div>
-        </div>
-
-        <!-- Episodes List Grid -->
-        <div id="series-modal-episodes" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 pt-1">
-          <!-- Populated by JS -->
-        </div>
       </div>
     </div>
   </div>

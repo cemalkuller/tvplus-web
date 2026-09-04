@@ -146,7 +146,61 @@ async function handleRoute(isInitial = false) {
     return;
   }
 
-  // 2. Doğrudan Kanal İzleme Linki: /izle/:id
+  // 2. Dizi Bölüm İzleme: /dizi/:seriesId/izle/:episodeId
+  if (path.includes('/dizi/') && path.includes('/izle/')) {
+    const parts = path.split('/');
+    const sIdx = parts.indexOf('dizi');
+    const eIdx = parts.indexOf('izle');
+    if (sIdx !== -1 && eIdx !== -1 && parts[sIdx + 1] && parts[eIdx + 1]) {
+      const sId = parseInt(parts[sIdx + 1]);
+      const epId = parseInt(parts[eIdx + 1]);
+      await openSeriesDetailPage(sId, false);
+      if (STATE.currentSeries) {
+        let foundEp = null;
+        let foundSeason = 1;
+        for (const [sNum, epList] of Object.entries(STATE.currentSeries.episodes || {})) {
+          const ep = epList.find(e => String(e.id) === String(epId));
+          if (ep) {
+            foundEp = ep;
+            foundSeason = parseInt(sNum);
+            break;
+          }
+        }
+        if (foundEp) {
+          playSeriesEpisodeDirect(foundEp, foundSeason);
+          return;
+        }
+      }
+    }
+  }
+
+  // 3. Dizi Detay Sayfası: /dizi/:seriesId (Ayrı Sayfa)
+  if (path.startsWith('/dizi/')) {
+    const idStr = path.replace('/dizi/', '').replace(/\/$/, '');
+    const sId = parseInt(idStr);
+    if (!isNaN(sId)) {
+      await openSeriesDetailPage(sId, false);
+      return;
+    }
+  }
+
+  // 4. Film İzleme: /film/:id
+  if (path.startsWith('/film/')) {
+    const idStr = path.replace('/film/', '').replace(/\/$/, '');
+    const movieId = parseInt(idStr);
+    if (!isNaN(movieId)) {
+      try {
+        const res = await fetch(`/api/vod/movie/${movieId}`);
+        if (res.ok) {
+          const movie = await res.json();
+          openMediaItem(movie, 'movie');
+          return;
+        }
+      } catch (_) {}
+    }
+  }
+
+  // 5. Doğrudan Canlı TV Kanal İzleme Linki: /izle/:id
   if (path.startsWith('/izle/')) {
     const idStr = path.replace('/izle/', '').replace(/\/$/, '');
     const streamId = parseInt(idStr);
@@ -169,37 +223,37 @@ async function handleRoute(isInitial = false) {
       }
     }
   } else {
-    // /izle/... rotasında değilsek ve oynatıcı açıksa kapat
-    if (!playerModal.classList.contains('hidden')) {
+    // Herhangi bir izleme/oynatıcı rotasında değilsek ve oynatıcı açıksa kapat
+    if (!path.includes('/izle') && !path.startsWith('/film/') && !playerModal.classList.contains('hidden')) {
       closePlayer(false);
     }
   }
 
-  // 3. Canlı TV Rotası
+  // 6. Canlı TV Rotası
   if (path === '/canli-tv' || path === '/live') {
     switchTab('live', false);
     return;
   }
 
-  // 4. Filmler Rotası
-  if (path === '/filmler' || path === '/movies' || path === '/film') {
+  // 7. Filmler Rotası
+  if (path === '/filmler' || path === '/movies') {
     switchTab('movies', false);
     return;
   }
 
-  // 5. Diziler Rotası
-  if (path === '/diziler' || path === '/series' || path === '/dizi') {
+  // 8. Diziler Rotası
+  if (path === '/diziler' || path === '/series') {
     switchTab('series', false);
     return;
   }
 
-  // 6. Favorilerim Rotası
+  // 9. Favorilerim Rotası
   if (path === '/favorilerim' || path === '/favoriler') {
     showFavoritesTab(false);
     return;
   }
 
-  // 7. Kanal Listesi Rotası
+  // 10. Kanal Listesi Rotası
   if (path === '/kanal-listesi' || path === '/kanallar' || path === '/rehber' || path === '/' || path === '') {
     const cat = searchParams.get('kategori');
     const q = searchParams.get('ara');
@@ -294,6 +348,7 @@ function switchTab(tab, push = true) {
   viewGuide?.classList.add('hidden');
   viewMovies?.classList.add('hidden');
   viewSeries?.classList.add('hidden');
+  document.getElementById('view-series-detail')?.classList.add('hidden');
 
   if (tab === 'live') {
     navLive?.classList.add('text-white', 'font-bold');
@@ -883,11 +938,24 @@ function openMediaItem(item, type = 'movie') {
     });
   }
 
+  if (type === 'episode') {
+    const sId = item.seriesId || STATE.currentSeries?.info?.series_id;
+    if (sId && item.id) {
+      updateUrl(`/dizi/${sId}/izle/${item.id}`);
+    }
+  } else if (type === 'movie') {
+    const mId = item.stream_id || item.id;
+    if (mId) {
+      updateUrl(`/film/${mId}`);
+    }
+  }
+
   resetInactivity();
   initIcons();
 }
 
 function closePlayer(push = true) {
+  const prevMedia = STATE.currentMedia;
   STATE.currentChannel = null;
   STATE.currentMedia = null;
   STATE.playbackSession = null;
@@ -941,7 +1009,18 @@ function closePlayer(push = true) {
   hideError();
 
   if (push) {
-    updateUrl(getCurrentTabUrl());
+    if (prevMedia?.type === 'episode') {
+      const sId = prevMedia.seriesId || STATE.currentSeries?.info?.series_id;
+      if (sId) {
+        updateUrl(`/dizi/${sId}`);
+      } else {
+        updateUrl('/diziler');
+      }
+    } else if (prevMedia?.type === 'movie') {
+      updateUrl('/filmler');
+    } else {
+      updateUrl(getCurrentTabUrl());
+    }
   }
 }
 
@@ -2243,7 +2322,7 @@ function renderSeriesCards() {
     const genre = item.genre || 'Dizi';
 
     html += `
-      <div class="media-card group" onclick="openSeriesModal(${item.id})">
+      <div class="media-card group" onclick="openSeriesDetailPage(${item.id})">
         <div class="media-poster-wrapper">
           <img src="${cover}" alt="${escapeHtml(title)}" class="media-poster-img" onerror="this.src='https://images.unsplash.com/photo-1522869635100-9f4c5e86aa37?auto=format&fit=crop&w=400&q=80'">
           ${rating ? `<span class="absolute top-2 left-2 px-1.5 py-0.5 rounded bg-black/80 backdrop-blur border border-tv-yellow/40 text-[10px] font-black text-tv-yellow">${rating}</span>` : ''}
@@ -2270,22 +2349,40 @@ function loadMoreSeries() {
 }
 
 // -------------------------------------------------------------
-// DİZİ DETAY & BÖLÜM SEÇİMİ
+// DİZİ DETAY SAYFASI (AYRI SAYFA - POPUP DEĞİL)
 // -------------------------------------------------------------
-async function openSeriesModal(seriesId) {
-  const modal = document.getElementById('series-modal');
-  if (!modal) return;
+async function openSeriesDetailPage(seriesId, push = true) {
+  closePlayer(false);
 
-  modal.classList.remove('hidden');
-  document.body.style.overflow = 'hidden';
+  // Diğer tüm view'ları gizle
+  document.getElementById('view-live')?.classList.add('hidden');
+  document.getElementById('view-guide')?.classList.add('hidden');
+  document.getElementById('view-movies')?.classList.add('hidden');
+  document.getElementById('view-series')?.classList.add('hidden');
 
-  const episodesContainer = document.getElementById('series-modal-episodes');
-  episodesContainer.innerHTML = `
-    <div class="col-span-full py-10 flex flex-col items-center justify-center space-y-2 text-gray-400">
-      <div class="w-6 h-6 rounded-full border-2 border-white/20 border-t-tv-yellow animate-spin"></div>
-      <span class="text-xs">Dizi ve bölümler yükleniyor...</span>
-    </div>
-  `;
+  // Menüde Diziler sekmesini aktif göster
+  const navSeries = document.getElementById('nav-series');
+  document.querySelectorAll('header nav a').forEach(a => a.classList.remove('text-white', 'font-bold'));
+  navSeries?.classList.add('text-white', 'font-bold');
+
+  // Dizi detay sayfasını göster
+  const viewDetail = document.getElementById('view-series-detail');
+  if (viewDetail) viewDetail.classList.remove('hidden');
+
+  if (push) {
+    updateUrl(`/dizi/${seriesId}`);
+  }
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+
+  const episodesContainer = document.getElementById('series-detail-episodes-grid');
+  if (episodesContainer) {
+    episodesContainer.innerHTML = `
+      <div class="col-span-full py-16 flex flex-col items-center justify-center space-y-3 text-gray-400">
+        <div class="w-8 h-8 rounded-full border-2 border-white/20 border-t-tv-yellow animate-spin"></div>
+        <span class="text-xs">Dizi ve bölümler yükleniyor...</span>
+      </div>
+    `;
+  }
 
   try {
     const res = await fetch(`/api/series-info/${seriesId}`);
@@ -2295,30 +2392,33 @@ async function openSeriesModal(seriesId) {
 
     const info = data.info || {};
     const title = cleanName(info.name || 'Dizi');
-    document.getElementById('series-modal-title').textContent = title;
-    document.getElementById('series-modal-plot').textContent = info.plot || 'Açıklama bulunmuyor.';
-    document.getElementById('series-modal-cast').textContent = info.cast ? `Oyuncular: ${info.cast}` : '';
-    document.getElementById('series-modal-genre').textContent = info.genre || 'Dizi';
-    document.getElementById('series-modal-rating').textContent = info.rating ? `★ ${parseFloat(info.rating).toFixed(1)}` : '★ TV+';
+    document.getElementById('series-detail-title').textContent = title;
+    document.getElementById('series-detail-plot').textContent = info.plot || 'Açıklama bulunmuyor.';
+    document.getElementById('series-detail-cast').textContent = info.cast ? `Oyuncular: ${info.cast}` : '';
+    document.getElementById('series-detail-genre').textContent = info.genre || 'Dizi';
+    document.getElementById('series-detail-rating').textContent = info.rating ? `★ ${parseFloat(info.rating).toFixed(1)}` : '★ TV+';
 
     const backdrop = (info.backdrop_path && info.backdrop_path[0]) || info.cover || '';
-    const backdropElem = document.getElementById('series-modal-backdrop');
+    const backdropElem = document.getElementById('series-detail-backdrop');
     if (backdropElem && backdrop) {
       backdropElem.style.backgroundImage = `url('${backdrop}')`;
     }
 
-    const posterElem = document.getElementById('series-modal-poster');
+    const posterElem = document.getElementById('series-detail-poster');
     if (posterElem && info.cover) {
       posterElem.src = info.cover;
     }
 
-    // Render season tabs
-    const seasonTabs = document.getElementById('series-modal-season-tabs');
+    // Sezon Sekmelerini hazırla
+    const seasonTabs = document.getElementById('series-detail-season-tabs');
     const seasons = data.seasons || [];
     const availableSeasons = Object.keys(data.episodes || {});
 
     let firstSeason = seasons[0]?.season_number || availableSeasons[0] || 1;
     STATE.activeSeriesSeason = firstSeason;
+
+    const epCount = (data.episodes?.[String(firstSeason)] || []).length;
+    document.getElementById('series-detail-season-count').textContent = `${seasons.length || availableSeasons.length || 1} Sezon • ${epCount} Bölüm`;
 
     let tabsHtml = '';
     if (seasons.length > 0) {
@@ -2326,7 +2426,7 @@ async function openSeriesModal(seriesId) {
         const sNum = s.season_number;
         const isActive = String(sNum) === String(firstSeason);
         tabsHtml += `
-          <button onclick="selectSeriesSeason(${sNum})" id="s-tab-${sNum}" class="vod-cat-pill ${isActive ? 'active' : ''}">
+          <button onclick="selectSeriesDetailSeason(${sNum})" id="s-detail-tab-${sNum}" class="vod-cat-pill ${isActive ? 'active' : ''}">
             ${s.name || `Sezon ${sNum}`}
           </button>
         `;
@@ -2335,43 +2435,45 @@ async function openSeriesModal(seriesId) {
       for (const sNum of availableSeasons) {
         const isActive = String(sNum) === String(firstSeason);
         tabsHtml += `
-          <button onclick="selectSeriesSeason(${sNum})" id="s-tab-${sNum}" class="vod-cat-pill ${isActive ? 'active' : ''}">
+          <button onclick="selectSeriesDetailSeason(${sNum})" id="s-detail-tab-${sNum}" class="vod-cat-pill ${isActive ? 'active' : ''}">
             Sezon ${sNum}
           </button>
         `;
       }
     }
-    seasonTabs.innerHTML = tabsHtml;
+    if (seasonTabs) seasonTabs.innerHTML = tabsHtml;
 
-    renderSeriesEpisodes(firstSeason);
+    renderSeriesDetailEpisodes(firstSeason);
     initIcons();
   } catch (err) {
-    console.error('Series modal error:', err);
-    episodesContainer.innerHTML = `
-      <div class="col-span-full py-8 text-center text-gray-500 text-xs">
-        Dizi detayları yüklenemedi.
-      </div>
-    `;
+    console.error('Series detail load error:', err);
+    if (episodesContainer) {
+      episodesContainer.innerHTML = `
+        <div class="col-span-full py-12 text-center text-gray-400 text-xs">
+          Dizi detayları yüklenemedi. Lütfen tekrar deneyin.
+        </div>
+      `;
+    }
   }
 }
 
-function selectSeriesSeason(seasonNum) {
+function selectSeriesDetailSeason(seasonNum) {
   STATE.activeSeriesSeason = seasonNum;
-  const tabs = document.querySelectorAll('#series-modal-season-tabs button');
+  const tabs = document.querySelectorAll('#series-detail-season-tabs button');
   tabs.forEach(t => t.classList.remove('active'));
-  const activeTab = document.getElementById(`s-tab-${seasonNum}`);
+  const activeTab = document.getElementById(`s-detail-tab-${seasonNum}`);
   if (activeTab) activeTab.classList.add('active');
 
-  renderSeriesEpisodes(seasonNum);
+  renderSeriesDetailEpisodes(seasonNum);
 }
 
-function renderSeriesEpisodes(seasonNum) {
-  const container = document.getElementById('series-modal-episodes');
-  const epCountElem = document.getElementById('series-modal-ep-count');
+function renderSeriesDetailEpisodes(seasonNum) {
+  const container = document.getElementById('series-detail-episodes-grid');
+  const countElem = document.getElementById('series-detail-episodes-count');
   if (!container || !STATE.currentSeries) return;
 
   const episodes = (STATE.currentSeries.episodes && STATE.currentSeries.episodes[String(seasonNum)]) || [];
-  if (epCountElem) epCountElem.textContent = `${episodes.length} Bölüm`;
+  if (countElem) countElem.textContent = `(${episodes.length} Bölüm)`;
 
   if (episodes.length === 0) {
     container.innerHTML = `
@@ -2402,18 +2504,18 @@ function renderSeriesEpisodes(seasonNum) {
     };
 
     html += `
-      <div class="bg-[#131926] border border-[#1E2738] hover:border-tv-yellow/70 rounded-xl p-3 flex flex-col justify-between space-y-2 cursor-pointer transition group" onclick='playSeriesEpisode(${JSON.stringify(epPayload).replace(/'/g, "&#39;")})'>
-        <div class="relative w-full aspect-video rounded-lg overflow-hidden bg-black/60">
+      <div class="bg-[#10141F] border border-[#1E2738] hover:border-tv-yellow/70 rounded-2xl p-3 flex flex-col justify-between space-y-3 cursor-pointer transition group shadow-md hover:shadow-xl" onclick='playSeriesEpisode(${JSON.stringify(epPayload).replace(/'/g, "&#39;")})'>
+        <div class="relative w-full aspect-video rounded-xl overflow-hidden bg-black/60">
           <img src="${epThumb}" alt="${escapeHtml(epTitle)}" class="w-full h-full object-cover group-hover:scale-105 transition duration-300" onerror="this.src='https://images.unsplash.com/photo-1522869635100-9f4c5e86aa37?auto=format&fit=crop&w=400&q=80'">
           <div class="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition">
-            <div class="w-10 h-10 rounded-full bg-tv-yellow text-black flex items-center justify-center shadow-lg">
+            <div class="w-11 h-11 rounded-full bg-tv-yellow text-black flex items-center justify-center shadow-lg transform group-hover:scale-110 transition">
               <i data-lucide="play" class="w-5 h-5 fill-current ml-0.5"></i>
             </div>
           </div>
-          ${duration ? `<span class="absolute bottom-1 right-1 px-1.5 py-0.5 rounded bg-black/80 text-[9px] font-mono text-gray-300">${duration}</span>` : ''}
+          ${duration ? `<span class="absolute bottom-2 right-2 px-2 py-0.5 rounded-md bg-black/80 text-[10px] font-mono text-gray-300 backdrop-blur">${duration}</span>` : ''}
         </div>
         <div>
-          <div class="text-[10px] text-tv-yellow font-bold">${ep.episode_num || '1'}. Bölüm</div>
+          <div class="text-[10px] text-tv-yellow font-black tracking-wide">${ep.episode_num || '1'}. Bölüm</div>
           <h4 class="text-xs font-bold text-white group-hover:text-tv-yellow transition line-clamp-1">${escapeHtml(epTitle)}</h4>
         </div>
       </div>
@@ -2423,16 +2525,30 @@ function renderSeriesEpisodes(seasonNum) {
   initIcons();
 }
 
-function closeSeriesModal() {
-  const modal = document.getElementById('series-modal');
-  modal?.classList.add('hidden');
-  document.body.style.overflow = '';
+function playFirstEpisodeOfSeries() {
+  if (!STATE.currentSeries) return;
+  const firstSeason = String(STATE.activeSeriesSeason || 1);
+  const eps = STATE.currentSeries.episodes?.[firstSeason] || [];
+  if (eps.length > 0) {
+    playSeriesEpisodeDirect(eps[0], parseInt(firstSeason));
+  }
+}
+
+function goBackToSeries() {
+  const viewDetail = document.getElementById('view-series-detail');
+  if (viewDetail) viewDetail.classList.add('hidden');
+  switchTab('series', true);
 }
 
 function playSeriesEpisode(epPayload) {
-  closeSeriesModal();
   openMediaItem(epPayload, 'episode');
 }
+
+window.openSeriesDetailPage = openSeriesDetailPage;
+window.openSeriesModal = openSeriesDetailPage;
+window.goBackToSeries = goBackToSeries;
+window.selectSeriesDetailSeason = selectSeriesDetailSeason;
+window.playFirstEpisodeOfSeries = playFirstEpisodeOfSeries;
 
 // =============================================================
 // EKRAN İÇİ DİZİ BÖLÜMLERİ LİSTESİ & OTOMATİK BÖLÜM GEÇİŞİ

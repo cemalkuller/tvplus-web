@@ -990,6 +990,39 @@ app.get('/api/vod/streams', async (req, res) => {
   }
 });
 
+// REST: Tekil Film Bilgisi & Stream URL
+app.get('/api/vod/movie/:id', async (req, res) => {
+  try {
+    const movieId = req.params.id;
+    for (const [_, cached] of vodCache.streamsByCat.entries()) {
+      const found = cached.data?.find(m => String(m.id) === String(movieId));
+      if (found) return res.json(found);
+    }
+    const { host, username, password } = CONFIG.iptv;
+    const url = `${host}/player_api.php?username=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}&action=get_vod_info&vod_id=${movieId}`;
+    const r = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0' } });
+    if (r.ok) {
+      const raw = await r.json();
+      const info = raw.info || {};
+      const movieData = raw.movie_data || {};
+      const ext = movieData.container_extension || info.container_extension || 'mp4';
+      return res.json({
+        id: movieId,
+        stream_id: movieId,
+        name: cleanName(info.name || movieData.name || 'Film'),
+        icon: info.movie_image || info.cover_big || '',
+        rating: info.rating || '',
+        year: info.releasedate?.slice(0, 4) || '',
+        container_extension: ext,
+        streamUrl: `/vod/movie/${movieId}.${ext}`
+      });
+    }
+    res.status(404).json({ error: 'Film bulunamadı' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // REST: Dizi Kategorileri
 app.get('/api/series/categories', async (req, res) => {
   try {
