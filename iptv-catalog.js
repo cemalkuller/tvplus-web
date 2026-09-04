@@ -1,3 +1,4 @@
+import { iptvFetch } from './iptv-proxy.js';
 import { CONFIG } from './config.js';
 import { getDb } from './db.js';
 
@@ -8,7 +9,7 @@ export async function fetchCatalogAction(action = '') {
   url.searchParams.set('username', CONFIG.iptv.username);
   url.searchParams.set('password', CONFIG.iptv.password);
   if (action) url.searchParams.set('action', action);
-  const response = await fetch(url, { signal: AbortSignal.timeout(120000), headers: { 'User-Agent': 'Mozilla/5.0' } });
+  const response = await iptvFetch(url, { signal: AbortSignal.timeout(120000), headers: { 'User-Agent': 'Mozilla/5.0' } });
   if (!response.ok) throw new Error(`IPTV HTTP ${response.status}`);
   const data = await response.json();
   if (action ? !Array.isArray(data) : Number(data?.user_info?.auth) !== 1) {

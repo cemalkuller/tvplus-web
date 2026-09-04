@@ -11,6 +11,7 @@ import QRCode from 'qrcode';
 import { CONFIG, saveEnvFile } from './config.js';
 import { initDatabase, getDb } from './db.js';
 import { readCatalogAction } from './iptv-catalog.js';
+import { iptvFetch, proxyInputArgs } from './iptv-proxy.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -144,7 +145,7 @@ async function fetchFromXtream(action = '') {
     }
   }
 
-  const response = await fetch(url, {
+  const response = await iptvFetch(url, {
     headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' }
   });
 
@@ -408,7 +409,7 @@ app.get(['/stream/:id.m3u8', '/stream/variant'], async (req, res) => {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 20000); // 20 sn zaman aşımı
 
-    const upstreamRes = await fetch(targetUrl, {
+    const upstreamRes = await iptvFetch(targetUrl, {
       redirect: 'follow',
       signal: controller.signal,
       headers: {
@@ -485,7 +486,7 @@ app.get('/stream/seg', async (req, res) => {
     const timeout = setTimeout(() => controller.abort(), 45000); // 45 sn zaman aşımı (32MB parçalar için)
     req.on('close', () => controller.abort());
 
-    const segRes = await fetch(targetUrl, {
+    const segRes = await iptvFetch(targetUrl, {
       signal: controller.signal,
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'
@@ -528,7 +529,7 @@ app.get('/live/:id.ts', async (req, res) => {
     const controller = new AbortController();
     req.on('close', () => controller.abort());
 
-    const upstreamRes = await fetch(targetUrl, {
+    const upstreamRes = await iptvFetch(targetUrl, {
       signal: controller.signal,
       headers: { 'User-Agent': 'VLC/3.0.18' }
     });
@@ -569,7 +570,7 @@ async function proxyMediaStream(req, res, targetUrl) {
       headers['Range'] = req.headers.range;
     }
 
-    const upstreamRes = await fetch(targetUrl, {
+    const upstreamRes = await iptvFetch(targetUrl, {
       signal: controller.signal,
       headers
     });
@@ -710,6 +711,7 @@ app.get('/vod/browser/:mediaType/:idWithExt', async (req, res) => {
   const ffmpegArgs = [
     '-hide_banner', '-loglevel', 'error',
     ...seekArgs,
+    ...proxyInputArgs(),
     '-i', targetUrl,
     '-map', '0:v:0', '-map', audioIndex ? `0:${audioIndex}` : '0:a:0?',
     ...videoArgs,
@@ -778,7 +780,7 @@ app.get('/api/vod/tracks/:mediaType/:idWithExt', (req, res) => {
   if (!['movie', 'series'].includes(mediaType) || !/^\d+\.[a-z0-9]+$/i.test(idWithExt)) return res.status(400).json({ error: 'Geçersiz medya yolu.' });
   const { host, username, password } = CONFIG.iptv;
   const targetUrl = `${host}/${mediaType}/${username}/${password}/${idWithExt}`;
-  const probe = spawn('ffprobe', ['-v', 'error', '-show_streams', '-of', 'json', targetUrl], { windowsHide: true });
+  const probe = spawn('ffprobe', [...proxyInputArgs(), '-v', 'error', '-show_streams', '-of', 'json', targetUrl], { windowsHide: true });
   let output = '';
   probe.stdout.on('data', chunk => { output += chunk; });
   probe.on('close', code => {
@@ -802,7 +804,7 @@ app.get('/vod/subtitle/:mediaType/:idWithExt/:trackIndex.vtt', (req, res) => {
   const { host, username, password } = CONFIG.iptv;
   const targetUrl = `${host}/${mediaType}/${username}/${password}/${idWithExt}`;
   res.type('text/vtt');
-  const ffmpeg = spawn('ffmpeg', ['-hide_banner', '-loglevel', 'error', '-i', targetUrl, '-map', `0:${trackIndex}`, '-f', 'webvtt', 'pipe:1'], { windowsHide: true });
+  const ffmpeg = spawn('ffmpeg', ['-hide_banner', '-loglevel', 'error', ...proxyInputArgs(), '-i', targetUrl, '-map', `0:${trackIndex}`, '-f', 'webvtt', 'pipe:1'], { windowsHide: true });
   ffmpeg.stdout.pipe(res);
   res.on('close', () => killProcessTree(ffmpeg));
 });
@@ -825,6 +827,7 @@ app.get('/api/vod/duration/:mediaType/:idWithExt', async (req, res) => {
   try {
     const duration = await new Promise((resolve, reject) => {
       const ffprobe = spawn('ffprobe', [
+        ...proxyInputArgs(),
         '-v', 'error',
         '-show_entries', 'format=duration',
         '-of', 'default=noprint_wrappers=1:nokey=1',
@@ -922,7 +925,7 @@ app.get('/api/epg/:stream_id', async (req, res) => {
 
     let rawListings = [];
     try {
-      const epgRes = await fetch(url, { signal: AbortSignal.timeout(4000) });
+      const epgRes = await iptvFetch(url, { signal: AbortSignal.timeout(4000) });
       if (epgRes.ok) {
         const data = await epgRes.json();
         rawListings = data.epg_listings || [];
@@ -1070,7 +1073,7 @@ app.post('/api/settings', async (req, res) => {
     
     let testRes;
     try {
-      testRes = await fetch(testUrl, {
+      testRes = await iptvFetch(testUrl, {
         signal: AbortSignal.timeout(7000),
         headers: { 'User-Agent': 'Mozilla/5.0' }
       });
@@ -1303,7 +1306,7 @@ async function getSeriesDetails(seriesId) {
   }
   const { host, username, password } = CONFIG.iptv;
   const url = `${host}/player_api.php?username=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}&action=get_series_info&series_id=${seriesId}`;
-  const res = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0' } });
+  const res = await iptvFetch(url, { headers: { 'User-Agent': 'Mozilla/5.0' } });
   if (!res.ok) throw new Error('Dizi bilgisi alınamadı');
   const raw = await res.json();
 
@@ -1384,7 +1387,7 @@ app.get('/api/vod/movie/:id', async (req, res) => {
     }
     const { host, username, password } = CONFIG.iptv;
     const url = `${host}/player_api.php?username=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}&action=get_vod_info&vod_id=${movieId}`;
-    const r = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0' } });
+    const r = await iptvFetch(url, { headers: { 'User-Agent': 'Mozilla/5.0' } });
     if (r.ok) {
       const raw = await r.json();
       const info = raw.info || {};
@@ -2315,7 +2318,7 @@ app.get('/player_api.php', async (req, res) => {
       const { host: upstreamHost, username, password } = CONFIG.iptv;
       const url = `${upstreamHost}/player_api.php?username=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}&action=get_simple_data_table&stream_id=${stream_id}`;
       try {
-        const epgRes = await fetch(url, { signal: AbortSignal.timeout(4000) });
+        const epgRes = await iptvFetch(url, { signal: AbortSignal.timeout(4000) });
         if (epgRes.ok) {
           const data = await epgRes.json();
           return res.json(data);
