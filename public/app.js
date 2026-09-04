@@ -17,7 +17,7 @@ const STATE = {
   recents: JSON.parse(localStorage.getItem('tvplus_recents') || '[]'),
   volume: parseFloat(localStorage.getItem('tvplus_volume') || '1'),
   isMuted: localStorage.getItem('tvplus_muted') === 'true',
-  profileName: localStorage.getItem('tvplus_profile_name') || null,
+  profileName: localStorage.getItem('tvplus_profile_name') || 'Cemal Küller',
   hls: null,
   clockInterval: null,
   inactivityTimer: null,
@@ -234,26 +234,40 @@ async function handleRoute(isInitial = false) {
 function selectProfile(name) {
   STATE.profileName = name;
   localStorage.setItem('tvplus_profile_name', name);
-  document.getElementById('header-user-name').textContent = name;
+  const headerName = document.getElementById('header-user-name');
+  if (headerName) headerName.textContent = name;
 
   const pScreen = document.getElementById('profile-screen');
-  pScreen.classList.add('opacity-0');
-  setTimeout(() => {
-    pScreen.classList.add('hidden');
-    pScreen.classList.remove('opacity-0');
-    document.getElementById('main-app').classList.remove('hidden');
-    initIcons();
-    updateUrl(getCurrentTabUrl(), true);
-  }, 400);
+  if (pScreen) {
+    pScreen.classList.add('opacity-0');
+    setTimeout(() => {
+      pScreen.classList.add('hidden');
+      pScreen.classList.remove('opacity-0');
+      document.getElementById('main-app').classList.remove('hidden');
+      initIcons();
+      const currentPath = window.location.pathname.toLowerCase();
+      if (currentPath && currentPath !== '/' && currentPath !== '/profil') {
+        handleRoute(false);
+      } else {
+        updateUrl(getCurrentTabUrl(), true);
+      }
+    }, 400);
+  }
 }
 
 function showProfileScreen(push = true) {
   closePlayer(false);
   document.getElementById('main-app').classList.add('hidden');
-  document.getElementById('profile-screen').classList.remove('hidden');
+  const pScreen = document.getElementById('profile-screen');
+  if (pScreen) {
+    pScreen.classList.remove('opacity-0', 'hidden');
+  }
   initIcons();
   if (push) updateUrl('/profil');
 }
+
+window.selectProfile = selectProfile;
+window.showProfileScreen = showProfileScreen;
 
 // =============================================================
 // 2. TAB NAVİGASYONU (CANLI TV & KANAL LİSTESİ & FİLMLER & DİZİLER)
