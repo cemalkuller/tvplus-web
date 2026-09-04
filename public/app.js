@@ -923,14 +923,19 @@ function openMediaItem(item, type = 'movie') {
   cancelNextEpisodeAutoplay();
 
   // 3. Başlıklar ve Dizi / Film Ayrımı
-  const title = cleanName(item.name || item.title);
   if (type === 'episode') {
     // Dizi Bölümü
     if (btnEpisodes) btnEpisodes.classList.remove('hidden');
-    document.getElementById('player-channel-title').textContent = cleanName(item.seriesTitle || 'Dizi');
-    const epSubtitle = (item.seasonNum && item.episodeNum) 
-      ? `${item.seasonNum}. Sezon ${item.episodeNum}. Bölüm • ${title}`
-      : title;
+    const seriesTitle = cleanName(item.seriesTitle || STATE.currentSeries?.info?.name || 'Dizi', 'series');
+    let epTitle = cleanName(item.title || item.name || '', 'episode', seriesTitle);
+
+    document.getElementById('player-channel-title').textContent = seriesTitle;
+
+    const hasDistinctTitle = epTitle && !/^(\d+\.?\s*(bölüm|bolum|ep|episode)?)$/i.test(epTitle.trim());
+    const epSubtitle = (item.seasonNum && item.episodeNum)
+      ? `${item.seasonNum}. Sezon ${item.episodeNum}. Bölüm${hasDistinctTitle ? ' • ' + epTitle : ''}`
+      : (hasDistinctTitle ? epTitle : `${item.episodeNum || 1}. Bölüm`);
+
     document.getElementById('player-program-title').textContent = epSubtitle;
 
     // Dizi detayları hafızada yoksa arkada yükle
@@ -941,9 +946,10 @@ function openMediaItem(item, type = 'movie') {
     }
   } else {
     // Film
+    const movieTitle = cleanName(item.name || item.title, 'movie');
     if (btnEpisodes) btnEpisodes.classList.add('hidden');
     document.getElementById('player-episodes-tray')?.classList.add('hidden');
-    document.getElementById('player-channel-title').textContent = title;
+    document.getElementById('player-channel-title').textContent = movieTitle;
     document.getElementById('player-program-title').textContent = 'Film (VOD)';
   }
 
@@ -1748,12 +1754,81 @@ function escapeHtml(str) {
     .replace(/'/g, '&#039;');
 }
 
-// Sansürlü BeIN isimlerini beIN olarak düzelt
-function cleanName(str) {
+// Kanal, Kategori, Dizi, Film ve Bölüm isimlerini temizle ve profesyonel formata çevir
+function cleanName(str, type = 'general', seriesContext = '') {
   if (!str) return '';
-  return String(str)
-    .replace(/b\*{1,4}n/gi, 'beIN')
-    .replace(/b\*{1,4}in/gi, 'beIN');
+  let s = String(str).trim();
+
+  // 1. Sansür düzeltmeleri (b**n -> beIN, s**r -> SPOR)
+  s = s.replace(/b\*{1,4}n/gi, 'beIN')
+       .replace(/b\*{1,4}in/gi, 'beIN')
+       .replace(/s\*{1,4}r/gi, 'SPOR');
+
+  if (type === 'episode') {
+    // Dizi bölümü: Dizi adını baştan temizle
+    if (seriesContext) {
+      const cleanSeries = seriesContext.replace(/\(\d{4}\)/g, '').trim();
+      const esc = cleanSeries.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      s = s.replace(new RegExp('^' + esc, 'i'), '');
+    }
+    // 'S01E01', 'S1E1', '01x01', '1x01' etiketleri sonrasını al
+    s = s.replace(/^.*?\bS\d+\s*E\d+\b\s*[-–—:]*\s*/i, '');
+    s = s.replace(/^.*?\b\d+x\d+\b\s*[-–—:]*\s*/i, '');
+    s = s.replace(/^[\s\-–—:|•]+/, '').trim();
+
+    // Dil ve format etiketlerini temizle
+    s = s.replace(/\b(TR\s*YERL[İI]|TR\s*DUBLAJ|TR\s*ALTYAZI(LI)?|DUBLAJ|ALTYAZILI?|YERL[İI])\b/gi, '');
+    s = s.replace(/\(\d{4}\)/g, '');
+    s = s.replace(/^[\s\-–—:|•]+/, '').replace(/[\s\-–—:|•]+$/, '').trim();
+
+    return s || '';
+  }
+
+  // Film ve Dizi başlıkları için
+  if (type === 'movie' || type === 'series') {
+    // Tarihleri temizle: '03.09.2026'
+    s = s.replace(/\b\d{2}\.\d{2}\.\d{4}\b/g, '');
+    // Yıldız ve dekoratif karakterler: '⭐⭐'
+    s = s.replace(/[⭐★✦●⚡️🔥✨]+/g, '');
+    // Sezon finali / Vizyon etiketleri
+    s = s.replace(/\b(SEZON\s*F[İI]NAL[İI]|F[İI]NAL|YEN[İI]|V[İI]ZYON)\b/gi, '');
+    // Dil etiketleri: 'TR-EN', 'TR YERLİ', 'TR DUBLAJ', 'TR ALTYAZILI', 'TR', 'EN'
+    s = s.replace(/\b(TR-EN|EN-TR|TR\s*YERL[İI]|TR\s*DUBLAJ|TR\s*ALTYAZI(LI)?|DUBLAJ|ALTYAZILI?|YERL[İI])\b/gi, '');
+    s = s.replace(/\s+TR\b/g, '');
+    // Çözünürlük ve kodek etiketleri (sonda yer alan)
+    s = s.replace(/\b(UHD\s*2160p|2160p|1080p|720p|4K|UHD|FHD|HD|SD|HEVC|H\.?265|H\.?264|BluRay|WEB-DL|WEBRip|DVDRip)\b/gi, '');
+    // Köşeli parantez içindeki gereksizler: '[...]'
+    s = s.replace(/\[[^\]]*\]/g, '');
+    // Boş parantezleri temizle: '()'
+    s = s.replace(/\(\s*\)/g, '');
+    // Baş ve sondaki tire ve boşlukları temizle
+    s = s.replace(/^[\s\-–—:|•]+/, '').replace(/[\s\-–—:|•]+$/, '').trim();
+    s = s.replace(/\s{2,}/g, ' ');
+    return s;
+  }
+
+  // Kanal ve Kategori isimleri için
+  if (type === 'channel' || type === 'category') {
+    // Dekoratif başlık kanalları: '✦●✦ ULUSAL ✦●✦'
+    s = s.replace(/[✦●★⭐⚡️🔥✨]+/g, '').trim();
+    // 'TR: ', 'TR | ', 'TR - ' gibi önekleri kaldır
+    s = s.replace(/^(TR\s*[:|–—-]\s*|VIP\s*[:|–—-]\s*)/i, '');
+    // 'COCUK 7/24 | ' gibi kategori öneklerini sadeleştir
+    if (s.includes('|')) {
+      const parts = s.split('|').map(p => p.trim()).filter(Boolean);
+      s = parts[parts.length - 1]; // Son kısmı al (kanal adı)
+    }
+    // Kalite eklerini temizle (TRT 4K gibi kanal adı olan 4K'yı koru)
+    s = s.replace(/\b(UHD\s*2160p|2160p|1080p|720p|UHD|FHD|HD|SD|HEVC|H\.?265|H\.?264|50FPS|60FPS|RAW|YEDEK)\b/gi, '');
+    // Köşeli parantezleri temizle: '[SIYAH BEYAZ]' -> '(Siyah Beyaz)'
+    s = s.replace(/\[(.*?)\]/g, '($1)');
+    s = s.replace(/\(\s*\)/g, '');
+    s = s.replace(/^[\s\-–—:|•]+/, '').replace(/[\s\-–—:|•]+$/, '').trim();
+    s = s.replace(/\s{2,}/g, ' ');
+    return s;
+  }
+
+  return s;
 }
 
 // =============================================================
@@ -2666,12 +2741,17 @@ function renderSeriesDetailEpisodes(seasonNum) {
     return;
   }
 
-  const seriesTitle = STATE.currentSeries.info?.name || 'Dizi';
+  const seriesTitle = cleanName(STATE.currentSeries.info?.name || 'Dizi', 'series');
   const lastWatched = STATE.lastWatchedSeriesEpisode;
 
   let html = '';
   for (const ep of episodes) {
-    const epTitle = cleanName(ep.title || `${ep.episode_num}. Bölüm`);
+    const rawEpTitle = ep.title || '';
+    let epTitle = cleanName(rawEpTitle, 'episode', seriesTitle);
+    const hasDistinctTitle = epTitle && !/^(\d+\.?\s*(bölüm|bolum|ep|episode)?)$/i.test(epTitle.trim());
+    const topBadge = hasDistinctTitle ? `${ep.episode_num || '1'}. Bölüm` : `${seasonNum}. Sezon`;
+    const bottomTitle = hasDistinctTitle ? epTitle : `${ep.episode_num || '1'}. Bölüm`;
+
     const epThumb = ep.info?.movie_image || STATE.currentSeries.info?.cover || '';
     const duration = ep.info?.duration || (ep.info?.duration_secs ? `${Math.round(ep.info.duration_secs / 60)} dk` : '');
     const isLastWatched = lastWatched && String(ep.id) === String(lastWatched.episode_id);
@@ -2681,7 +2761,7 @@ function renderSeriesDetailEpisodes(seasonNum) {
 
     const epPayload = {
       id: ep.id,
-      title: epTitle,
+      title: bottomTitle,
       seriesTitle: seriesTitle,
       streamUrl: ep.streamUrl,
       seasonNum: parseInt(seasonNum) || 1,
@@ -2693,7 +2773,7 @@ function renderSeriesDetailEpisodes(seasonNum) {
     html += `
       <div class="bg-[#10141F] border ${borderClass} rounded-2xl p-3 flex flex-col justify-between space-y-3 cursor-pointer transition group shadow-md hover:shadow-xl relative" onclick='playSeriesEpisode(${JSON.stringify(epPayload).replace(/'/g, "&#39;")})'>
         <div class="relative w-full aspect-video rounded-xl overflow-hidden bg-black/60">
-          <img src="${epThumb}" alt="${escapeHtml(epTitle)}" class="w-full h-full object-cover group-hover:scale-105 transition duration-300" onerror="this.src='https://images.unsplash.com/photo-1522869635100-9f4c5e86aa37?auto=format&fit=crop&w=400&q=80'">
+          <img src="${epThumb}" alt="${escapeHtml(bottomTitle)}" class="w-full h-full object-cover group-hover:scale-105 transition duration-300" onerror="this.src='https://images.unsplash.com/photo-1522869635100-9f4c5e86aa37?auto=format&fit=crop&w=400&q=80'">
           <div class="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition">
             <div class="w-11 h-11 rounded-full bg-tv-yellow text-black flex items-center justify-center shadow-lg transform group-hover:scale-110 transition">
               <i data-lucide="play" class="w-5 h-5 fill-current ml-0.5"></i>
@@ -2711,10 +2791,10 @@ function renderSeriesDetailEpisodes(seasonNum) {
         </div>
         <div>
           <div class="flex items-center justify-between">
-            <div class="text-[10px] text-tv-yellow font-black tracking-wide">${ep.episode_num || '1'}. Bölüm</div>
+            <div class="text-[10px] text-tv-yellow font-black tracking-wide">${topBadge}</div>
             ${isLastWatched ? `<div class="text-[10px] text-tv-yellow font-bold">%${lastWatched.percentage} (${formatDuration(lastWatched.progress_seconds)})</div>` : ''}
           </div>
-          <h4 class="text-xs font-bold text-white group-hover:text-tv-yellow transition line-clamp-1">${escapeHtml(epTitle)}</h4>
+          <h4 class="text-xs font-bold text-white group-hover:text-tv-yellow transition line-clamp-1">${escapeHtml(bottomTitle)}</h4>
         </div>
       </div>
     `;
@@ -2807,7 +2887,7 @@ async function renderInPlayerEpisodes() {
   }
 
   const series = STATE.currentSeries;
-  const seriesName = cleanName(series.info?.name || STATE.currentMedia?.seriesTitle || 'Dizi');
+  const seriesName = cleanName(series.info?.name || STATE.currentMedia?.seriesTitle || 'Dizi', 'series');
   if (seriesTitleElem) seriesTitleElem.textContent = seriesName;
 
   const activeSeason = String(STATE.activeSeriesSeason || STATE.currentMedia?.seasonNum || 1);
@@ -2841,14 +2921,18 @@ async function renderInPlayerEpisodes() {
 
   for (const ep of episodes) {
     const isPlaying = String(ep.id) === currentEpId;
-    const epTitle = cleanName(ep.title || `${ep.episode_num}. Bölüm`);
+    let epTitle = cleanName(ep.title || '', 'episode', seriesName);
+    const hasDistinctTitle = epTitle && !/^(\d+\.?\s*(bölüm|bolum|ep|episode)?)$/i.test(epTitle.trim());
+    const topBadge = hasDistinctTitle ? `${ep.episode_num || '1'}. Bölüm` : `${activeSeason}. Sezon`;
+    const bottomTitle = hasDistinctTitle ? epTitle : `${ep.episode_num || '1'}. Bölüm`;
+
     const epThumb = ep.info?.movie_image || series.info?.cover || '';
     const duration = ep.info?.duration || (ep.info?.duration_secs ? `${Math.round(ep.info.duration_secs / 60)} dk` : '');
 
     cardsHtml += `
       <div class="episode-tray-card group ${isPlaying ? 'active' : ''}" onclick="playSeriesEpisodeDirect(${JSON.stringify(ep).replace(/'/g, '&#39;')}, ${activeSeason})">
         <div class="relative w-full aspect-video rounded-lg overflow-hidden bg-black flex-shrink-0">
-          <img src="${epThumb}" alt="${escapeHtml(epTitle)}" class="w-full h-full object-cover group-hover:scale-105 transition duration-300" onerror="this.src='https://images.unsplash.com/photo-1522869635100-9f4c5e86aa37?auto=format&fit=crop&w=400&q=80'">
+          <img src="${epThumb}" alt="${escapeHtml(bottomTitle)}" class="w-full h-full object-cover group-hover:scale-105 transition duration-300" onerror="this.src='https://images.unsplash.com/photo-1522869635100-9f4c5e86aa37?auto=format&fit=crop&w=400&q=80'">
           <div class="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition">
             <div class="w-8 h-8 rounded-full bg-tv-yellow text-black flex items-center justify-center shadow">
               <i data-lucide="play" class="w-4 h-4 fill-current ml-0.5"></i>
@@ -2863,8 +2947,8 @@ async function renderInPlayerEpisodes() {
           ${duration ? `<span class="absolute bottom-1 right-1 px-1.5 py-0.5 rounded bg-black/80 text-[9px] font-mono text-gray-300">${duration}</span>` : ''}
         </div>
         <div class="pt-2 flex-1 min-w-0">
-          <div class="text-[10px] text-tv-yellow font-bold">${ep.episode_num || '1'}. Bölüm</div>
-          <h4 class="text-xs font-bold text-white group-hover:text-tv-yellow transition truncate">${escapeHtml(epTitle)}</h4>
+          <div class="text-[10px] text-tv-yellow font-bold">${topBadge}</div>
+          <h4 class="text-xs font-bold text-white group-hover:text-tv-yellow transition truncate">${escapeHtml(bottomTitle)}</h4>
         </div>
       </div>
     `;
@@ -2887,8 +2971,11 @@ function changeInPlayerSeason(seasonNum) {
 }
 
 function playSeriesEpisodeDirect(ep, seasonNum) {
-  const epTitle = cleanName(ep.title || `${ep.episode_num}. Bölüm`);
-  const seriesTitle = STATE.currentSeries?.info?.name || ep.seriesTitle || 'Dizi';
+  const seriesTitle = cleanName(STATE.currentSeries?.info?.name || ep.seriesTitle || 'Dizi', 'series');
+  let epTitle = cleanName(ep.title || '', 'episode', seriesTitle);
+  if (!epTitle || /^(\d+\.?\s*(bölüm|bolum|ep|episode)?)$/i.test(epTitle.trim())) {
+    epTitle = `${ep.episode_num || 1}. Bölüm`;
+  }
   const epThumb = ep.info?.movie_image || STATE.currentSeries?.info?.cover || '';
 
   STATE.activeSeriesSeason = seasonNum || ep.season || 1;
@@ -3295,96 +3382,105 @@ function renderHomeMoviesShelf(movies) {
   const container = document.getElementById('home-movies-shelf');
   if (!container) return;
 
-  container.innerHTML = movies.map(m => `
-    <div 
-      onclick="openMediaItem(${JSON.stringify(m).replace(/"/g, '&quot;')}, 'movie')"
-      class="group flex-shrink-0 w-36 sm:w-44 cursor-pointer"
-    >
-      <div class="relative aspect-[2/3] rounded-xl overflow-hidden bg-zinc-900 border border-white/10 group-hover:border-tv-yellow/60 group-hover:scale-105 transition-all duration-300 shadow-md">
-        <img 
-          src="${m.icon || ''}" 
-          alt="${m.name}" 
-          class="w-full h-full object-cover group-hover:scale-110 transition duration-500" 
-          loading="lazy"
-          onerror="this.src='https://images.unsplash.com/photo-1594909122845-11baa439b7bf?auto=format&fit=crop&w=400&q=80'"
-        />
-        <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition flex items-center justify-center">
-          <div class="w-10 h-10 rounded-full bg-tv-yellow text-black flex items-center justify-center shadow-lg transform scale-90 group-hover:scale-100 transition">
-            <i data-lucide="play" class="w-5 h-5 fill-current"></i>
+  container.innerHTML = movies.map(m => {
+    const title = cleanName(m.name, 'movie');
+    return `
+      <div 
+        onclick="openMediaItem(${JSON.stringify(m).replace(/"/g, '&quot;')}, 'movie')"
+        class="group flex-shrink-0 w-36 sm:w-44 cursor-pointer"
+      >
+        <div class="relative aspect-[2/3] rounded-xl overflow-hidden bg-zinc-900 border border-white/10 group-hover:border-tv-yellow/60 group-hover:scale-105 transition-all duration-300 shadow-md">
+          <img 
+            src="${m.icon || ''}" 
+            alt="${escapeHtml(title)}" 
+            class="w-full h-full object-cover group-hover:scale-110 transition duration-500" 
+            loading="lazy"
+            onerror="this.src='https://images.unsplash.com/photo-1594909122845-11baa439b7bf?auto=format&fit=crop&w=400&q=80'"
+          />
+          <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition flex items-center justify-center">
+            <div class="w-10 h-10 rounded-full bg-tv-yellow text-black flex items-center justify-center shadow-lg transform scale-90 group-hover:scale-100 transition">
+              <i data-lucide="play" class="w-5 h-5 fill-current"></i>
+            </div>
           </div>
+          <div class="absolute top-2 left-2 px-1.5 py-0.5 rounded bg-black/60 backdrop-blur text-[10px] font-bold text-yellow-400 border border-white/10 flex items-center space-x-0.5">
+            <span>★</span><span>${m.rating ? parseFloat(m.rating).toFixed(1) : '7.5'}</span>
+          </div>
+          ${m.year ? `<div class="absolute top-2 right-2 px-1.5 py-0.5 rounded bg-black/60 backdrop-blur text-[10px] text-gray-300 border border-white/10">${m.year}</div>` : ''}
         </div>
-        <div class="absolute top-2 left-2 px-1.5 py-0.5 rounded bg-black/60 backdrop-blur text-[10px] font-bold text-yellow-400 border border-white/10 flex items-center space-x-0.5">
-          <span>★</span><span>${m.rating ? parseFloat(m.rating).toFixed(1) : '7.5'}</span>
-        </div>
-        ${m.year ? `<div class="absolute top-2 right-2 px-1.5 py-0.5 rounded bg-black/60 backdrop-blur text-[10px] text-gray-300 border border-white/10">${m.year}</div>` : ''}
+        <h3 class="text-xs sm:text-sm font-semibold text-gray-200 group-hover:text-tv-yellow truncate mt-2 transition" title="${escapeHtml(title)}">${escapeHtml(title)}</h3>
+        <p class="text-[11px] text-gray-500 truncate">Film</p>
       </div>
-      <h3 class="text-xs sm:text-sm font-semibold text-gray-200 group-hover:text-tv-yellow truncate mt-2 transition">${m.name}</h3>
-      <p class="text-[11px] text-gray-500 truncate">Film</p>
-    </div>
-  `).join('');
+    `;
+  }).join('');
 }
 
 function renderHomeSeriesShelf(series) {
   const container = document.getElementById('home-series-shelf');
   if (!container) return;
 
-  container.innerHTML = series.map(s => `
-    <div 
-      onclick="openSeriesDetailPage(${s.id})"
-      class="group flex-shrink-0 w-36 sm:w-44 cursor-pointer"
-    >
-      <div class="relative aspect-[2/3] rounded-xl overflow-hidden bg-zinc-900 border border-white/10 group-hover:border-tv-yellow/60 group-hover:scale-105 transition-all duration-300 shadow-md">
-        <img 
-          src="${s.cover || s.backdrop || ''}" 
-          alt="${s.name}" 
-          class="w-full h-full object-cover group-hover:scale-110 transition duration-500" 
-          loading="lazy"
-          onerror="this.src='https://images.unsplash.com/photo-1522869635100-9f4c5e86aa37?auto=format&fit=crop&w=400&q=80'"
-        />
-        <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition flex items-center justify-center">
-          <div class="w-10 h-10 rounded-full bg-tv-yellow text-black flex items-center justify-center shadow-lg transform scale-90 group-hover:scale-100 transition">
-            <i data-lucide="play" class="w-5 h-5 fill-current"></i>
+  container.innerHTML = series.map(s => {
+    const title = cleanName(s.name, 'series');
+    return `
+      <div 
+        onclick="openSeriesDetailPage(${s.id})"
+        class="group flex-shrink-0 w-36 sm:w-44 cursor-pointer"
+      >
+        <div class="relative aspect-[2/3] rounded-xl overflow-hidden bg-zinc-900 border border-white/10 group-hover:border-tv-yellow/60 group-hover:scale-105 transition-all duration-300 shadow-md">
+          <img 
+            src="${s.cover || s.backdrop || ''}" 
+            alt="${escapeHtml(title)}" 
+            class="w-full h-full object-cover group-hover:scale-110 transition duration-500" 
+            loading="lazy"
+            onerror="this.src='https://images.unsplash.com/photo-1522869635100-9f4c5e86aa37?auto=format&fit=crop&w=400&q=80'"
+          />
+          <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition flex items-center justify-center">
+            <div class="w-10 h-10 rounded-full bg-tv-yellow text-black flex items-center justify-center shadow-lg transform scale-90 group-hover:scale-100 transition">
+              <i data-lucide="play" class="w-5 h-5 fill-current"></i>
+            </div>
           </div>
+          <div class="absolute top-2 left-2 px-1.5 py-0.5 rounded bg-black/60 backdrop-blur text-[10px] font-bold text-yellow-400 border border-white/10 flex items-center space-x-0.5">
+            <span>★</span><span>${s.rating ? parseFloat(s.rating).toFixed(1) : '8.0'}</span>
+          </div>
+          <div class="absolute top-2 right-2 px-1.5 py-0.5 rounded bg-purple-600/80 backdrop-blur text-[10px] font-bold text-white">DİZİ</div>
         </div>
-        <div class="absolute top-2 left-2 px-1.5 py-0.5 rounded bg-black/60 backdrop-blur text-[10px] font-bold text-yellow-400 border border-white/10 flex items-center space-x-0.5">
-          <span>★</span><span>${s.rating ? parseFloat(s.rating).toFixed(1) : '8.0'}</span>
-        </div>
-        <div class="absolute top-2 right-2 px-1.5 py-0.5 rounded bg-purple-600/80 backdrop-blur text-[10px] font-bold text-white">DİZİ</div>
+        <h3 class="text-xs sm:text-sm font-semibold text-gray-200 group-hover:text-tv-yellow truncate mt-2 transition" title="${escapeHtml(title)}">${escapeHtml(title)}</h3>
+        <p class="text-[11px] text-gray-500 truncate">${s.genre || 'Dizi'}</p>
       </div>
-      <h3 class="text-xs sm:text-sm font-semibold text-gray-200 group-hover:text-tv-yellow truncate mt-2 transition">${s.name}</h3>
-      <p class="text-[11px] text-gray-500 truncate">${s.genre || 'Dizi'}</p>
-    </div>
-  `).join('');
+    `;
+  }).join('');
 }
 
 function renderHomeChannelsShelf(channels) {
   const container = document.getElementById('home-channels-shelf');
   if (!container) return;
 
-  container.innerHTML = channels.map(ch => `
-    <div 
-      onclick="openPlayer(${JSON.stringify(ch).replace(/"/g, '&quot;')})"
-      class="group flex-shrink-0 flex items-center space-x-3 px-4 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 hover:border-tv-yellow/50 transition cursor-pointer"
-    >
-      <div class="w-8 h-8 rounded-lg bg-black/60 flex items-center justify-center p-1 overflow-hidden border border-white/10">
-        <img 
-          src="${ch.icon || ''}" 
-          alt="${ch.name}" 
-          class="w-full h-full object-contain" 
-          loading="lazy"
-          onerror="this.style.display='none'; this.nextElementSibling.style.display='block';"
-        />
-        <i data-lucide="tv" class="w-4 h-4 text-gray-400 hidden"></i>
+  container.innerHTML = channels.map(ch => {
+    const title = cleanName(ch.name, 'channel');
+    return `
+      <div 
+        onclick="openPlayer(${JSON.stringify(ch).replace(/"/g, '&quot;')})"
+        class="group flex-shrink-0 flex items-center space-x-3 px-4 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 hover:border-tv-yellow/50 transition cursor-pointer"
+      >
+        <div class="w-8 h-8 rounded-lg bg-black/60 flex items-center justify-center p-1 overflow-hidden border border-white/10">
+          <img 
+            src="${ch.icon || ''}" 
+            alt="${escapeHtml(title)}" 
+            class="w-full h-full object-contain" 
+            loading="lazy"
+            onerror="this.style.display='none'; this.nextElementSibling.style.display='block';"
+          />
+          <i data-lucide="tv" class="w-4 h-4 text-gray-400 hidden"></i>
+        </div>
+        <div>
+          <h4 class="text-xs font-bold text-white group-hover:text-tv-yellow transition truncate max-w-[120px]" title="${escapeHtml(title)}">${escapeHtml(title)}</h4>
+          <span class="text-[10px] text-red-500 font-bold flex items-center space-x-1">
+            <span class="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse"></span>
+            <span>CANLI</span>
+          </span>
+        </div>
       </div>
-      <div>
-        <h4 class="text-xs font-bold text-white group-hover:text-tv-yellow transition truncate max-w-[120px]">${ch.name}</h4>
-        <span class="text-[10px] text-red-500 font-bold flex items-center space-x-1">
-          <span class="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse"></span>
-          <span>CANLI</span>
-        </span>
-      </div>
-    </div>
-  `).join('');
+    `;
+  }).join('');
 }
 
 // =============================================================
@@ -3534,15 +3630,15 @@ async function loadPlatformContent(reset = false) {
               <span>★</span><span>${rating}</span>
             </div>
           </div>
-          <div class="p-3">
-            <h4 class="text-xs sm:text-sm font-semibold text-gray-200 group-hover:text-tv-yellow truncate transition" title="${item.name}">
-              ${item.name}
-            </h4>
-            <div class="flex items-center justify-between mt-1 text-[10px] text-gray-400">
-              <span>${isMovie ? 'Film' : (item.genre || 'Dizi')}</span>
-              ${year ? `<span>${year}</span>` : ''}
+            <div class="p-3">
+              <h4 class="text-xs sm:text-sm font-semibold text-gray-200 group-hover:text-tv-yellow truncate transition" title="${escapeHtml(cleanName(item.name, isMovie ? 'movie' : 'series'))}">
+                ${escapeHtml(cleanName(item.name, isMovie ? 'movie' : 'series'))}
+              </h4>
+              <div class="flex items-center justify-between mt-1 text-[10px] text-gray-400">
+                <span>${isMovie ? 'Film' : (item.genre || 'Dizi')}</span>
+                ${year ? `<span>${year}</span>` : ''}
+              </div>
             </div>
-          </div>
         </div>
       `;
     }).join('');
@@ -3618,6 +3714,7 @@ function renderHomeContinueWatching(items) {
   section.classList.remove('hidden');
   shelf.innerHTML = items.map(item => {
     const isEpisode = item.media_type === 'episode';
+    const cleanItemTitle = cleanName(item.title, isEpisode ? 'episode' : 'movie');
     const pct = item.percentage || 0;
     const progressTime = formatDuration(item.progress_seconds);
     const totalTime = formatDuration(item.duration_seconds);
@@ -3631,7 +3728,7 @@ function renderHomeContinueWatching(items) {
         <div class="relative aspect-video rounded-xl overflow-hidden bg-zinc-900 border border-white/10 group-hover:border-tv-yellow/80 group-hover:scale-105 transition-all duration-300 shadow-md">
           <img 
             src="${item.poster || ''}" 
-            alt="${escapeHtml(item.title)}" 
+            alt="${escapeHtml(cleanItemTitle)}" 
             class="w-full h-full object-cover group-hover:scale-110 transition duration-500" 
             loading="lazy"
             onerror="this.src='https://images.unsplash.com/photo-1574375927938-d5a98e8ffe85?auto=format&fit=crop&w=400&q=80'"
@@ -3651,7 +3748,7 @@ function renderHomeContinueWatching(items) {
             %${pct}
           </div>
         </div>
-        <h3 class="text-xs sm:text-sm font-semibold text-gray-200 group-hover:text-tv-yellow truncate mt-2 transition">${escapeHtml(item.title)}</h3>
+        <h3 class="text-xs sm:text-sm font-semibold text-gray-200 group-hover:text-tv-yellow truncate mt-2 transition" title="${escapeHtml(cleanItemTitle)}">${escapeHtml(cleanItemTitle)}</h3>
         <p class="text-[11px] text-gray-400 truncate flex items-center justify-between">
           <span>${subtitle}</span>
           <span class="text-tv-yellow font-bold text-[10px]">Kaldığın Yerden</span>

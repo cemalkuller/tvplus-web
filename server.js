@@ -81,10 +81,81 @@ async function fetchFromXtream(action = '') {
   return await response.json();
 }
 
-// Kanal ve Kategori isimlerindeki sansürleri düzelt (b**N -> beIN)
-function cleanName(str) {
+// Kanal, Kategori, Dizi, Film ve Bölüm isimlerini temizle ve profesyonel formata çevir
+function cleanName(str, type = 'general', seriesContext = '') {
   if (!str) return '';
-  return str.replace(/b\*{1,4}n/gi, 'beIN').replace(/b\*{1,4}in/gi, 'beIN');
+  let s = String(str).trim();
+
+  // 1. Sansür düzeltmeleri (b**n -> beIN)
+  s = s.replace(/b\*{1,4}n/gi, 'beIN')
+       .replace(/b\*{1,4}in/gi, 'beIN')
+       .replace(/s\*{1,4}r/gi, 'SPOR');
+
+  if (type === 'episode') {
+    // Dizi bölümü: Dizi adını baştan temizle
+    if (seriesContext) {
+      const cleanSeries = seriesContext.replace(/\(\d{4}\)/g, '').trim();
+      const esc = cleanSeries.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      s = s.replace(new RegExp('^' + esc, 'i'), '');
+    }
+    // 'S01E01', 'S1E1', '01x01', '1x01' etiketleri sonrasını al
+    s = s.replace(/^.*?\bS\d+\s*E\d+\b\s*[-–—:]*\s*/i, '');
+    s = s.replace(/^.*?\b\d+x\d+\b\s*[-–—:]*\s*/i, '');
+    s = s.replace(/^[\s\-–—:|•]+/, '').trim();
+
+    // Dil ve format etiketlerini temizle
+    s = s.replace(/\b(TR\s*YERL[İI]|TR\s*DUBLAJ|TR\s*ALTYAZI(LI)?|DUBLAJ|ALTYAZILI?|YERL[İI])\b/gi, '');
+    s = s.replace(/\(\d{4}\)/g, '');
+    s = s.replace(/^[\s\-–—:|•]+/, '').replace(/[\s\-–—:|•]+$/, '').trim();
+
+    return s || '';
+  }
+
+  // Film ve Dizi başlıkları için
+  if (type === 'movie' || type === 'series') {
+    // Tarihleri temizle: '03.09.2026'
+    s = s.replace(/\b\d{2}\.\d{2}\.\d{4}\b/g, '');
+    // Yıldız ve dekoratif karakterler: '⭐⭐'
+    s = s.replace(/[⭐★✦●⚡️🔥✨]+/g, '');
+    // Sezon finali / Vizyon etiketleri
+    s = s.replace(/\b(SEZON\s*F[İI]NAL[İI]|F[İI]NAL|YEN[İI]|V[İI]ZYON)\b/gi, '');
+    // Dil etiketleri: 'TR-EN', 'TR YERLİ', 'TR DUBLAJ', 'TR ALTYAZILI', 'TR', 'EN'
+    s = s.replace(/\b(TR-EN|EN-TR|TR\s*YERL[İI]|TR\s*DUBLAJ|TR\s*ALTYAZI(LI)?|DUBLAJ|ALTYAZILI?|YERL[İI])\b/gi, '');
+    s = s.replace(/\s+TR\b/g, '');
+    // Çözünürlük ve kodek etiketleri (sonda yer alan)
+    s = s.replace(/\b(UHD\s*2160p|2160p|1080p|720p|4K|UHD|FHD|HD|SD|HEVC|H\.?265|H\.?264|BluRay|WEB-DL|WEBRip|DVDRip)\b/gi, '');
+    // Köşeli parantez içindeki gereksizler: '[...]'
+    s = s.replace(/\[[^\]]*\]/g, '');
+    // Boş parantezleri temizle: '()'
+    s = s.replace(/\(\s*\)/g, '');
+    // Baş ve sondaki tire ve boşlukları temizle
+    s = s.replace(/^[\s\-–—:|•]+/, '').replace(/[\s\-–—:|•]+$/, '').trim();
+    s = s.replace(/\s{2,}/g, ' ');
+    return s;
+  }
+
+  // Kanal ve Kategori isimleri için
+  if (type === 'channel' || type === 'category') {
+    // Dekoratif başlık kanalları: '✦●✦ ULUSAL ✦●✦'
+    s = s.replace(/[✦●★⭐⚡️🔥✨]+/g, '').trim();
+    // 'TR: ', 'TR | ', 'TR - ' gibi önekleri kaldır
+    s = s.replace(/^(TR\s*[:|–—-]\s*|VIP\s*[:|–—-]\s*)/i, '');
+    // 'COCUK 7/24 | ' gibi kategori öneklerini sadeleştir
+    if (s.includes('|')) {
+      const parts = s.split('|').map(p => p.trim()).filter(Boolean);
+      s = parts[parts.length - 1]; // Son kısmı al (kanal adı)
+    }
+    // Kalite eklerini temizle (TRT 4K gibi kanal adı olan 4K'yı koru)
+    s = s.replace(/\b(UHD\s*2160p|2160p|1080p|720p|UHD|FHD|HD|SD|HEVC|H\.?265|H\.?264|50FPS|60FPS|RAW|YEDEK)\b/gi, '');
+    // Köşeli parantezleri temizle: '[SIYAH BEYAZ]' -> '(Siyah Beyaz)'
+    s = s.replace(/\[(.*?)\]/g, '($1)');
+    s = s.replace(/\(\s*\)/g, '');
+    s = s.replace(/^[\s\-–—:|•]+/, '').replace(/[\s\-–—:|•]+$/, '').trim();
+    s = s.replace(/\s{2,}/g, ' ');
+    return s;
+  }
+
+  return s;
 }
 
 // Kategori sıralama önceliği (Canlı TV kanallarını öne al, VOD/Dizi dosyalarını ve yetişkin içerikleri sona at)
@@ -123,10 +194,15 @@ function sortStreams(streams, sortedCats) {
     catOrder[String(c.category_id)] = idx;
   });
 
-  return streams.map(s => ({
-    ...s,
-    name: cleanName(s.name)
-  })).sort((a, b) => {
+  return streams
+    .filter(s => {
+      const n = (s.name || '').trim();
+      return !n.includes('✦') && !n.includes('●') && !n.includes('===') && !n.includes('---') && !n.includes('***') && !n.includes('###');
+    })
+    .map(s => ({
+      ...s,
+      name: cleanName(s.name, 'channel')
+    })).sort((a, b) => {
     const orderA = catOrder[String(a.category_id)] ?? 999;
     const orderB = catOrder[String(b.category_id)] ?? 999;
 
@@ -623,7 +699,7 @@ app.get('/api/streams', async (req, res) => {
     const streamsResult = paginated.map(s => ({
       id: s.stream_id,
       num: s.num,
-      name: cleanName(s.name),
+      name: cleanName(s.name, 'channel'),
       icon: s.stream_icon,
       categoryId: s.category_id,
       epgId: s.epg_channel_id,
@@ -840,7 +916,7 @@ async function getVodCategories() {
     .filter(c => !isAdultCategory(c.category_name))
     .map(c => ({
       category_id: String(c.category_id),
-      category_name: cleanName(c.category_name).replace(/TR\s*⭐\s*/g, '').trim(),
+      category_name: cleanName(c.category_name, 'category').replace(/TR\s*⭐\s*/g, '').trim(),
       parent_id: c.parent_id || 0
     }));
   vodCache.categories = clean;
@@ -857,7 +933,7 @@ async function getSeriesCategories() {
     .filter(c => !isAdultCategory(c.category_name))
     .map(c => ({
       category_id: String(c.category_id),
-      category_name: cleanName(c.category_name).replace(/TR\s*⭐\s*/g, '').trim(),
+      category_name: cleanName(c.category_name, 'category').replace(/TR\s*⭐\s*/g, '').trim(),
       parent_id: c.parent_id || 0
     }));
   seriesCache.categories = clean;
@@ -878,7 +954,7 @@ async function getVodStreamsByCategory(catId) {
     .map(m => ({
       id: m.stream_id,
       stream_id: m.stream_id,
-      name: cleanName(m.name),
+      name: cleanName(m.name, 'movie'),
       icon: m.stream_icon,
       rating: m.rating || '',
       rating_5based: m.rating_5based || 0,
@@ -905,7 +981,7 @@ async function getSeriesByCategory(catId) {
     .map(s => ({
       id: s.series_id,
       series_id: s.series_id,
-      name: cleanName(s.name),
+      name: cleanName(s.name, 'series'),
       cover: s.cover,
       plot: s.plot || '',
       cast: s.cast || '',
@@ -933,24 +1009,31 @@ async function getSeriesDetails(seriesId) {
   if (!res.ok) throw new Error('Dizi bilgisi alınamadı');
   const raw = await res.json();
 
+  const seriesTitle = cleanName(raw.info?.name || 'Dizi', 'series');
   const seasons = raw.seasons || [];
   const rawEpisodes = raw.episodes || {};
   const episodesBySeason = {};
 
   for (const [seasonNum, epList] of Object.entries(rawEpisodes)) {
-    episodesBySeason[seasonNum] = (epList || []).map(ep => ({
-      id: ep.id,
-      episode_num: ep.episode_num,
-      title: cleanName(ep.title || `${ep.episode_num}. Bölüm`),
-      container_extension: ep.container_extension || 'mp4',
-      season: ep.season,
-      streamUrl: `/vod/series/${ep.id}.${ep.container_extension || 'mp4'}`,
-      info: ep.info || {}
-    }));
+    episodesBySeason[seasonNum] = (epList || []).map(ep => {
+      let epTitle = cleanName(ep.title || '', 'episode', seriesTitle);
+      if (!epTitle || epTitle.toLowerCase() === 'bölüm' || epTitle.toLowerCase() === 'bolum') {
+        epTitle = `${ep.episode_num}. Bölüm`;
+      }
+      return {
+        id: ep.id,
+        episode_num: ep.episode_num,
+        title: epTitle,
+        container_extension: ep.container_extension || 'mp4',
+        season: ep.season,
+        streamUrl: `/vod/series/${ep.id}.${ep.container_extension || 'mp4'}`,
+        info: ep.info || {}
+      };
+    });
   }
 
   const result = {
-    info: raw.info || {},
+    info: { ...(raw.info || {}), name: seriesTitle },
     seasons,
     episodes: episodesBySeason
   };
@@ -1364,7 +1447,7 @@ app.get('/api/featured', async (req, res) => {
       return priorityChannelNames.some(p => u.includes(p)) && !u.includes('XXX');
     }).slice(0, 12).map(s => ({
       id: s.stream_id,
-      name: cleanName(s.name),
+      name: cleanName(s.name, 'channel'),
       icon: s.stream_icon,
       streamUrl: `/stream/${s.stream_id}.m3u8`
     }));
@@ -1693,8 +1776,8 @@ app.get(['/tv.m3u', '/tv.m3u8', '/playlist.m3u', '/playlist.m3u8'], async (req, 
         continue;
       }
 
-      const channelName = cleanName(s.name);
-      const cleanGroup = cleanName(groupTitle).replace(/TR\s*⭐\s*/g, '').replace(/VIP\s*⭐\s*/g, '').trim();
+      const channelName = cleanName(s.name, 'channel');
+      const cleanGroup = cleanName(groupTitle, 'category').replace(/TR\s*⭐\s*/g, '').replace(/VIP\s*⭐\s*/g, '').trim();
 
       const streamUrl = (streamType === 'ts')
         ? `${baseUrl}/live/${s.stream_id}.ts`
@@ -1726,7 +1809,7 @@ app.get('/player_api.php', async (req, res) => {
       .filter(c => !c.category_name.toUpperCase().includes('XXX') && !['112', '547', '865', '866'].includes(String(c.category_id)))
       .map(c => ({
         category_id: String(c.category_id),
-        category_name: cleanName(c.category_name).replace(/TR\s*⭐\s*/g, '').replace(/VIP\s*⭐\s*/g, '').trim(),
+        category_name: cleanName(c.category_name, 'category').replace(/TR\s*⭐\s*/g, '').replace(/VIP\s*⭐\s*/g, '').trim(),
         parent_id: 0
       }));
 
@@ -1735,7 +1818,7 @@ app.get('/player_api.php', async (req, res) => {
       .filter(s => !isAdultContent(s) && !s.name.includes('✦●✦') && !s.name.includes('==='))
       .map(s => ({
         num: s.num,
-        name: cleanName(s.name),
+        name: cleanName(s.name, 'channel'),
         stream_type: 'live',
         stream_id: s.stream_id,
         stream_icon: s.stream_icon,
