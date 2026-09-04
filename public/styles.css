@@ -531,3 +531,78 @@ body {
   border-color: var(--tv-yellow);
   font-weight: 800;
 }
+
+/* Netflix-style platform shelves */
+.platform-shelf-row {
+  display: flex;
+  gap: 0.55rem;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 0.4rem 0 1rem;
+  scrollbar-width: none;
+  cursor: grab;
+  user-select: none;
+  touch-action: pan-y;
+}
+.platform-shelf-row.dragging { cursor: grabbing; scroll-behavior: auto; }
+.platform-shelf-row.dragging * { pointer-events: none; }
+.platform-shelf-row::-webkit-scrollbar { display: none; }
+.platform-poster-card {
+  position: relative;
+  flex: 0 0 clamp(138px, 14vw, 210px);
+  cursor: pointer;
+  transition: transform 180ms ease, z-index 180ms ease;
+}
+.platform-poster-card:hover { transform: scale(1.075); z-index: 5; }
+.platform-poster-frame {
+  position: relative;
+  aspect-ratio: 2 / 3;
+  overflow: hidden;
+  border-radius: 0.35rem;
+  background: linear-gradient(135deg, #262626, #111);
+  box-shadow: 0 8px 24px rgba(0,0,0,.45);
+}
+.platform-poster-frame img { width: 100%; height: 100%; object-fit: cover; }
+.platform-card-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: .2rem;
+  padding: .8rem;
+  color: white;
+  background: linear-gradient(to top, rgba(0,0,0,.96), rgba(0,0,0,.05) 65%);
+  opacity: 0;
+  transition: opacity 180ms ease;
+}
+.platform-poster-card:hover .platform-card-overlay { opacity: 1; }
+.platform-card-overlay strong { font-size: .8rem; line-height: 1.1rem; }
+.platform-card-overlay small { color: #b3b3b3; font-size: .65rem; }
+.platform-card-play {
+  display: grid;
+  place-items: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  margin-bottom: .35rem;
+  border-radius: 999px;
+  color: black;
+  background: white;
+}
+.platform-ranked-card { flex-basis: clamp(200px, 20vw, 285px); padding-left: 3.8rem; }
+.platform-rank {
+  position: absolute;
+  left: 0;
+  bottom: -.25rem;
+  z-index: -1;
+  color: #141414;
+  font-size: clamp(7rem, 12vw, 10rem);
+  font-weight: 900;
+  line-height: .85;
+  -webkit-text-stroke: 2px #777;
+}
+@media (max-width: 640px) {
+  .platform-poster-card { flex-basis: 125px; }
+  .platform-ranked-card { flex-basis: 180px; padding-left: 3rem; }
+  .platform-rank { font-size: 6rem; }
+}

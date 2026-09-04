@@ -16,7 +16,7 @@ const STATE = {
   favorites: JSON.parse(localStorage.getItem('tvplus_favorites') || '[]'),
   recents: JSON.parse(localStorage.getItem('tvplus_recents') || '[]'),
   volume: parseFloat(localStorage.getItem('tvplus_volume') || '1'),
-  isMuted: localStorage.getItem('tvplus_muted') === 'true',
+  isMuted: false, // Ses her zaman açık başlasın, ses seviyesi hatırlansın
   profileName: localStorage.getItem('tvplus_profile_name') || 'Cemal Küller',
   hls: null,
   clockInterval: null,
@@ -36,6 +36,8 @@ const STATE = {
   platformOffset: 0,
   platformLimit: 36,
   platformSearchQuery: '',
+  platformYear: '',
+  platformCategory: '',
   homeFeatured: null,
   // Filmler & Sinema
   movieCategories: [],
@@ -56,9 +58,20 @@ const STATE = {
   currentSeries: null,
   activeSeriesSeason: 1,
   currentMedia: null,
+  sourceDuration: 0,
+  mediaTrackBase: '',
+  mediaStartOffset: 0,
+  mediaSeekTarget: null,
+  mediaSeekTimer: null,
+  selectedAudioTrack: '',
+  selectedQuality: 'original',
   resumeBannerTimer: null,
   lastWatchedSeriesEpisode: null
 };
+
+// Tek eşzamanlı bağlantı limitine karşı sunucunun bu sekmenin eski VOD akışını
+// kapatabilmesi için sekme başına sabit bir oturum kimliği üretilir.
+const CLIENT_STREAM_ID = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
 
 // DOM References
 const video = document.getElementById('video-player');
@@ -373,6 +386,10 @@ function switchTab(tab, push = true) {
   const viewSeries = document.getElementById('view-series');
   const viewSeriesDetail = document.getElementById('view-series-detail');
   const viewPlatform = document.getElementById('view-platform');
+  const mainHeader = document.getElementById('main-header');
+
+  // Platform sayfası kendi Netflix tarzı gezinme çubuğunu kullanır.
+  mainHeader?.classList.toggle('hidden', tab === 'platform');
 
   navHome?.classList.remove('text-white', 'font-bold');
   navLive?.classList.remove('text-white', 'font-bold');
@@ -817,10 +834,11 @@ function openPlayer(channel, push = true) {
   playerModal.classList.remove('hidden');
   document.body.style.overflow = 'hidden';
 
-  // Restore volume and unmute
-  video.muted = STATE.isMuted;
-  video.volume = STATE.volume;
+  // Ses her zaman açık başlasın, seviye hatırlansın
+  video.muted = false;
+  video.volume = STATE.volume || 1;
   updateVolumeUI();
+  hideUnmuteBanner();
 
   const btnEpg = document.getElementById('btn-toggle-epg');
   const btnSw = document.getElementById('btn-toggle-switcher');
@@ -833,7 +851,13 @@ function openPlayer(channel, push = true) {
   document.getElementById('player-program-title').textContent = `${cleanedName} Canlı Yayını`;
   document.getElementById('player-time-range').textContent = '20:00 - 22:30';
 
-  // Live UI Controls (CANLI badge, clock, return to live)
+  // Canlı TV kontrolleri: Geri/ileri sarma, progress bar ve canlıya dön butonu OLMASIN
+  document.getElementById('btn-player-rewind')?.classList.add('hidden');
+  document.getElementById('btn-player-forward')?.classList.add('hidden');
+  document.getElementById('player-progress-track')?.classList.add('hidden');
+  document.getElementById('btn-live-return')?.classList.add('hidden');
+
+  // Live UI Controls (Sadece CANLI badge ve saat)
   const liveGroup = document.getElementById('player-live-badge-group');
   if (liveGroup) liveGroup.classList.remove('hidden');
   document.getElementById('btn-toggle-epg')?.classList.remove('hidden');
@@ -893,6 +917,10 @@ function openPlayer(channel, push = true) {
 function openMediaItem(item, type = 'movie') {
   if (!item) return;
   STATE.currentMedia = { ...item, type };
+  STATE.sourceDuration = 0;
+  STATE.mediaStartOffset = 0;
+  STATE.mediaSeekTarget = null;
+  clearTimeout(STATE.mediaSeekTimer);
   STATE.currentChannel = null;
   const sessionId = Date.now();
   STATE.playbackSession = sessionId;
@@ -900,10 +928,17 @@ function openMediaItem(item, type = 'movie') {
   playerModal.classList.remove('hidden');
   document.body.style.overflow = 'hidden';
 
-  // Restore volume
-  video.muted = STATE.isMuted;
-  video.volume = STATE.volume;
+  // Ses her zaman açık başlasın, seviye hatırlansın
+  video.muted = false;
+  video.volume = STATE.volume || 1;
   updateVolumeUI();
+  hideUnmuteBanner();
+
+  // VOD / Dizi / Film kontrolleri: Geri/ileri sarma butonları ve progress bar görünür olsun
+  document.getElementById('btn-player-rewind')?.classList.remove('hidden');
+  document.getElementById('btn-player-forward')?.classList.remove('hidden');
+  document.getElementById('player-progress-track')?.classList.remove('hidden');
+  document.getElementById('btn-live-return')?.classList.add('hidden');
 
   // 1. CANLI ile ilgili TÜM unsurları KESİNLİKLE GİZLE
   const liveGroup = document.getElementById('player-live-badge-group');
@@ -923,10 +958,12 @@ function openMediaItem(item, type = 'movie') {
   cancelNextEpisodeAutoplay();
 
   // 3. Başlıklar ve Dizi / Film Ayrımı
+  let title;
   if (type === 'episode') {
     // Dizi Bölümü
     if (btnEpisodes) btnEpisodes.classList.remove('hidden');
     const seriesTitle = cleanName(item.seriesTitle || STATE.currentSeries?.info?.name || 'Dizi', 'series');
+    title = seriesTitle;
     let epTitle = cleanName(item.title || item.name || '', 'episode', seriesTitle);
 
     document.getElementById('player-channel-title').textContent = seriesTitle;
@@ -947,6 +984,7 @@ function openMediaItem(item, type = 'movie') {
   } else {
     // Film
     const movieTitle = cleanName(item.name || item.title, 'movie');
+    title = movieTitle;
     if (btnEpisodes) btnEpisodes.classList.add('hidden');
     document.getElementById('player-episodes-tray')?.classList.add('hidden');
     document.getElementById('player-channel-title').textContent = movieTitle;
@@ -961,6 +999,20 @@ function openMediaItem(item, type = 'movie') {
   clearTimeout(STATE.resumeBannerTimer);
 
   const mediaId = type === 'episode' ? item.id : (item.stream_id || item.id);
+  const mediaKind = type === 'episode' ? 'series' : 'movie';
+  const mediaExt = item.container_extension || String(item.streamUrl || '').match(/\.([a-z0-9]+)(?:\?|$)/i)?.[1] || 'mp4';
+  STATE.mediaTrackBase = `${mediaKind}/${mediaId}.${mediaExt}`;
+  STATE.selectedAudioTrack = '';
+  STATE.selectedQuality = 'original';
+  loadMediaTrackOptions();
+  fetch(`/api/vod/duration/${mediaKind}/${mediaId}.${mediaExt}`)
+    .then(response => response.ok ? response.json() : Promise.reject(new Error('Süre alınamadı')))
+    .then(data => {
+      if (STATE.playbackSession !== sessionId) return;
+      STATE.sourceDuration = Number(data.duration) || 0;
+      updateVodTimeDisplay();
+    })
+    .catch(err => console.warn('VOD duration error:', err.message));
   const cacheKey = `tvplus_resume_${type}_${mediaId}`;
   let targetResumeSec = parseFloat(localStorage.getItem(cacheKey) || '0');
 
@@ -973,7 +1025,8 @@ function openMediaItem(item, type = 'movie') {
     if (data.item && data.item.progress_seconds > 5 && data.item.percentage < 95) {
       const serverSec = parseFloat(data.item.progress_seconds);
       targetResumeSec = serverSec;
-      if (video.currentTime < 5 && Math.abs(serverSec - video.currentTime) > 5) {
+      const position = getMediaPosition();
+      if (position < 5 && Math.abs(serverSec - position) > 5) {
         applyResumeSeconds(serverSec);
       }
     }
@@ -991,39 +1044,49 @@ function openMediaItem(item, type = 'movie') {
     STATE.hls = null;
   }
 
-  video.src = item.streamUrl;
+  video.src = buildMediaSrc();
   video.load();
 
   // Medya meta verileri yüklendiğinde veya oynatma başladığında kaldığı yere atla
   const onReadyToResume = () => {
     video.removeEventListener('loadedmetadata', onReadyToResume);
-    if (targetResumeSec > 5 && video.currentTime < 5) {
+    if (targetResumeSec > 5 && getMediaPosition() < 5) {
+      // Resume konum varsa oynatmayı başlatmadan banner göster
       applyResumeSeconds(targetResumeSec);
+      video.pause();
+      return;
     }
+    // Resume yok, normal oynatma başlat
+    video.play().catch(e => {
+      if (e.name === 'NotAllowedError') {
+        video.muted = true;
+        updateVolumeUI();
+        video.play().catch(() => {});
+        showUnmuteBanner();
+        setupAutoUnmuteOnFirstGesture();
+      }
+    });
   };
   video.addEventListener('loadedmetadata', onReadyToResume, { once: true });
 
-  const playPromise = video.play();
-  if (playPromise !== undefined) {
-    playPromise.then(() => {
-      if (STATE.playbackSession !== sessionId || playerModal.classList.contains('hidden')) {
-        video.pause();
-        video.muted = true;
-        video.volume = 0;
-        video.removeAttribute('src');
-        video.src = '';
-      } else if (targetResumeSec > 5 && video.currentTime < 5) {
-        applyResumeSeconds(targetResumeSec);
-      }
-    }).catch(e => {
-      if (playerModal.classList.contains('hidden')) return;
-      if (e.name !== 'AbortError') {
-        video.muted = true;
-        STATE.isMuted = true;
-        updateVolumeUI();
-        video.play().catch(() => {});
-      }
-    });
+  // Resume konum yoksa normal oynatma başlat
+  if (targetResumeSec <= 5) {
+    const playPromise = video.play();
+    if (playPromise !== undefined) {
+      playPromise.catch(e => {
+        if (playerModal.classList.contains('hidden')) return;
+        if (e.name === 'NotAllowedError') {
+          video.muted = true;
+          updateVolumeUI();
+          video.play().catch(() => {});
+          showUnmuteBanner();
+          setupAutoUnmuteOnFirstGesture();
+        } else if (e.name !== 'AbortError') {
+          showError('Bu içerik oynatılamadı. Lütfen tekrar deneyin.');
+          console.error('VOD playback error:', e);
+        }
+      });
+    }
   }
 
   if (type === 'episode') {
@@ -1042,6 +1105,59 @@ function openMediaItem(item, type = 'movie') {
   initIcons();
 }
 
+async function loadMediaTrackOptions() {
+  const button = document.getElementById('btn-media-options');
+  try {
+    const response = await fetch(`/api/vod/tracks/${STATE.mediaTrackBase}`);
+    if (!response.ok) throw new Error('Parça bilgileri alınamadı');
+    const data = await response.json();
+    const audio = document.getElementById('media-audio-select');
+    const subtitles = document.getElementById('media-subtitle-select');
+    audio.innerHTML = (data.audio || []).map((track, i) => `<option value="${track.index}">${track.title || track.language.toUpperCase() || `Ses ${i + 1}`}</option>`).join('') || '<option>Varsayılan</option>';
+    subtitles.innerHTML = '<option value="">Kapalı</option>' + (data.subtitles || []).map((track, i) => `<option value="${track.index}">${track.title || track.language.toUpperCase() || `Altyazı ${i + 1}`}</option>`).join('');
+    STATE.selectedAudioTrack = data.audio?.[0]?.index ?? '';
+    button?.classList.remove('hidden');
+    initIcons();
+  } catch (_) {
+    button?.classList.add('hidden');
+  }
+}
+
+function toggleMediaOptions() {
+  document.getElementById('media-options-panel')?.classList.toggle('hidden');
+}
+
+function reloadMediaWithOptions() {
+  if (!STATE.mediaTrackBase) return;
+  showLoading(true, 'Yayın seçeneği uygulanıyor...');
+  // Ses / kalite değişiminde bulunulan konumdan devam et
+  restartMediaAt(getMediaPosition());
+}
+
+function changeMediaAudio(index) {
+  STATE.selectedAudioTrack = index;
+  reloadMediaWithOptions();
+}
+
+function changeMediaQuality(quality) {
+  STATE.selectedQuality = quality;
+  reloadMediaWithOptions();
+}
+
+function changeMediaSubtitle(index) {
+  video.querySelectorAll('track[data-dynamic-subtitle]').forEach(track => track.remove());
+  if (!index) return;
+  const track = document.createElement('track');
+  track.kind = 'subtitles';
+  track.label = document.getElementById('media-subtitle-select')?.selectedOptions[0]?.textContent || 'Altyazı';
+  track.srclang = 'tr';
+  track.src = `/vod/subtitle/${STATE.mediaTrackBase}/${index}.vtt`;
+  track.default = true;
+  track.dataset.dynamicSubtitle = 'true';
+  video.appendChild(track);
+  track.addEventListener('load', () => { track.track.mode = 'showing'; });
+}
+
 function closePlayer(push = true) {
   // Oynatma sonlanırken ilerlemeyi anında MySQL ve localStorage'a kaydet
   saveCurrentProgress(true);
@@ -1050,6 +1166,9 @@ function closePlayer(push = true) {
   STATE.currentChannel = null;
   STATE.currentMedia = null;
   STATE.playbackSession = null;
+  STATE.mediaStartOffset = 0;
+  STATE.mediaSeekTarget = null;
+  clearTimeout(STATE.mediaSeekTimer);
   cancelNextEpisodeAutoplay();
 
   // Resume banner'ı kapat
@@ -1156,7 +1275,10 @@ function startPlayback(channel) {
       maxMaxBufferLength: 90,
       backBufferLength: 30,
       liveSyncDurationCount: 3,
-      liveMaxLatencyDurationCount: 10
+      liveMaxLatencyDurationCount: 10,
+      startFragPrefetch: false,
+      nudgeMaxRetry: 5,
+      maxFragLookUpTolerance: 0.25
     });
 
     hls.loadSource(streamUrl);
@@ -1183,12 +1305,13 @@ function startPlayback(channel) {
             video.pause();
             return;
           }
-          if (e.name !== 'AbortError') {
-            console.warn('Muted autoplay fallback...');
+          if (e.name === 'NotAllowedError') {
+            console.warn('Otomatik oynatma kısıtlaması, ses geçici sessize alınıyor...');
             video.muted = true;
-            STATE.isMuted = true;
             updateVolumeUI();
             video.play().catch(() => {});
+            showUnmuteBanner();
+            setupAutoUnmuteOnFirstGesture();
           }
         });
       }
@@ -1196,8 +1319,18 @@ function startPlayback(channel) {
 
     hls.on(Hls.Events.ERROR, (event, data) => {
       if (STATE.playbackSession !== sessionId || playerModal.classList.contains('hidden')) return;
-      console.warn('HLS Event Error:', data.type, data.details);
       if (data.details === 'bufferStalledError') {
+        hls.startLoad();
+        if (hls.liveSyncPosition && Math.abs(video.currentTime - hls.liveSyncPosition) > 1.5) {
+          video.currentTime = hls.liveSyncPosition;
+        }
+        return;
+      }
+      if (data.details === 'bufferNudgeOnStall' || data.details === 'internalException') {
+        return;
+      }
+      if (data.type === Hls.ErrorTypes.NETWORK_ERROR && data.details === 'manifestLoadError') {
+        console.warn('Canlı yayın manifest yüklenemedi, yeniden deneniyor...');
         hls.startLoad();
         return;
       }
@@ -1234,21 +1367,116 @@ function retryCurrentStream() {
   }
 }
 
-// Rewind / Forward 10 seconds (Görsel 5: ⟲ 10 and ⟳ 10)
-function seekRelative(seconds) {
-  if (video && !isNaN(video.currentTime)) {
-    video.currentTime = Math.max(0, video.currentTime + seconds);
-    showToast(`${Math.abs(seconds)} saniye ${seconds > 0 ? 'ileri' : 'geri'} alındı`);
+// -------------------------------------------------------------
+// VOD SANAL ZAMAN ÇİZGİSİ
+// VOD akışı sunucuda canlı olarak fragmented MP4'e dönüştürüldüğü için
+// tarayıcı HTTP Range ile arama yapamaz; arabellek dışına yapılan her
+// video.currentTime ataması akışı başa sarar. Bu yüzden gerçek konum
+// "sunucu başlangıç offseti + video.currentTime" olarak hesaplanır ve
+// arabellek dışı atlamalar akış ?start= ile yeniden başlatılarak yapılır.
+// -------------------------------------------------------------
+function buildMediaSrc(startSec = 0) {
+  const params = new URLSearchParams();
+  if (STATE.selectedAudioTrack !== '') params.set('audio', STATE.selectedAudioTrack);
+  if (STATE.selectedQuality !== 'original') params.set('quality', STATE.selectedQuality);
+  if (startSec > 0) params.set('start', Math.floor(startSec));
+  params.set('sid', CLIENT_STREAM_ID);
+  const query = params.toString();
+  return `/vod/browser/${STATE.mediaTrackBase}${query ? `?${query}` : ''}`;
+}
+
+// Oynatıcının kullanıcıya gösterilen gerçek konumu
+function getMediaPosition() {
+  if (!STATE.currentMedia) return Number(video.currentTime) || 0;
+  if (STATE.mediaSeekTarget !== null) return STATE.mediaSeekTarget;
+  return STATE.mediaStartOffset + (Number(video.currentTime) || 0);
+}
+
+function restartMediaAt(targetSec) {
+  if (!STATE.mediaTrackBase) return;
+  clearTimeout(STATE.mediaSeekTimer);
+  STATE.mediaStartOffset = Math.max(0, Math.floor(targetSec));
+  STATE.mediaSeekTarget = null;
+
+  // Eski metadata temizle (yeni src atamadan önce)
+  video.pause();
+  video.currentTime = 0;
+  video.src = '';
+
+  video.src = buildMediaSrc(STATE.mediaStartOffset);
+  video.load();
+  video.currentTime = 0;
+
+  // Hemen zaman gösterimini güncelle (offset atandı, video başında)
+  updateVodTimeDisplay();
+
+  // Oynatma başla (timeupdate event'leri progress bar'ı otomatik güncelleyecek)
+  const playPromise = video.play();
+  if (playPromise !== undefined) {
+    playPromise.catch(err => {
+      console.warn('[VOD Seek Play]', `Offset=${STATE.mediaStartOffset}s`, err.name, err.message);
+      if (err.name === 'NotAllowedError') {
+        video.muted = true;
+        video.play().catch(() => {});
+      }
+    });
   }
 }
 
+function seekMediaTo(targetSec) {
+  if (!video) return;
+  const duration = getEffectiveDuration();
+  let target = Math.max(0, Number(targetSec) || 0);
+  if (duration > 0) target = Math.min(target, Math.max(0, duration - 1));
+
+  // Canlı yayın: davranış aynı kalır
+  if (!STATE.currentMedia) {
+    if (!isNaN(video.currentTime)) video.currentTime = target;
+    return;
+  }
+
+  // VOD: yeni akış aç. Hızlı tekrarlanan atlamalarda gereksiz ffmpeg süreci açmamak için kısa gecikme.
+  STATE.mediaSeekTarget = target;
+  updateVodTimeDisplay();
+  showLoading(true, `${formatDuration(target)} konumuna atlanıyor...`);
+  clearTimeout(STATE.mediaSeekTimer);
+  STATE.mediaSeekTimer = setTimeout(() => restartMediaAt(target), 400);
+}
+
+// Rewind / Forward 10 seconds (Sadece VOD/Dizi/Film için, Canlı TV'de yok)
+function seekRelative(seconds) {
+  if (!STATE.currentMedia) return; // Canlı TV direkt aksın, geri/ileri sarma yok
+  if (!video || isNaN(video.currentTime)) return;
+  seekMediaTo(getMediaPosition() + seconds);
+  showToast(`${Math.abs(seconds)} saniye ${seconds > 0 ? 'ileri' : 'geri'} alındı`);
+}
+
 function handleScrubberClick(e) {
+  if (!STATE.currentMedia) return; // Canlı TV'de timeline tıklaması yok
   const rect = e.currentTarget.getBoundingClientRect();
   const clickX = e.clientX - rect.left;
   const ratio = Math.max(0, Math.min(1, clickX / rect.width));
-  if (video.duration && !isNaN(video.duration)) {
-    video.currentTime = video.duration * ratio;
+  const duration = getEffectiveDuration();
+  if (duration > 0) {
+    seekMediaTo(duration * ratio);
   }
+}
+
+function getEffectiveDuration() {
+  if (STATE.currentMedia && STATE.sourceDuration > 0) return STATE.sourceDuration;
+  if (STATE.currentMedia && Number.isFinite(video.duration)) return video.duration;
+  return 0; // Canlı yayında süre sayımı ve timeline olmasın, doğrudan canlı aksın
+}
+
+function updateVodTimeDisplay() {
+  if (!STATE.currentMedia) return;
+  const duration = getEffectiveDuration();
+  if (duration <= 0) return;
+  const current = getMediaPosition();
+  const timeRange = document.getElementById('player-time-range');
+  if (timeRange) timeRange.textContent = `${formatDuration(current)} / ${formatDuration(duration)}`;
+  const fill = document.getElementById('player-progress-fill');
+  if (fill) fill.style.width = `${Math.min(100, (current / duration) * 100)}%`;
 }
 
 function updateLiveClock() {
@@ -1264,9 +1492,9 @@ function updateLiveClock() {
 // PLAYER CONTROLS & 5s INACTIVITY HIDING
 // -------------------------------------------------------------
 function initPlayerEvents() {
-  // Volume restore
-  video.volume = STATE.volume;
-  video.muted = STATE.isMuted;
+  // Volume restore: her zaman ses açık, seviye hatırlanır
+  video.muted = false;
+  video.volume = STATE.volume || 1;
   updateVolumeUI();
 
   // Player Events
@@ -1300,20 +1528,24 @@ function initPlayerEvents() {
       video.volume = 0;
       return;
     }
-    if (video.duration && !isNaN(video.duration)) {
-      const pct = (video.currentTime / video.duration) * 100;
+
+    // Canlı yayında süre sayımı ve sarı ilerleme çubuğu tamamen kapalı
+    if (!STATE.currentMedia) return;
+
+    const effectiveDuration = getEffectiveDuration();
+    if (effectiveDuration > 0) {
+      const position = getMediaPosition();
+      const pct = (position / effectiveDuration) * 100;
       const fill = document.getElementById('player-progress-fill');
-      if (fill) fill.style.width = `${pct}%`;
+      if (fill) fill.style.width = `${Math.min(100, pct)}%`;
 
-      if (STATE.currentMedia) {
-        const cur = formatDuration(video.currentTime);
-        const dur = formatDuration(video.duration);
-        const timeRange = document.getElementById('player-time-range');
-        if (timeRange) timeRange.textContent = `${cur} / ${dur}`;
+      const cur = formatDuration(position);
+      const dur = formatDuration(effectiveDuration);
+      const timeRange = document.getElementById('player-time-range');
+      if (timeRange) timeRange.textContent = `${cur} / ${dur}`;
 
-        // MySQL ve Cache senkronizasyonu (5 saniyede bir)
-        saveCurrentProgress(false);
-      }
+      // MySQL ve Cache senkronizasyonu (5 saniyede bir)
+      saveCurrentProgress(false);
     }
   });
 
@@ -1401,7 +1633,7 @@ function resetInactivity() {
   if (!video.paused) {
     STATE.inactivityTimer = setTimeout(() => {
       // If channel drawer, EPG tray, or channel switcher is open, keep controls visible
-      if (!channelDrawer.classList.contains('open') && !isTrayOpen && !isSwitcherOpen) {
+      if (!channelDrawer?.classList.contains('open') && !isTrayOpen && !isSwitcherOpen) {
         playerModal.classList.add('user-inactive');
       }
     }, 5000); // 5 Saniye
@@ -1428,27 +1660,31 @@ function updatePlayPauseIcons(isPlaying) {
 function toggleMute() {
   video.muted = !video.muted;
   STATE.isMuted = video.muted;
-  localStorage.setItem('tvplus_muted', STATE.isMuted);
+  if (!video.muted && video.volume === 0) {
+    video.volume = STATE.volume || 1;
+  }
   updateVolumeUI();
 }
 
 function setVolume(val) {
+  val = Math.max(0, Math.min(1, parseFloat(val) || 0));
   video.volume = val;
   video.muted = (val === 0);
   STATE.volume = val;
   STATE.isMuted = video.muted;
-  localStorage.setItem('tvplus_volume', val);
-  localStorage.setItem('tvplus_muted', STATE.isMuted);
+  localStorage.setItem('tvplus_volume', String(val));
   updateVolumeUI();
+  hideUnmuteBanner();
 }
 
 function updateVolumeUI() {
   const volSlider = document.getElementById('player-vol-slider');
   const btnMute = document.getElementById('btn-player-mute');
-  if (volSlider) volSlider.value = STATE.isMuted ? 0 : STATE.volume;
+  const isMuted = video.muted || video.volume === 0;
+  if (volSlider) volSlider.value = isMuted ? 0 : (video.volume || STATE.volume || 1);
 
   let icon = 'volume-2';
-  if (video.muted || video.volume === 0) {
+  if (isMuted) {
     icon = 'volume-x';
   } else if (video.volume < 0.5) {
     icon = 'volume-1';
@@ -1458,6 +1694,134 @@ function updateVolumeUI() {
     initIcons();
   }
 }
+
+function showUnmuteBanner() {
+  const banner = document.getElementById('player-unmute-banner');
+  if (banner) {
+    banner.classList.remove('hidden');
+    initIcons();
+  }
+}
+
+function hideUnmuteBanner() {
+  document.getElementById('player-unmute-banner')?.classList.add('hidden');
+}
+
+function unmuteFromBanner() {
+  if (video) {
+    video.muted = false;
+    video.volume = STATE.volume || 1;
+    STATE.isMuted = false;
+    updateVolumeUI();
+  }
+  hideUnmuteBanner();
+}
+
+let autoUnmuteListenerAttached = false;
+function setupAutoUnmuteOnFirstGesture() {
+  if (autoUnmuteListenerAttached) return;
+  autoUnmuteListenerAttached = true;
+  const onGesture = () => {
+    autoUnmuteListenerAttached = false;
+    window.removeEventListener('click', onGesture, true);
+    window.removeEventListener('keydown', onGesture, true);
+    window.removeEventListener('touchstart', onGesture, true);
+    if (video && video.muted && !playerModal.classList.contains('hidden')) {
+      video.muted = false;
+      video.volume = STATE.volume || 1;
+      STATE.isMuted = false;
+      updateVolumeUI();
+      hideUnmuteBanner();
+    }
+  };
+  window.addEventListener('click', onGesture, true);
+  window.addEventListener('keydown', onGesture, true);
+  window.addEventListener('touchstart', onGesture, true);
+}
+
+// =============================================================
+// CHROMECAST YAYINLAMA DESTEĞİ (Google Cast & RemotePlayback)
+// =============================================================
+function handleCastClick() {
+  // 1. HTML5 Video RemotePlayback API (Chrome ve Android TV desteği)
+  if (video && video.remote && typeof video.remote.prompt === 'function') {
+    video.remote.prompt()
+      .then(() => {
+        showToast('Yayınlama cihazına bağlanılıyor...');
+      })
+      .catch(err => {
+        if (err.name !== 'NotFoundError' && err.name !== 'NotAllowedError') {
+          console.warn('[Cast Remote Error]', err);
+          showToast('Yayınlama cihazı arandı.');
+        }
+      });
+    return;
+  }
+
+  // 2. Google Cast Framework SDK
+  if (window.cast && window.cast.framework) {
+    try {
+      const castContext = cast.framework.CastContext.getInstance();
+      castContext.requestSession()
+        .then(() => {
+          showToast('Chromecast oturumu başlatıldı');
+          loadMediaOnCastSession();
+        })
+        .catch(err => {
+          if (err !== 'cancel') {
+            console.warn('[Cast Framework Error]', err);
+            showToast('Chromecast cihazı seçilmedi');
+          }
+        });
+      return;
+    } catch (e) {
+      console.warn('Cast framework request error:', e);
+    }
+  }
+
+  showToast('Chrome menüsünden (⋮) "Yayınla..." seçeneği ile TV nize aktarabilirsiniz.');
+}
+
+function loadMediaOnCastSession() {
+  if (!window.chrome || !chrome.cast || !chrome.cast.media) return;
+  try {
+    const castSession = cast.framework.CastContext.getInstance().getCurrentSession();
+    if (!castSession) return;
+
+    let mediaUrl = video.currentSrc || video.src;
+    if (mediaUrl && mediaUrl.startsWith('/')) {
+      mediaUrl = window.location.origin + mediaUrl;
+    }
+    const contentType = STATE.currentMedia ? 'video/mp4' : 'application/x-mpegurl';
+    const mediaInfo = new chrome.cast.media.MediaInfo(mediaUrl, contentType);
+    mediaInfo.metadata = new chrome.cast.media.GenericMediaMetadata();
+    mediaInfo.metadata.title = document.getElementById('player-channel-title')?.textContent || 'TV+';
+    mediaInfo.metadata.subtitle = document.getElementById('player-program-title')?.textContent || '';
+
+    const request = new chrome.cast.media.LoadRequest(mediaInfo);
+    request.currentTime = video.currentTime || 0;
+    castSession.loadMedia(request).then(
+      () => { showToast('Yayın TV ekranına aktarıldı'); },
+      (errorCode) => { console.warn('Cast load media error:', errorCode); }
+    );
+  } catch (err) {
+    console.warn('loadMediaOnCastSession error:', err);
+  }
+}
+
+window['__onGCastApiAvailable'] = function(isAvailable) {
+  if (isAvailable && window.cast && window.cast.framework) {
+    try {
+      cast.framework.CastContext.getInstance().setOptions({
+        receiverApplicationId: chrome.cast.media.DEFAULT_MEDIA_RECEIVER_APP_ID,
+        autoJoinPolicy: chrome.cast.AutoJoinPolicy.ORIGIN_SCOPED
+      });
+      console.log('[Google Cast SDK] Hazır.');
+    } catch (e) {
+      console.warn('[Google Cast SDK] Init hatası:', e);
+    }
+  }
+};
 
 function toggleFullscreen() {
   if (!document.fullscreenElement) {
@@ -1799,6 +2163,8 @@ function cleanName(str, type = 'general', seriesContext = '') {
     s = s.replace(/\b(UHD\s*2160p|2160p|1080p|720p|4K|UHD|FHD|HD|SD|HEVC|H\.?265|H\.?264|BluRay|WEB-DL|WEBRip|DVDRip)\b/gi, '');
     // Köşeli parantez içindeki gereksizler: '[...]'
     s = s.replace(/\[[^\]]*\]/g, '');
+    s = s.replace(/[\[(]\s*(19\d{2}|20\d{2})\s*[\])]/g, '');
+    s = s.replace(/(?:\s|[-–—|:])+(19\d{2}|20\d{2})\s*$/g, '');
     // Boş parantezleri temizle: '()'
     s = s.replace(/\(\s*\)/g, '');
     // Baş ve sondaki tire ve boşlukları temizle
@@ -3492,6 +3858,8 @@ async function openPlatformPage(platformSlug, filterType = 'all', push = true) {
   STATE.platformFilter = filterType;
   STATE.platformOffset = 0;
   STATE.platformSearchQuery = '';
+  STATE.platformYear = '';
+  STATE.platformCategory = '';
 
   const searchInput = document.getElementById('platform-search-input');
   if (searchInput) searchInput.value = '';
@@ -3512,30 +3880,26 @@ async function loadPlatformContent(reset = false) {
 
   const loadingEl = document.getElementById('platform-loading');
   const emptyEl = document.getElementById('platform-empty');
-  const gridEl = document.getElementById('platform-items-grid');
-  const loadMoreEl = document.getElementById('platform-load-more-container');
+  const shelvesEl = document.getElementById('platform-shelves-container');
 
   if (reset) {
     STATE.platformOffset = 0;
-    if (gridEl) gridEl.innerHTML = '';
+    if (shelvesEl) shelvesEl.innerHTML = '';
     loadingEl?.classList.remove('hidden');
     emptyEl?.classList.add('hidden');
-    loadMoreEl?.classList.add('hidden');
   }
 
   updatePlatformFilterButtons();
 
   try {
-    const params = new URLSearchParams({
-      type: STATE.platformFilter,
-      limit: STATE.platformLimit,
-      offset: STATE.platformOffset
-    });
+    const params = new URLSearchParams({ type: STATE.platformFilter });
     if (STATE.platformSearchQuery) {
       params.set('search', STATE.platformSearchQuery);
     }
+    if (STATE.platformYear) params.set('year', STATE.platformYear);
+    if (STATE.platformCategory) params.set('category', STATE.platformCategory);
 
-    const res = await fetch(`/api/platform/${STATE.activePlatform}?${params.toString()}`);
+    const res = await fetch(`/api/platform/${STATE.activePlatform}/shelves?${params.toString()}`);
     if (!res.ok) throw new Error('Platform içeriği alınamadı');
 
     const data = await res.json();
@@ -3545,135 +3909,194 @@ async function loadPlatformContent(reset = false) {
     STATE.platformMovieCount = data.movieCount || 0;
     STATE.platformSeriesCount = data.seriesCount || 0;
 
-    // Header ve İstatistikleri Güncelle
     const p = data.platform || {};
-    const logoEl = document.getElementById('platform-hero-logo');
-    if (logoEl) logoEl.innerHTML = getPlatformLogoHtml(p.id || STATE.activePlatform);
-
-    const nameEl = document.getElementById('platform-hero-name');
-    if (nameEl) nameEl.textContent = p.name || STATE.activePlatform.toUpperCase();
-
-    const taglineEl = document.getElementById('platform-hero-tagline');
-    if (taglineEl) taglineEl.textContent = p.tagline || 'Tüm film ve dizi koleksiyonu';
-
-    const cardEl = document.getElementById('platform-hero-card');
-    if (cardEl && p.bgGradient) {
-      cardEl.className = `relative rounded-2xl p-6 sm:p-8 overflow-hidden border border-white/10 shadow-2xl bg-gradient-to-r ${p.bgGradient}`;
-    }
-
-    document.getElementById('platform-stat-total').innerHTML = `
-      <i data-lucide="layers" class="w-3.5 h-3.5 text-tv-yellow"></i>
-      <span>${data.total} İçerik</span>
-    `;
-    document.getElementById('platform-stat-movies').innerHTML = `
-      <i data-lucide="film" class="w-3.5 h-3.5 text-sky-400"></i>
-      <span>${data.movieCount} Film</span>
-    `;
-    document.getElementById('platform-stat-series').innerHTML = `
-      <i data-lucide="clapperboard" class="w-3.5 h-3.5 text-purple-400"></i>
-      <span>${data.seriesCount} Dizi</span>
-    `;
+    const platformLogo = getPlatformLogoHtml(p.id || STATE.activePlatform);
+    document.getElementById('platform-topbar-logo').innerHTML = platformLogo;
+    document.getElementById('platform-hero-logo-mini').innerHTML = platformLogo;
+    updatePlatformSelectOptions(data.years || [], data.categories || []);
 
     // Filtre butonlarındaki sayıları güncelle
     const filterAllBtn = document.getElementById('plat-filter-all');
-    if (filterAllBtn) filterAllBtn.textContent = `Tümü (${data.movieCount + data.seriesCount})`;
+    if (filterAllBtn) filterAllBtn.textContent = `Tümü (${data.total})`;
     const filterMoviesBtn = document.getElementById('plat-filter-movies');
     if (filterMoviesBtn) filterMoviesBtn.textContent = `Filmler (${data.movieCount})`;
     const filterSeriesBtn = document.getElementById('plat-filter-series');
     if (filterSeriesBtn) filterSeriesBtn.textContent = `Diziler (${data.seriesCount})`;
 
-    const countInfo = document.getElementById('platform-count-info');
-    if (countInfo) {
-      countInfo.textContent = `Toplam ${data.total} içerikten ${Math.min(STATE.platformOffset + data.items.length, data.total)} tanesi gösteriliyor`;
-    }
-
-    if (data.items.length === 0 && reset) {
+    if (!data.hero || !data.shelves?.length) {
       emptyEl?.classList.remove('hidden');
       return;
     }
 
-    // Kartları çiz
-    const cardsHtml = data.items.map(item => {
-      const isMovie = item.mediaType === 'movie';
-      const poster = isMovie ? item.icon : (item.cover || item.backdrop);
-      const rating = item.rating ? parseFloat(item.rating).toFixed(1) : (isMovie ? '7.5' : '8.0');
-      const year = item.year || (item.releaseDate ? item.releaseDate.slice(0, 4) : '');
-
-      const clickAction = isMovie 
-        ? `openMediaItem(${JSON.stringify(item).replace(/"/g, '&quot;')}, 'movie')`
-        : `openSeriesDetailPage(${item.id})`;
-
-      return `
-        <div 
-          onclick="${clickAction}" 
-          class="group cursor-pointer bg-zinc-900/60 rounded-xl overflow-hidden border border-white/10 hover:border-tv-yellow/70 hover:scale-[1.03] transition-all duration-300 shadow-md flex flex-col justify-between"
-        >
-          <div class="relative aspect-[2/3] w-full overflow-hidden bg-black/40">
-            <img 
-              src="${poster || ''}" 
-              alt="${item.name}" 
-              class="w-full h-full object-cover group-hover:scale-105 transition duration-500" 
-              loading="lazy"
-              onerror="this.src='https://images.unsplash.com/photo-1594909122845-11baa439b7bf?auto=format&fit=crop&w=400&q=80'"
-            />
-            <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition flex items-center justify-center">
-              <div class="w-10 h-10 rounded-full bg-tv-yellow text-black flex items-center justify-center shadow-lg transform scale-90 group-hover:scale-100 transition">
-                <i data-lucide="play" class="w-5 h-5 fill-current"></i>
-              </div>
-            </div>
-            <!-- Type badge -->
-            <div class="absolute top-2 left-2 px-1.5 py-0.5 rounded text-[10px] font-bold ${isMovie ? 'bg-sky-500 text-black' : 'bg-purple-600 text-white'}">
-              ${isMovie ? 'FİLM' : 'DİZİ'}
-            </div>
-            <!-- Rating badge -->
-            <div class="absolute top-2 right-2 px-1.5 py-0.5 rounded bg-black/60 backdrop-blur text-[10px] font-bold text-yellow-400 border border-white/10 flex items-center space-x-0.5">
-              <span>★</span><span>${rating}</span>
-            </div>
-          </div>
-            <div class="p-3">
-              <h4 class="text-xs sm:text-sm font-semibold text-gray-200 group-hover:text-tv-yellow truncate transition" title="${escapeHtml(cleanName(item.name, isMovie ? 'movie' : 'series'))}">
-                ${escapeHtml(cleanName(item.name, isMovie ? 'movie' : 'series'))}
-              </h4>
-              <div class="flex items-center justify-between mt-1 text-[10px] text-gray-400">
-                <span>${isMovie ? 'Film' : (item.genre || 'Dizi')}</span>
-                ${year ? `<span>${year}</span>` : ''}
-              </div>
-            </div>
-        </div>
-      `;
-    }).join('');
-
-    if (reset) {
-      gridEl.innerHTML = cardsHtml;
-    } else {
-      gridEl.insertAdjacentHTML('beforeend', cardsHtml);
-    }
-
-    // Load More visibility
-    if (STATE.platformOffset + data.items.length < data.total) {
-      loadMoreEl?.classList.remove('hidden');
-    } else {
-      loadMoreEl?.classList.add('hidden');
-    }
+    renderPlatformHero(data.hero, p);
+    renderPlatformShelves(data.shelves);
 
     initIcons();
   } catch (err) {
     console.error('Platform load error:', err);
     loadingEl?.classList.add('hidden');
+    emptyEl?.classList.remove('hidden');
   }
 }
 
+function getPlatformItemAction(item) {
+  if (item.mediaType === 'movie') {
+    return `openMediaItem(${JSON.stringify(item).replace(/'/g, "&#39;")}, "movie")`;
+  }
+  return `openSeriesDetailPage(${Number(item.id)})`;
+}
+
+function renderPlatformHero(item, platform) {
+  const isMovie = item.mediaType === 'movie';
+  const title = cleanName(item.name || '', isMovie ? 'movie' : 'series');
+  const image = item.backdrop || item.cover || item.icon || '';
+  const year = item.year || (item.releaseDate || '').slice(0, 4) || '';
+  const rating = parseFloat(item.rating || 0);
+  const action = getPlatformItemAction(item);
+
+  document.getElementById('platform-hero-backdrop').style.backgroundImage = image
+    ? `url("${String(image).replace(/"/g, '%22')}")`
+    : 'linear-gradient(120deg, #181818, #050505)';
+  document.getElementById('platform-hero-title').textContent = title;
+  document.getElementById('platform-hero-desc').textContent = item.plot || `${platform.name || 'Platform'} kataloğundan seçilen ${isMovie ? 'film' : 'dizi'}.`;
+  document.getElementById('platform-hero-type-badge').textContent = isMovie ? 'Film' : 'Dizi';
+  document.getElementById('platform-hero-rating').innerHTML = rating > 0 ? `<span>★</span><span>${rating.toFixed(1)}</span>` : '';
+  document.getElementById('platform-hero-year').textContent = year;
+  document.getElementById('platform-hero-genre').textContent = item.genre || '';
+  document.getElementById('platform-hero-play').setAttribute('onclick', action);
+  document.getElementById('platform-hero-info').setAttribute('onclick', action);
+}
+
+function renderPlatformShelves(shelves) {
+  const container = document.getElementById('platform-shelves-container');
+  if (!container) return;
+
+  container.innerHTML = shelves.map(shelf => `
+    <section class="platform-shelf">
+      <button ${shelf.category ? `onclick="setPlatformCategory('${escapeHtml(shelf.category).replace(/'/g, '&#39;')}')"` : ''} class="mb-3 flex items-center gap-1 text-left text-lg sm:text-xl font-bold text-white ${shelf.category ? 'hover:text-gray-300 cursor-pointer' : 'cursor-default'}">
+        <span>${escapeHtml(shelf.title)}</span>
+        ${shelf.category ? '<i data-lucide="chevron-right" class="w-5 h-5"></i>' : ''}
+      </button>
+      <div class="platform-shelf-row">
+        ${shelf.items.map(item => renderPlatformShelfCard(item, shelf.type === 'top10')).join('')}
+      </div>
+    </section>
+  `).join('');
+  initPlatformShelfDragging();
+}
+
+function initPlatformShelfDragging() {
+  document.querySelectorAll('.platform-shelf-row').forEach(row => {
+    let startX = 0;
+    let startScroll = 0;
+    let dragged = false;
+    let pointerDown = false;
+    row.addEventListener('pointerdown', event => {
+      startX = event.clientX;
+      startScroll = row.scrollLeft;
+      dragged = false;
+      pointerDown = true;
+    });
+    row.addEventListener('pointermove', event => {
+      if (!pointerDown) return;
+      const distance = event.clientX - startX;
+      if (Math.abs(distance) > 5 && !dragged) {
+        dragged = true;
+        row.classList.add('dragging');
+        row.setPointerCapture(event.pointerId);
+      }
+      if (!dragged) return;
+      row.scrollLeft = startScroll - distance;
+    });
+    const finish = event => {
+      pointerDown = false;
+      if (row.hasPointerCapture(event.pointerId)) row.releasePointerCapture(event.pointerId);
+      row.classList.remove('dragging');
+    };
+    row.addEventListener('pointerup', finish);
+    row.addEventListener('pointercancel', finish);
+    row.addEventListener('click', event => {
+      if (dragged) {
+        event.preventDefault();
+        event.stopPropagation();
+        dragged = false;
+      }
+    }, true);
+  });
+}
+
+function updatePlatformSelectOptions(years, categories) {
+  const yearSelect = document.getElementById('platform-year-filter');
+  const categorySelect = document.getElementById('platform-category-filter');
+  if (yearSelect) {
+    yearSelect.innerHTML = '<option value="">Tüm yıllar</option>' + years.map(year => `<option value="${year}">${year}</option>`).join('');
+    yearSelect.value = STATE.platformYear;
+  }
+  if (categorySelect) {
+    categorySelect.innerHTML = '<option value="">Tüm kategoriler</option>' + categories.map(category => `<option value="${escapeHtml(category)}">${escapeHtml(category)}</option>`).join('');
+    categorySelect.value = STATE.platformCategory;
+  }
+  document.getElementById('platform-reset-filters')?.classList.toggle('hidden', !STATE.platformYear && !STATE.platformCategory);
+}
+
+function setPlatformYear(year) {
+  STATE.platformYear = year;
+  loadPlatformContent(true);
+}
+
+function setPlatformCategory(category) {
+  STATE.platformCategory = category;
+  loadPlatformContent(true);
+}
+
+function resetPlatformFilters() {
+  STATE.platformYear = '';
+  STATE.platformCategory = '';
+  loadPlatformContent(true);
+}
+
+function renderPlatformShelfCard(item, showRank = false) {
+  const isMovie = item.mediaType === 'movie';
+  const title = cleanName(item.name || '', isMovie ? 'movie' : 'series');
+  const poster = item.icon || item.cover || item.backdrop || '';
+  const year = item.year || (item.releaseDate || '').slice(0, 4) || '';
+  const rating = parseFloat(item.rating || 0);
+  const genre = (item.genre || '').split(/[\/,&]/)[0].trim();
+  const action = getPlatformItemAction(item);
+  return `
+    <article class="platform-poster-card ${showRank ? 'platform-ranked-card' : ''}" onclick='${action}'>
+      ${showRank ? `<span class="platform-rank">${item.rank}</span>` : ''}
+      <div class="platform-poster-frame">
+        <img src="${escapeHtml(poster)}" alt="${escapeHtml(title)}" loading="lazy" onerror="this.style.display='none'">
+        <div class="platform-card-overlay">
+          <span class="platform-card-play"><i data-lucide="play" class="w-5 h-5 fill-current"></i></span>
+          <strong>${escapeHtml(title)}</strong>
+          <span class="platform-card-meta">${year ? `<span class="platform-card-year">${year}</span>` : ''}${genre ? `<span class="platform-card-genre">${escapeHtml(genre)}</span>` : ''}</span>
+        </div>
+        ${rating > 0 ? `<div class="platform-card-rating">★ ${rating.toFixed(1)}</div>` : ''}
+      </div>
+      <div class="platform-card-info">
+        <p class="platform-card-title">${escapeHtml(title)}</p>
+        <div class="platform-card-details">
+          ${year ? `<span class="platform-card-year-tag">${year}</span>` : ''}
+          ${genre ? `<span class="platform-card-genre-tag">${escapeHtml(genre)}</span>` : ''}
+          <span class="platform-card-type-tag ${isMovie ? 'movie' : 'series'}">${isMovie ? 'Film' : 'Dizi'}</span>
+        </div>
+      </div>
+    </article>
+  `;
+}
+
 function updatePlatformFilterButtons() {
-  const allBtn = document.getElementById('plat-filter-all');
-  const moviesBtn = document.getElementById('plat-filter-movies');
-  const seriesBtn = document.getElementById('plat-filter-series');
-
-  const activeClass = 'px-5 py-2 rounded-full text-xs font-bold transition bg-tv-yellow text-black shadow-lg';
-  const inactiveClass = 'px-5 py-2 rounded-full text-xs font-semibold transition bg-white/5 hover:bg-white/10 text-gray-300 hover:text-white border border-white/10';
-
-  if (allBtn) allBtn.className = STATE.platformFilter === 'all' ? activeClass : inactiveClass;
-  if (moviesBtn) moviesBtn.className = STATE.platformFilter === 'movies' ? activeClass : inactiveClass;
-  if (seriesBtn) seriesBtn.className = STATE.platformFilter === 'series' ? activeClass : inactiveClass;
+  ['all', 'movies', 'series'].forEach(type => {
+    [document.getElementById(`plat-filter-${type}`), document.getElementById(`plat-filter-${type}-m`)].forEach(btn => {
+      if (!btn) return;
+      btn.classList.toggle('bg-white/20', STATE.platformFilter === type);
+      btn.classList.toggle('text-white', STATE.platformFilter === type);
+      btn.classList.toggle('font-semibold', STATE.platformFilter === type);
+      btn.classList.toggle('text-gray-300', STATE.platformFilter !== type);
+    });
+  });
 }
 
 function setPlatformFilter(filterType) {
@@ -3817,7 +4240,7 @@ function resumeSeriesEpisode(lastWatched) {
 function applyResumeSeconds(sec) {
   if (sec <= 5 || !video) return;
   try {
-    video.currentTime = sec;
+    seekMediaTo(sec);
   } catch (_) {}
 
   const banner = document.getElementById('resume-banner');
@@ -3828,13 +4251,21 @@ function applyResumeSeconds(sec) {
     clearTimeout(STATE.resumeBannerTimer);
     STATE.resumeBannerTimer = setTimeout(() => {
       banner.classList.add('hidden');
+      // Resume timeout sonrasında oynatma başlat (eğer pausedsa)
+      if (video && video.paused) {
+        video.play().catch(() => {});
+      }
     }, 7000);
   }
 }
 
 function restartCurrentMedia() {
   if (!video) return;
-  video.currentTime = 0;
+  if (STATE.currentMedia && STATE.mediaStartOffset > 0) {
+    restartMediaAt(0);
+  } else {
+    video.currentTime = 0;
+  }
   const banner = document.getElementById('resume-banner');
   if (banner) banner.classList.add('hidden');
   clearTimeout(STATE.resumeBannerTimer);
@@ -3847,8 +4278,8 @@ let lastSavedTs = 0;
 
 function saveCurrentProgress(force = false) {
   if (!STATE.currentMedia || !video) return;
-  const dur = Math.floor(video.duration || 0);
-  const cur = Math.floor(video.currentTime || 0);
+  const dur = Math.floor(getEffectiveDuration());
+  const cur = Math.floor(getMediaPosition());
   if (dur <= 0 || isNaN(dur)) return;
 
   const now = Date.now();
@@ -4022,5 +4453,3 @@ window.saveCurrentProgress = saveCurrentProgress;
 window.openTvLoginModal = openTvLoginModal;
 window.closeTvLoginModal = closeTvLoginModal;
 window.handleClassicLogin = handleClassicLogin;
-
-

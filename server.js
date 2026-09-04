@@ -5,6 +5,7 @@ import fs from 'fs';
 import os from 'os';
 import { fileURLToPath } from 'url';
 import { Readable } from 'stream';
+import { spawn } from 'child_process';
 import QRCode from 'qrcode';
 import { CONFIG, saveEnvFile } from './config.js';
 import { initDatabase, getDb } from './db.js';
@@ -126,6 +127,9 @@ function cleanName(str, type = 'general', seriesContext = '') {
     s = s.replace(/\b(UHD\s*2160p|2160p|1080p|720p|4K|UHD|FHD|HD|SD|HEVC|H\.?265|H\.?264|BluRay|WEB-DL|WEBRip|DVDRip)\b/gi, '');
     // Köşeli parantez içindeki gereksizler: '[...]'
     s = s.replace(/\[[^\]]*\]/g, '');
+    // Yayın yılını başlıktan kaldır; ayrı `year` alanında tutulur.
+    s = s.replace(/[\[(]\s*(19\d{2}|20\d{2})\s*[\])]/g, '');
+    s = s.replace(/(?:\s|[-–—|:])+(19\d{2}|20\d{2})\s*$/g, '');
     // Boş parantezleri temizle: '()'
     s = s.replace(/\(\s*\)/g, '');
     // Baş ve sondaki tire ve boşlukları temizle
@@ -551,6 +555,227 @@ app.get('/vod/series/:idWithExt', async (req, res) => {
   await proxyMediaStream(req, res, targetUrl);
 });
 
+// Tarayıcıların desteklemediği MKV / E-AC-3 VOD akışlarını fragmented MP4 + AAC olarak sunar.
+// Video yeniden kodlanmaz; yalnızca ses dönüştürüldüğü için sunucu yükü sınırlı kalır.
+// ffmpeg bu sistemde bir sarmalayıcı (chocolatey shim) üzerinden çalıştığı için
+// proc.kill() yalnızca sarmalayıcıyı öldürür; asıl ffmpeg süreci yayını okumaya ve
+// hesabın tek bağlantı yuvasını tutmaya devam eder. Bu yüzden tüm süreç ağacı öldürülür.
+function killProcessTree(proc) {
+  if (!proc || proc.exitCode !== null) return;
+  if (process.platform === 'win32') {
+    try {
+      spawn('taskkill', ['/PID', String(proc.pid), '/T', '/F'], { windowsHide: true, stdio: 'ignore' })
+        .on('error', () => { try { proc.kill(); } catch (_) {} });
+      return;
+    } catch (_) {}
+  }
+  try {
+    proc.kill('SIGKILL');
+  } catch (_) {}
+}
+
+// Bu IPTV hesabı yalnızca 1 eşzamanlı bağlantıya izin verdiği için (max_connections=1)
+// her istemci için tek bir dönüştürme süreci tutulur. İleri alma ya da ses/kalite
+// değişiminde önce eski süreç öldürülür ve bağlantı yuvasının boşalması beklenir.
+const vodSessions = new Map(); // sid -> ffmpeg süreci
+
+function killVodSession(sid) {
+  const proc = vodSessions.get(sid);
+  if (!proc) return Promise.resolve();
+  vodSessions.delete(sid);
+  if (proc.exitCode !== null || proc.signalCode) return Promise.resolve();
+  return new Promise(resolve => {
+    let settled = false;
+    const done = () => {
+      if (settled) return;
+      settled = true;
+      resolve();
+    };
+    proc.once('close', done);
+    setTimeout(done, 2500);
+    killProcessTree(proc);
+  });
+}
+
+app.get('/vod/browser/:mediaType/:idWithExt', async (req, res) => {
+  const { mediaType, idWithExt } = req.params;
+  if (!['movie', 'series'].includes(mediaType) || !/^\d+\.[a-z0-9]+$/i.test(idWithExt)) {
+    return res.status(400).send('Geçersiz medya yolu.');
+  }
+
+  const { host, username, password } = CONFIG.iptv;
+  const targetUrl = `${host}/${mediaType}/${username}/${password}/${idWithExt}`;
+  res.setHeader('Content-Type', 'video/mp4');
+  res.setHeader('Cache-Control', 'no-store');
+  res.setHeader('Access-Control-Allow-Origin', '*');
+
+  const audioIndex = /^\d+$/.test(String(req.query.audio || '')) ? String(req.query.audio) : null;
+  const quality = ['1080', '720', '480'].includes(String(req.query.quality)) ? String(req.query.quality) : 'original';
+  
+  // Kaliteye göre video parametreleri:
+  // 'original': Orijinal çözünürlüğü koruyarak hızlı libx264 ile encode eder.
+  // Bu sayede video ve ses aynı filtergraph'tan geçerek her zaman %100 senkron çalışır.
+  let videoArgs;
+  if (quality === '720') {
+    videoArgs = ['-c:v', 'libx264', '-preset', 'veryfast', '-crf', '23', '-vf', 'scale=-2:720:force_original_aspect_ratio=decrease'];
+  } else if (quality === '480') {
+    videoArgs = ['-c:v', 'libx264', '-preset', 'veryfast', '-crf', '24', '-vf', 'scale=-2:480:force_original_aspect_ratio=decrease'];
+  } else if (quality === '1080') {
+    videoArgs = ['-c:v', 'libx264', '-preset', 'veryfast', '-crf', '22', '-vf', 'scale=-2:1080:force_original_aspect_ratio=decrease'];
+  } else {
+    // 'original' - orijinal çözünürlük, çok hızlı x264, senkron garantili
+    videoArgs = ['-c:v', 'libx264', '-preset', 'veryfast', '-crf', '21'];
+  }
+
+  // Akış canlı dönüştürüldüğü için tarayıcı HTTP Range ile ileri/geri saramaz.
+  // İstemci ileri alındığında ?start=<saniye> ile yeni bir akış ister; ffmpeg
+  // girişi -ss ile o noktadan açar ve çıkış zaman damgaları tekrar 0'dan başlar.
+  const startSec = Number.parseFloat(req.query.start);
+  const seekArgs = Number.isFinite(startSec) && startSec > 0
+    ? ['-ss', String(Math.floor(startSec))]
+    : ['-ss', '0'];
+
+  const ffmpegArgs = [
+    '-hide_banner', '-loglevel', 'error',
+    ...seekArgs,
+    '-i', targetUrl,
+    '-map', '0:v:0', '-map', audioIndex ? `0:${audioIndex}` : '0:a:0?',
+    ...videoArgs,
+    '-c:a', 'aac', '-ac', '2', '-b:a', '192k',
+    '-af', 'aresample=async=1:min_hard_comp=0.100000:first_pts=0',
+    '-avoid_negative_ts', 'make_zero',
+    '-movflags', 'frag_keyframe+empty_moov+default_base_moof',
+    '-f', 'mp4', 'pipe:1'
+  ];
+
+  const sid = String(req.query.sid || req.ip || 'default').slice(0, 64);
+  await killVodSession(sid);
+  // Sağlayıcının bağlantı yuvasını serbest bırakması için kısa bekleme
+  await new Promise(resolve => setTimeout(resolve, 400));
+  if (req.destroyed || res.writableEnded) return;
+
+  const MAX_TRIES = 3;
+  let current = null;
+
+  const startTranscode = attempt => {
+    const ffmpeg = spawn('ffmpeg', ffmpegArgs, { windowsHide: true });
+    current = ffmpeg;
+    vodSessions.set(sid, ffmpeg);
+
+    let bytes = 0;
+    ffmpeg.stdout.on('data', chunk => { bytes += chunk.length; });
+    ffmpeg.stdout.pipe(res, { end: false });
+    ffmpeg.stderr.on('data', data => console.warn('[VOD Dönüştürme]', String(data).trim()));
+
+    ffmpeg.on('error', err => {
+      console.error('[FFmpeg Hatası]', err.message);
+      if (!res.headersSent) res.status(500);
+      if (!res.writableEnded) res.end();
+    });
+
+    ffmpeg.on('close', () => {
+      if (vodSessions.get(sid) === ffmpeg) vodSessions.delete(sid);
+      if (current !== ffmpeg || res.writableEnded || req.destroyed) return;
+
+      // Tek bağlantı limiti yüzünden hiç veri gelmediyse yuva boşalınca yeniden dene
+      if (bytes === 0 && attempt < MAX_TRIES) {
+        console.warn(`[VOD] Akış boş döndü, yeniden deneniyor (${attempt + 1}/${MAX_TRIES})`);
+        setTimeout(() => {
+          const taken = vodSessions.get(sid);
+          if (taken && taken !== ffmpeg) return; // başka bir istek devraldı
+          if (!res.writableEnded && !req.destroyed) startTranscode(attempt + 1);
+        }, 800);
+        return;
+      }
+
+      res.end();
+    });
+  };
+
+  res.on('close', () => {
+    if (!current) return;
+    if (vodSessions.get(sid) === current) vodSessions.delete(sid);
+    killProcessTree(current);
+  });
+
+  startTranscode(1);
+});
+
+app.get('/api/vod/tracks/:mediaType/:idWithExt', (req, res) => {
+  const { mediaType, idWithExt } = req.params;
+  if (!['movie', 'series'].includes(mediaType) || !/^\d+\.[a-z0-9]+$/i.test(idWithExt)) return res.status(400).json({ error: 'Geçersiz medya yolu.' });
+  const { host, username, password } = CONFIG.iptv;
+  const targetUrl = `${host}/${mediaType}/${username}/${password}/${idWithExt}`;
+  const probe = spawn('ffprobe', ['-v', 'error', '-show_streams', '-of', 'json', targetUrl], { windowsHide: true });
+  let output = '';
+  probe.stdout.on('data', chunk => { output += chunk; });
+  probe.on('close', code => {
+    if (code !== 0) return res.status(502).json({ error: 'Medya bilgisi okunamadı.' });
+    try {
+      const streams = JSON.parse(output).streams || [];
+      const normalize = stream => ({ index: stream.index, codec: stream.codec_name, language: stream.tags?.language || 'und', title: stream.tags?.title || '' });
+      const video = streams.find(s => s.codec_type === 'video');
+      res.json({
+        audio: streams.filter(s => s.codec_type === 'audio').map(normalize),
+        subtitles: streams.filter(s => s.codec_type === 'subtitle').map(normalize),
+        source: video ? { width: video.width, height: video.height, codec: video.codec_name } : null
+      });
+    } catch (err) { res.status(502).json({ error: err.message }); }
+  });
+});
+
+app.get('/vod/subtitle/:mediaType/:idWithExt/:trackIndex.vtt', (req, res) => {
+  const { mediaType, idWithExt, trackIndex } = req.params;
+  if (!['movie', 'series'].includes(mediaType) || !/^\d+\.[a-z0-9]+$/i.test(idWithExt) || !/^\d+$/.test(trackIndex)) return res.status(400).end();
+  const { host, username, password } = CONFIG.iptv;
+  const targetUrl = `${host}/${mediaType}/${username}/${password}/${idWithExt}`;
+  res.type('text/vtt');
+  const ffmpeg = spawn('ffmpeg', ['-hide_banner', '-loglevel', 'error', '-i', targetUrl, '-map', `0:${trackIndex}`, '-f', 'webvtt', 'pipe:1'], { windowsHide: true });
+  ffmpeg.stdout.pipe(res);
+  res.on('close', () => killProcessTree(ffmpeg));
+});
+
+const vodDurationCache = new Map();
+
+app.get('/api/vod/duration/:mediaType/:idWithExt', async (req, res) => {
+  const { mediaType, idWithExt } = req.params;
+  if (!['movie', 'series'].includes(mediaType) || !/^\d+\.[a-z0-9]+$/i.test(idWithExt)) {
+    return res.status(400).json({ error: 'Geçersiz medya yolu.' });
+  }
+
+  const cacheKey = `${mediaType}/${idWithExt}`;
+  if (vodDurationCache.has(cacheKey)) {
+    return res.json({ duration: vodDurationCache.get(cacheKey) });
+  }
+
+  const { host, username, password } = CONFIG.iptv;
+  const targetUrl = `${host}/${mediaType}/${username}/${password}/${idWithExt}`;
+  try {
+    const duration = await new Promise((resolve, reject) => {
+      const ffprobe = spawn('ffprobe', [
+        '-v', 'error',
+        '-show_entries', 'format=duration',
+        '-of', 'default=noprint_wrappers=1:nokey=1',
+        targetUrl
+      ], { windowsHide: true });
+      let output = '';
+      let error = '';
+      ffprobe.stdout.on('data', chunk => { output += chunk; });
+      ffprobe.stderr.on('data', chunk => { error += chunk; });
+      ffprobe.on('error', reject);
+      ffprobe.on('close', code => {
+        const seconds = Number.parseFloat(output.trim());
+        if (code === 0 && Number.isFinite(seconds) && seconds > 0) resolve(seconds);
+        else reject(new Error(error.trim() || 'Süre okunamadı'));
+      });
+    });
+    vodDurationCache.set(cacheKey, duration);
+    res.json({ duration });
+  } catch (err) {
+    res.status(502).json({ error: err.message });
+  }
+});
+
 // Xtream standart yol yönlendirmeleri
 app.get('/movie/:username/:password/:idWithExt', async (req, res) => {
   req.url = `/vod/movie/${req.params.idWithExt}`;
@@ -962,7 +1187,7 @@ async function getVodStreamsByCategory(catId) {
       added: m.added,
       container_extension: m.container_extension || 'mp4',
       categoryId: String(m.category_id),
-      streamUrl: `/vod/movie/${m.stream_id}.${m.container_extension || 'mp4'}`
+      streamUrl: `/vod/browser/movie/${m.stream_id}.${m.container_extension || 'mp4'}`
     }));
   vodCache.streamsByCat.set(key, { time: Date.now(), data: clean });
   return clean;
@@ -988,6 +1213,7 @@ async function getSeriesByCategory(catId) {
       director: s.director || '',
       genre: s.genre || '',
       releaseDate: s.releaseDate || s.release_date || '',
+      year: (s.releaseDate || s.release_date || '').slice(0, 4) || (s.name?.match(/\b(19\d\d|20\d\d)\b/) || [])[0] || '',
       rating: s.rating || '',
       rating_5based: s.rating_5based || 0,
       backdrop: (s.backdrop_path && s.backdrop_path[0]) || '',
@@ -1026,7 +1252,7 @@ async function getSeriesDetails(seriesId) {
         title: epTitle,
         container_extension: ep.container_extension || 'mp4',
         season: ep.season,
-        streamUrl: `/vod/series/${ep.id}.${ep.container_extension || 'mp4'}`,
+        streamUrl: `/vod/browser/series/${ep.id}.${ep.container_extension || 'mp4'}`,
         info: ep.info || {}
       };
     });
@@ -1100,7 +1326,7 @@ app.get('/api/vod/movie/:id', async (req, res) => {
         rating: info.rating || '',
         year: info.releasedate?.slice(0, 4) || '',
         container_extension: ext,
-        streamUrl: `/vod/movie/${movieId}.${ext}`
+        streamUrl: `/vod/browser/movie/${movieId}.${ext}`
       });
     }
     res.status(404).json({ error: 'Film bulunamadı' });
@@ -1298,8 +1524,8 @@ async function getPlatformData(platformId) {
   );
 
   const [movieLists, seriesLists] = await Promise.all([
-    Promise.all(matchedVodCats.map(c => getVodStreamsByCategory(c.category_id))),
-    Promise.all(matchedSerCats.map(c => getSeriesByCategory(c.category_id)))
+    Promise.all(matchedVodCats.map(async c => (await getVodStreamsByCategory(c.category_id)).map(item => ({ ...item, categoryName: c.category_name })))),
+    Promise.all(matchedSerCats.map(async c => (await getSeriesByCategory(c.category_id)).map(item => ({ ...item, categoryName: c.category_name }))))
   ]);
 
   // Tekilleştir ve etiketle
@@ -1327,11 +1553,45 @@ async function getPlatformData(platformId) {
     }
   });
 
-  return {
+  const result = {
     platform,
     movies: Array.from(movieMap.values()),
     series: Array.from(seriesMap.values())
   };
+  await persistPlatformCatalog(result).catch(err => console.warn('[Katalog] DB senkronizasyonu atlandı:', err.message));
+  return result;
+}
+
+async function persistPlatformCatalog(data) {
+  persistPlatformCatalog.syncedAt ||= new Map();
+  const lastSync = persistPlatformCatalog.syncedAt.get(data.platform.id) || 0;
+  if (Date.now() - lastSync < 30 * 60 * 1000) return;
+
+  const db = getDb();
+  const items = [...data.movies, ...data.series];
+  for (let start = 0; start < items.length; start += 500) {
+    const chunk = items.slice(start, start + 500);
+    const placeholders = chunk.map(() => '(?,?,?,?,?,?,?,?)').join(',');
+    const values = chunk.flatMap(item => [
+      data.platform.id,
+      item.mediaType,
+      Number(item.id),
+      item.name || '',
+      Number(item.year) || null,
+      item.genre || item.categoryName || null,
+      item.icon || item.cover || item.backdrop || null,
+      Number(item.rating) || null
+    ]);
+    await db.query(`
+      INSERT INTO media_catalog
+        (platform_id, media_type, media_id, title, release_year, category_name, poster, rating)
+      VALUES ${placeholders}
+      ON DUPLICATE KEY UPDATE
+        title=VALUES(title), release_year=VALUES(release_year), category_name=VALUES(category_name),
+        poster=VALUES(poster), rating=VALUES(rating)
+    `, values);
+  }
+  persistPlatformCatalog.syncedAt.set(data.platform.id, Date.now());
 }
 
 // REST: Tüm Platformları Listele
@@ -1394,6 +1654,139 @@ app.get('/api/platform/:slug', async (req, res) => {
       offset: parseInt(offset),
       limit: parseInt(limit),
       items: paginated
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// REST: Netflix tarzı raf düzeni (hero + genre shelves)
+app.get('/api/platform/:slug/shelves', async (req, res) => {
+  try {
+    const { slug } = req.params;
+    const { search, type = 'all', year, category } = req.query;
+    const data = await getPlatformData(slug);
+    if (!data) return res.status(404).json({ error: 'Platform bulunamadı' });
+
+    let movies = [...data.movies];
+    let series = [...data.series];
+
+    const allItems = [...movies, ...series];
+    const years = [...new Set(allItems.map(item => Number(item.year)).filter(Boolean))].sort((a, b) => b - a);
+    const categories = [...new Set(series.flatMap(item => (item.genre || '').split(/[\/,&]/).map(g => g.trim()).filter(Boolean)))].sort((a, b) => a.localeCompare(b, 'tr'));
+
+    if (type === 'movies') series = [];
+    if (type === 'series') movies = [];
+
+    if (search) {
+      const q = search.toLowerCase().trim();
+      movies = movies.filter(m => (m.name || '').toLowerCase().includes(q));
+      series = series.filter(s => (s.name || '').toLowerCase().includes(q) || (s.genre || '').toLowerCase().includes(q));
+    }
+
+    if (year) {
+      movies = movies.filter(m => String(m.year) === String(year));
+      series = series.filter(s => String(s.year) === String(year));
+    }
+    if (category) {
+      const wanted = category.toLocaleLowerCase('tr-TR');
+      series = series.filter(s => (s.genre || '').split(/[\/,&]/).some(g => g.trim().toLocaleLowerCase('tr-TR') === wanted));
+      movies = movies.filter(m => (m.categoryName || '').toLocaleLowerCase('tr-TR').includes(wanted));
+    }
+
+    // Hero: rastgele yüksek puanlı içerik
+    const heroPool = [
+      ...movies.filter(m => parseFloat(m.rating || 0) >= 6).slice(0, 10),
+      ...series.filter(s => parseFloat(s.rating || 0) >= 6).slice(0, 10)
+    ];
+    const hero = heroPool.length > 0
+      ? heroPool[Math.floor(Math.random() * heroPool.length)]
+      : (movies[0] || series[0] || null);
+
+    if (category) {
+      return res.json({
+        platform: data.platform,
+        hero,
+        movieCount: data.movies.length,
+        seriesCount: data.series.length,
+        total: data.movies.length + data.series.length,
+        years,
+        categories,
+        shelves: hero ? [{ title: category, type: 'category', category, items: [...movies, ...series] }] : []
+      });
+    }
+
+    const shelves = [];
+
+    // Top 10 shelf
+    const top10Pool = [
+      ...movies.map(m => ({ ...m, _sort: parseFloat(m.rating || 0) })),
+      ...series.map(s => ({ ...s, _sort: parseFloat(s.rating || 0) }))
+    ].sort((a, b) => b._sort - a._sort).slice(0, 10);
+    if (top10Pool.length > 0) {
+      shelves.push({
+        title: `${data.platform.name} Top 10`,
+        type: 'top10',
+        items: top10Pool.map((it, i) => ({ ...it, rank: i + 1 }))
+      });
+    }
+
+    // Popüler Filmler
+    const popularMovies = movies.slice(0, 20);
+    if (popularMovies.length > 0) {
+      shelves.push({ title: 'Popüler Filmler', type: 'movies', items: popularMovies });
+    }
+
+    // Yeni Eklenen Filmler (added timestamp sıralı)
+    const newMovies = [...movies].sort((a, b) => parseInt(b.added || 0) - parseInt(a.added || 0)).slice(0, 20);
+    if (newMovies.length > 4) {
+      shelves.push({ title: 'Yeni Eklenen Filmler', type: 'movies', items: newMovies });
+    }
+
+    // Yüksek Puanlı Filmler
+    const highRated = [...movies].filter(m => parseFloat(m.rating || 0) >= 7).sort((a, b) => parseFloat(b.rating || 0) - parseFloat(a.rating || 0)).slice(0, 20);
+    if (highRated.length > 4) {
+      shelves.push({ title: 'Yüksek Puanlı Filmler', type: 'movies', items: highRated });
+    }
+
+    // Popüler Diziler
+    const popularSeries = series.slice(0, 20);
+    if (popularSeries.length > 0) {
+      shelves.push({ title: 'Popüler Diziler', type: 'series', items: popularSeries });
+    }
+
+    // Dizi genre raf grupları
+    const genreMap = new Map();
+    for (const s of series) {
+      const genres = (s.genre || '').split(/[\/,&]/).map(g => g.trim()).filter(Boolean);
+      for (const g of genres) {
+        if (!genreMap.has(g)) genreMap.set(g, []);
+        if (genreMap.get(g).length < 20) genreMap.get(g).push(s);
+      }
+    }
+    // En az 4 içeriği olan genre'leri raf olarak ekle
+    for (const [genre, items] of genreMap) {
+      if (items.length >= 4) {
+        shelves.push({ title: `${genre} Dizileri`, type: 'series', category: genre, items });
+      }
+    }
+
+    // Film yılına göre
+    const thisYear = new Date().getFullYear();
+    const yearMovies = movies.filter(m => parseInt(m.year) >= thisYear - 1);
+    if (yearMovies.length > 4) {
+      shelves.push({ title: `${thisYear} Yapımları`, type: 'movies', items: yearMovies.slice(0, 20) });
+    }
+
+    res.json({
+      platform: data.platform,
+      hero,
+      movieCount: data.movies.length,
+      seriesCount: data.series.length,
+      total: data.movies.length + data.series.length,
+      years,
+      categories,
+      shelves
     });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -1969,6 +2362,22 @@ app.get('*', (req, res, next) => {
 });
 
 // Start Server
+// Sunucu kapanırken açık kalan dönüştürme süreçlerini (ve bağlantı yuvasını) serbest bırak
+function cleanupVodSessions() {
+  for (const proc of vodSessions.values()) {
+    killProcessTree(proc);
+  }
+  vodSessions.clear();
+}
+
+process.on('exit', cleanupVodSessions);
+for (const signal of ['SIGINT', 'SIGTERM', 'SIGHUP', 'SIGBREAK']) {
+  process.on(signal, () => {
+    cleanupVodSessions();
+    process.exit(0);
+  });
+}
+
 app.listen(CONFIG.port, async () => {
   console.log(`====================================================`);
   console.log(` Turkcell TV+ Web Player (1 Günlük Önbellek & Güvenli Stream)`);
