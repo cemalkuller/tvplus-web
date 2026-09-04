@@ -61,7 +61,11 @@ async function fetchFromXtream(action = '') {
   const { host, username, password } = CONFIG.iptv;
   let url = `${host}/player_api.php?username=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}`;
   if (action) {
-    url += `&action=${encodeURIComponent(action)}`;
+    if (action.includes('&')) {
+      url += `&action=${action}`;
+    } else {
+      url += `&action=${encodeURIComponent(action)}`;
+    }
   }
 
   const response = await fetch(url, {
@@ -866,7 +870,7 @@ async function getVodStreamsByCategory(catId) {
   }
   const extra = catId && catId !== 'all' ? `get_vod_streams&category_id=${catId}` : 'get_vod_streams';
   const raw = await fetchFromXtream(extra);
-  const clean = (raw || [])
+  const clean = (Array.isArray(raw) ? raw : [])
     .filter(m => !isAdultContent(m))
     .map(m => ({
       id: m.stream_id,
@@ -893,7 +897,7 @@ async function getSeriesByCategory(catId) {
   }
   const extra = catId && catId !== 'all' ? `get_series&category_id=${catId}` : 'get_series';
   const raw = await fetchFromXtream(extra);
-  const clean = (raw || [])
+  const clean = (Array.isArray(raw) ? raw : [])
     .filter(s => !isAdultCategory(s.name) && !isAdultCategory(s.genre))
     .map(s => ({
       id: s.series_id,
