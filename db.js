@@ -112,6 +112,12 @@ export async function initDatabase() {
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
     `);
 
+    await pool.query(`CREATE TABLE IF NOT EXISTS iptv_catalog_snapshot (
+      action_key VARCHAR(64) PRIMARY KEY,
+      payload LONGTEXT NOT NULL,
+      fetched_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`);
+
     // Varsayılan kullanıcı ekle
     const [existingUsers] = await pool.query('SELECT id FROM users WHERE username = ?', ['cemal']);
     if (existingUsers.length === 0) {

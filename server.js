@@ -10,6 +10,7 @@ import dgram from 'dgram';
 import QRCode from 'qrcode';
 import { CONFIG, saveEnvFile } from './config.js';
 import { initDatabase, getDb } from './db.js';
+import { readCatalogAction } from './iptv-catalog.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -132,6 +133,7 @@ function decodeTargetUrl(encoded) {
 
 // Helper: Fetch from IPTV Xtream API
 async function fetchFromXtream(action = '') {
+  if (process.env.IPTV_CATALOG_SOURCE === 'database') return readCatalogAction(action);
   const { host, username, password } = CONFIG.iptv;
   let url = `${host}/player_api.php?username=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}`;
   if (action) {
@@ -336,7 +338,7 @@ async function getOrUpdateData(force = false) {
     return;
   }
 
-  if (!force && loadCacheFromDisk()) {
+  if (process.env.IPTV_CATALOG_SOURCE !== 'database' && !force && loadCacheFromDisk()) {
     return;
   }
 
@@ -2448,12 +2450,13 @@ for (const signal of ['SIGINT', 'SIGTERM', 'SIGHUP', 'SIGBREAK']) {
   });
 }
 
+await initDatabase();
+
 app.listen(CONFIG.port, async () => {
   console.log(`====================================================`);
   console.log(` Turkcell TV+ Web Player (1 Günlük Önbellek & Güvenli Stream)`);
   console.log(` Web Arayüzü: http://localhost:${CONFIG.port}`);
   console.log(`====================================================`);
   
-  initDatabase().catch(e => console.error('MySQL başlatma hatası:', e.message));
   getOrUpdateData().catch(e => console.error('Önbellek başlatma hatası:', e.message));
 });
