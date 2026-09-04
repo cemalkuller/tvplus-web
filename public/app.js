@@ -3,7 +3,7 @@
 // =============================================================
 
 const STATE = {
-  activeTab: 'guide', // Default to Kanal Listesi as requested
+  activeTab: 'home', // Default to Google TV style Anasayfa
   activeCategory: 'all',
   searchQuery: '',
   categories: [],
@@ -25,6 +25,18 @@ const STATE = {
   activeEpgDay: 'Bugün',
   switcherCategory: 'all',
   switcherSearch: '',
+  // Platformlar & Anasayfa (Google TV Deneyimi)
+  platforms: [],
+  activePlatform: null,
+  platformFilter: 'all', // 'all' | 'movies' | 'series'
+  platformItems: [],
+  platformTotal: 0,
+  platformMovieCount: 0,
+  platformSeriesCount: 0,
+  platformOffset: 0,
+  platformLimit: 36,
+  platformSearchQuery: '',
+  homeFeatured: null,
   // Filmler & Sinema
   movieCategories: [],
   activeMovieCategory: 'all',
@@ -97,7 +109,11 @@ function initRouting() {
 }
 
 function getCurrentTabUrl() {
-  if (STATE.activeTab === 'live') {
+  if (STATE.activeTab === 'home') {
+    return '/anasayfa';
+  } else if (STATE.activeTab === 'platform' && STATE.activePlatform) {
+    return `/platform/${STATE.activePlatform}${STATE.platformFilter !== 'all' ? '/' + STATE.platformFilter : ''}`;
+  } else if (STATE.activeTab === 'live') {
     return '/canli-tv';
   } else if (STATE.activeTab === 'movies') {
     return '/filmler';
@@ -117,7 +133,7 @@ function getCurrentTabUrl() {
     const qs = params.toString();
     return '/kanal-listesi' + (qs ? `?${qs}` : '');
   }
-  return '/kanal-listesi';
+  return '/anasayfa';
 }
 
 function updateUrl(url, replace = false) {
@@ -200,7 +216,18 @@ async function handleRoute(isInitial = false) {
     }
   }
 
-  // 5. Doğrudan Canlı TV Kanal İzleme Linki: /izle/:id
+  // 5. Platform Sayfası: /platform/:slug/:type? (Filtreli: Tümü, Filmler, Diziler)
+  if (path.startsWith('/platform/')) {
+    const parts = path.replace('/platform/', '').split('/').filter(Boolean);
+    const slug = parts[0];
+    const type = parts[1] || 'all';
+    if (slug) {
+      await openPlatformPage(slug, type, false);
+      return;
+    }
+  }
+
+  // 6. Doğrudan Canlı TV Kanal İzleme Linki: /izle/:id
   if (path.startsWith('/izle/')) {
     const idStr = path.replace('/izle/', '').replace(/\/$/, '');
     const streamId = parseInt(idStr);
@@ -229,32 +256,38 @@ async function handleRoute(isInitial = false) {
     }
   }
 
-  // 6. Canlı TV Rotası
+  // 7. Anasayfa Rotası: / veya /anasayfa veya /home
+  if (path === '/' || path === '' || path === '/anasayfa' || path === '/home') {
+    switchTab('home', false);
+    return;
+  }
+
+  // 8. Canlı TV Rotası
   if (path === '/canli-tv' || path === '/live') {
     switchTab('live', false);
     return;
   }
 
-  // 7. Filmler Rotası
+  // 9. Filmler Rotası
   if (path === '/filmler' || path === '/movies') {
     switchTab('movies', false);
     return;
   }
 
-  // 8. Diziler Rotası
+  // 10. Diziler Rotası
   if (path === '/diziler' || path === '/series') {
     switchTab('series', false);
     return;
   }
 
-  // 9. Favorilerim Rotası
+  // 11. Favorilerim Rotası
   if (path === '/favorilerim' || path === '/favoriler') {
     showFavoritesTab(false);
     return;
   }
 
-  // 10. Kanal Listesi Rotası
-  if (path === '/kanal-listesi' || path === '/kanallar' || path === '/rehber' || path === '/' || path === '') {
+  // 12. Kanal Listesi Rotası
+  if (path === '/kanal-listesi' || path === '/kanallar' || path === '/rehber') {
     const cat = searchParams.get('kategori');
     const q = searchParams.get('ara');
 
@@ -271,15 +304,11 @@ async function handleRoute(isInitial = false) {
 
     switchTab('guide', false);
     renderGuideCategories();
-
-    if (path === '/' || path === '') {
-      updateUrl('/kanal-listesi', true);
-    }
     return;
   }
 
-  // Tanımlanmayan diğer tüm URL'lerde varsayılan: Kanal Listesi
-  switchTab('guide', false);
+  // Varsayılan Rota: Google TV Anasayfa
+  switchTab('home', false);
 }
 
 // =============================================================
@@ -324,33 +353,48 @@ window.selectProfile = selectProfile;
 window.showProfileScreen = showProfileScreen;
 
 // =============================================================
-// 2. TAB NAVİGASYONU (CANLI TV & KANAL LİSTESİ & FİLMLER & DİZİLER)
+// 2. TAB NAVİGASYONU (ANASAYFA, CANLI TV, KANAL LİSTESİ, FİLMLER, DİZİLER, PLATFORMLAR)
 // =============================================================
 function switchTab(tab, push = true) {
   STATE.activeTab = tab;
+  const navHome = document.getElementById('nav-home');
   const navLive = document.getElementById('nav-live');
   const navGuide = document.getElementById('nav-guide');
   const navMovies = document.getElementById('nav-movies');
   const navSeries = document.getElementById('nav-series');
   const navFavs = document.getElementById('nav-favs');
+
+  const viewHome = document.getElementById('view-home');
   const viewLive = document.getElementById('view-live');
   const viewGuide = document.getElementById('view-guide');
   const viewMovies = document.getElementById('view-movies');
   const viewSeries = document.getElementById('view-series');
+  const viewSeriesDetail = document.getElementById('view-series-detail');
+  const viewPlatform = document.getElementById('view-platform');
 
+  navHome?.classList.remove('text-white', 'font-bold');
   navLive?.classList.remove('text-white', 'font-bold');
   navGuide?.classList.remove('text-white', 'font-bold');
   navMovies?.classList.remove('text-white', 'font-bold');
   navSeries?.classList.remove('text-white', 'font-bold');
   navFavs?.classList.remove('text-white', 'font-bold');
 
+  viewHome?.classList.add('hidden');
   viewLive?.classList.add('hidden');
   viewGuide?.classList.add('hidden');
   viewMovies?.classList.add('hidden');
   viewSeries?.classList.add('hidden');
-  document.getElementById('view-series-detail')?.classList.add('hidden');
+  viewSeriesDetail?.classList.add('hidden');
+  viewPlatform?.classList.add('hidden');
 
-  if (tab === 'live') {
+  if (tab === 'home') {
+    navHome?.classList.add('text-white', 'font-bold');
+    viewHome?.classList.remove('hidden');
+    loadHomeData();
+    if (push) updateUrl('/anasayfa');
+  } else if (tab === 'platform') {
+    viewPlatform?.classList.remove('hidden');
+  } else if (tab === 'live') {
     navLive?.classList.add('text-white', 'font-bold');
     viewLive?.classList.remove('hidden');
     if (push) updateUrl('/canli-tv');
@@ -1567,6 +1611,31 @@ function initSearchInputs() {
         seriesClear.classList.add('hidden');
         STATE.seriesSearchQuery = '';
         loadSeries(true);
+      });
+    }
+  }
+
+  // Platform Search Input
+  const platformSearch = document.getElementById('platform-search-input');
+  const platformClear = document.getElementById('platform-clear-search');
+  if (platformSearch) {
+    platformSearch.addEventListener('input', (e) => {
+      const val = e.target.value;
+      if (platformClear) platformClear.classList.toggle('hidden', !val);
+
+      clearTimeout(debounce);
+      debounce = setTimeout(() => {
+        STATE.platformSearchQuery = val;
+        loadPlatformContent(true);
+      }, 350);
+    });
+
+    if (platformClear) {
+      platformClear.addEventListener('click', () => {
+        platformSearch.value = '';
+        platformClear.classList.add('hidden');
+        STATE.platformSearchQuery = '';
+        loadPlatformContent(true);
       });
     }
   }
@@ -2947,3 +3016,461 @@ async function saveSettings() {
     if (btnText) btnText.textContent = 'Bağlantıyı Test Et & Kaydet';
   }
 }
+
+// =============================================================
+// GOOGLE TV ANASAYFA & PLATFORMLAR MODÜLÜ
+// =============================================================
+
+function getPlatformLogoHtml(id) {
+  switch (id) {
+    case 'netflix':
+      return `<div class="flex items-center space-x-1.5"><span class="font-black text-red-600 text-xl tracking-tight font-sans">NETFLIX</span></div>`;
+    case 'prime':
+      return `<div class="flex items-center space-x-1"><span class="font-black text-white text-base tracking-tight">prime</span><span class="font-bold text-sky-400 text-base">video</span></div>`;
+    case 'disney':
+      return `<div class="flex items-center space-x-0.5 font-serif"><span class="font-black text-white text-lg italic tracking-wider">Disney</span><span class="text-blue-400 font-black text-xl">+</span></div>`;
+    case 'blutv':
+      return `<div class="flex items-center space-x-1"><span class="font-black text-cyan-400 text-lg tracking-tight">blu<span class="bg-cyan-400 text-black text-[10px] px-1 py-0.5 rounded font-black ml-0.5">TV</span></span><span class="text-gray-500 text-xs">/</span><span class="font-black text-white text-xs tracking-wider">MAX</span></div>`;
+    case 'exxen':
+      return `<div class="flex items-center justify-center"><span class="font-black italic text-yellow-300 text-xl tracking-widest font-sans">EXXEN</span></div>`;
+    case 'tabii':
+      return `<div class="flex items-center space-x-0.5"><span class="font-extrabold text-emerald-400 text-xl tracking-tighter lowercase">tabii</span><span class="w-2 h-2 rounded-full bg-emerald-400 self-start mt-1"></span></div>`;
+    case 'bein':
+      return `<div class="flex items-center space-x-1.5"><span class="bg-purple-700 text-white font-extrabold text-[10px] px-1.5 py-0.5 rounded">beIN</span><span class="font-black text-white text-base tracking-wider">TOD</span></div>`;
+    case 'appletv':
+      return `<div class="flex items-center space-x-1"><span class="text-white text-lg font-bold"></span><span class="font-bold text-white text-base tracking-tight">tv+</span></div>`;
+    case 'gain':
+      return `<div class="flex items-center justify-center"><span class="font-black text-amber-300 text-xl tracking-wider">GAİN</span></div>`;
+    case 'tvplus':
+      return `<div class="flex items-center justify-center"><span class="font-black text-tv-yellow text-xl tracking-tight">tv<span class="text-white">+</span></span></div>`;
+    default:
+      return `<span class="font-bold text-white text-base">${id}</span>`;
+  }
+}
+
+async function loadHomeData() {
+  try {
+    const [platRes, featRes] = await Promise.all([
+      fetch('/api/platforms').then(r => r.json()).catch(() => ({ platforms: [] })),
+      fetch('/api/featured').then(r => r.json()).catch(() => ({ heroes: [], trendingMovies: [], popularSeries: [], topChannels: [] }))
+    ]);
+
+    STATE.platforms = platRes.platforms || [];
+    STATE.homeFeatured = featRes;
+
+    renderHomePlatforms(STATE.platforms);
+
+    if (featRes.heroes && featRes.heroes.length > 0) {
+      renderHomeHero(featRes.heroes);
+    }
+    if (featRes.trendingMovies) {
+      renderHomeMoviesShelf(featRes.trendingMovies);
+    }
+    if (featRes.popularSeries) {
+      renderHomeSeriesShelf(featRes.popularSeries);
+    }
+    if (featRes.topChannels) {
+      renderHomeChannelsShelf(featRes.topChannels);
+    }
+
+    initIcons();
+  } catch (err) {
+    console.error('Home data load error:', err);
+  }
+}
+
+function renderHomePlatforms(platforms) {
+  const container = document.getElementById('home-platforms-grid');
+  if (!container) return;
+
+  container.innerHTML = platforms.map(p => `
+    <div 
+      onclick="openPlatformPage('${p.id}')" 
+      class="group relative overflow-hidden rounded-2xl bg-gradient-to-br from-white/10 via-white/5 to-transparent border border-white/10 hover:border-white/40 hover:scale-[1.03] transition-all duration-300 p-4 sm:p-5 flex flex-col justify-between cursor-pointer shadow-lg hover:shadow-2xl"
+    >
+      <div class="absolute -right-6 -top-6 w-24 h-24 rounded-full blur-2xl opacity-25 group-hover:opacity-50 transition" style="background-color: ${p.color}"></div>
+      <div class="h-10 flex items-center">
+        ${getPlatformLogoHtml(p.id)}
+      </div>
+      <div class="mt-4 flex items-center justify-between">
+        <span class="text-[11px] font-semibold text-gray-300 group-hover:text-white transition">${p.name}</span>
+        <span class="text-[10px] px-2 py-0.5 rounded-full bg-white/10 text-gray-300 group-hover:bg-tv-yellow group-hover:text-black font-bold transition flex items-center space-x-0.5">
+          <span>Keşfet</span>
+          <i data-lucide="chevron-right" class="w-3 h-3"></i>
+        </span>
+      </div>
+    </div>
+  `).join('');
+}
+
+function renderHomeHero(heroes) {
+  if (!heroes || heroes.length === 0) return;
+  const hero = heroes[0];
+
+  const backdrop = document.getElementById('home-hero-backdrop');
+  if (backdrop && (hero.poster || hero.cover)) {
+    backdrop.style.backgroundImage = `url('${hero.poster || hero.cover}')`;
+  }
+
+  const titleEl = document.getElementById('home-hero-title');
+  if (titleEl) titleEl.textContent = hero.name;
+
+  const ratingEl = document.getElementById('home-hero-rating-val');
+  if (ratingEl) ratingEl.textContent = hero.rating ? parseFloat(hero.rating).toFixed(1) : '8.5';
+
+  const yearEl = document.getElementById('home-hero-year');
+  if (yearEl) yearEl.textContent = hero.year || '2024';
+
+  const typeEl = document.getElementById('home-hero-type');
+  if (typeEl) {
+    typeEl.textContent = hero.type === 'movie' ? 'FİLM' : 'DİZİ';
+    if (hero.type === 'movie') {
+      typeEl.className = 'bg-sky-400 text-black font-extrabold text-[10px] px-2 py-0.5 rounded uppercase';
+    } else {
+      typeEl.className = 'bg-tv-yellow text-black font-extrabold text-[10px] px-2 py-0.5 rounded uppercase';
+    }
+  }
+
+  const taglineEl = document.getElementById('home-hero-tagline');
+  if (taglineEl) taglineEl.textContent = hero.tagline || (hero.type === 'movie' ? 'Popüler Sinema Seçkisi' : 'En Çok İzlenen Dizi');
+
+  const descEl = document.getElementById('home-hero-desc');
+  if (descEl) descEl.textContent = hero.plot || 'Yüksek çözünürlüklü kesintisiz yayın.';
+
+  const playBtn = document.getElementById('home-hero-play-btn');
+  if (playBtn) {
+    playBtn.onclick = () => {
+      if (hero.type === 'movie') {
+        openMediaItem(hero, 'movie');
+      } else {
+        openSeriesDetailPage(hero.id);
+      }
+    };
+  }
+
+  const detailBtn = document.getElementById('home-hero-detail-btn');
+  if (detailBtn) {
+    detailBtn.onclick = () => {
+      if (hero.type === 'movie') {
+        openMediaItem(hero, 'movie');
+      } else {
+        openSeriesDetailPage(hero.id);
+      }
+    };
+  }
+}
+
+function renderHomeMoviesShelf(movies) {
+  const container = document.getElementById('home-movies-shelf');
+  if (!container) return;
+
+  container.innerHTML = movies.map(m => `
+    <div 
+      onclick="openMediaItem(${JSON.stringify(m).replace(/"/g, '&quot;')}, 'movie')"
+      class="group flex-shrink-0 w-36 sm:w-44 cursor-pointer"
+    >
+      <div class="relative aspect-[2/3] rounded-xl overflow-hidden bg-zinc-900 border border-white/10 group-hover:border-tv-yellow/60 group-hover:scale-105 transition-all duration-300 shadow-md">
+        <img 
+          src="${m.icon || ''}" 
+          alt="${m.name}" 
+          class="w-full h-full object-cover group-hover:scale-110 transition duration-500" 
+          loading="lazy"
+          onerror="this.src='https://images.unsplash.com/photo-1594909122845-11baa439b7bf?auto=format&fit=crop&w=400&q=80'"
+        />
+        <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition flex items-center justify-center">
+          <div class="w-10 h-10 rounded-full bg-tv-yellow text-black flex items-center justify-center shadow-lg transform scale-90 group-hover:scale-100 transition">
+            <i data-lucide="play" class="w-5 h-5 fill-current"></i>
+          </div>
+        </div>
+        <div class="absolute top-2 left-2 px-1.5 py-0.5 rounded bg-black/60 backdrop-blur text-[10px] font-bold text-yellow-400 border border-white/10 flex items-center space-x-0.5">
+          <span>★</span><span>${m.rating ? parseFloat(m.rating).toFixed(1) : '7.5'}</span>
+        </div>
+        ${m.year ? `<div class="absolute top-2 right-2 px-1.5 py-0.5 rounded bg-black/60 backdrop-blur text-[10px] text-gray-300 border border-white/10">${m.year}</div>` : ''}
+      </div>
+      <h3 class="text-xs sm:text-sm font-semibold text-gray-200 group-hover:text-tv-yellow truncate mt-2 transition">${m.name}</h3>
+      <p class="text-[11px] text-gray-500 truncate">Film</p>
+    </div>
+  `).join('');
+}
+
+function renderHomeSeriesShelf(series) {
+  const container = document.getElementById('home-series-shelf');
+  if (!container) return;
+
+  container.innerHTML = series.map(s => `
+    <div 
+      onclick="openSeriesDetailPage(${s.id})"
+      class="group flex-shrink-0 w-36 sm:w-44 cursor-pointer"
+    >
+      <div class="relative aspect-[2/3] rounded-xl overflow-hidden bg-zinc-900 border border-white/10 group-hover:border-tv-yellow/60 group-hover:scale-105 transition-all duration-300 shadow-md">
+        <img 
+          src="${s.cover || s.backdrop || ''}" 
+          alt="${s.name}" 
+          class="w-full h-full object-cover group-hover:scale-110 transition duration-500" 
+          loading="lazy"
+          onerror="this.src='https://images.unsplash.com/photo-1522869635100-9f4c5e86aa37?auto=format&fit=crop&w=400&q=80'"
+        />
+        <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition flex items-center justify-center">
+          <div class="w-10 h-10 rounded-full bg-tv-yellow text-black flex items-center justify-center shadow-lg transform scale-90 group-hover:scale-100 transition">
+            <i data-lucide="play" class="w-5 h-5 fill-current"></i>
+          </div>
+        </div>
+        <div class="absolute top-2 left-2 px-1.5 py-0.5 rounded bg-black/60 backdrop-blur text-[10px] font-bold text-yellow-400 border border-white/10 flex items-center space-x-0.5">
+          <span>★</span><span>${s.rating ? parseFloat(s.rating).toFixed(1) : '8.0'}</span>
+        </div>
+        <div class="absolute top-2 right-2 px-1.5 py-0.5 rounded bg-purple-600/80 backdrop-blur text-[10px] font-bold text-white">DİZİ</div>
+      </div>
+      <h3 class="text-xs sm:text-sm font-semibold text-gray-200 group-hover:text-tv-yellow truncate mt-2 transition">${s.name}</h3>
+      <p class="text-[11px] text-gray-500 truncate">${s.genre || 'Dizi'}</p>
+    </div>
+  `).join('');
+}
+
+function renderHomeChannelsShelf(channels) {
+  const container = document.getElementById('home-channels-shelf');
+  if (!container) return;
+
+  container.innerHTML = channels.map(ch => `
+    <div 
+      onclick="openPlayer(${JSON.stringify(ch).replace(/"/g, '&quot;')})"
+      class="group flex-shrink-0 flex items-center space-x-3 px-4 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 hover:border-tv-yellow/50 transition cursor-pointer"
+    >
+      <div class="w-8 h-8 rounded-lg bg-black/60 flex items-center justify-center p-1 overflow-hidden border border-white/10">
+        <img 
+          src="${ch.icon || ''}" 
+          alt="${ch.name}" 
+          class="w-full h-full object-contain" 
+          loading="lazy"
+          onerror="this.style.display='none'; this.nextElementSibling.style.display='block';"
+        />
+        <i data-lucide="tv" class="w-4 h-4 text-gray-400 hidden"></i>
+      </div>
+      <div>
+        <h4 class="text-xs font-bold text-white group-hover:text-tv-yellow transition truncate max-w-[120px]">${ch.name}</h4>
+        <span class="text-[10px] text-red-500 font-bold flex items-center space-x-1">
+          <span class="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse"></span>
+          <span>CANLI</span>
+        </span>
+      </div>
+    </div>
+  `).join('');
+}
+
+// =============================================================
+// PLATFORM SAYFASI & FİLTRE MOTORU
+// =============================================================
+
+async function openPlatformPage(platformSlug, filterType = 'all', push = true) {
+  STATE.activePlatform = platformSlug;
+  STATE.platformFilter = filterType;
+  STATE.platformOffset = 0;
+  STATE.platformSearchQuery = '';
+
+  const searchInput = document.getElementById('platform-search-input');
+  if (searchInput) searchInput.value = '';
+  document.getElementById('platform-clear-search')?.classList.add('hidden');
+
+  switchTab('platform', false);
+
+  if (push) {
+    const url = `/platform/${platformSlug}${filterType !== 'all' ? '/' + filterType : ''}`;
+    updateUrl(url);
+  }
+
+  await loadPlatformContent(true);
+}
+
+async function loadPlatformContent(reset = false) {
+  if (!STATE.activePlatform) return;
+
+  const loadingEl = document.getElementById('platform-loading');
+  const emptyEl = document.getElementById('platform-empty');
+  const gridEl = document.getElementById('platform-items-grid');
+  const loadMoreEl = document.getElementById('platform-load-more-container');
+
+  if (reset) {
+    STATE.platformOffset = 0;
+    if (gridEl) gridEl.innerHTML = '';
+    loadingEl?.classList.remove('hidden');
+    emptyEl?.classList.add('hidden');
+    loadMoreEl?.classList.add('hidden');
+  }
+
+  updatePlatformFilterButtons();
+
+  try {
+    const params = new URLSearchParams({
+      type: STATE.platformFilter,
+      limit: STATE.platformLimit,
+      offset: STATE.platformOffset
+    });
+    if (STATE.platformSearchQuery) {
+      params.set('search', STATE.platformSearchQuery);
+    }
+
+    const res = await fetch(`/api/platform/${STATE.activePlatform}?${params.toString()}`);
+    if (!res.ok) throw new Error('Platform içeriği alınamadı');
+
+    const data = await res.json();
+    loadingEl?.classList.add('hidden');
+
+    STATE.platformTotal = data.total || 0;
+    STATE.platformMovieCount = data.movieCount || 0;
+    STATE.platformSeriesCount = data.seriesCount || 0;
+
+    // Header ve İstatistikleri Güncelle
+    const p = data.platform || {};
+    const logoEl = document.getElementById('platform-hero-logo');
+    if (logoEl) logoEl.innerHTML = getPlatformLogoHtml(p.id || STATE.activePlatform);
+
+    const nameEl = document.getElementById('platform-hero-name');
+    if (nameEl) nameEl.textContent = p.name || STATE.activePlatform.toUpperCase();
+
+    const taglineEl = document.getElementById('platform-hero-tagline');
+    if (taglineEl) taglineEl.textContent = p.tagline || 'Tüm film ve dizi koleksiyonu';
+
+    const cardEl = document.getElementById('platform-hero-card');
+    if (cardEl && p.bgGradient) {
+      cardEl.className = `relative rounded-2xl p-6 sm:p-8 overflow-hidden border border-white/10 shadow-2xl bg-gradient-to-r ${p.bgGradient}`;
+    }
+
+    document.getElementById('platform-stat-total').innerHTML = `
+      <i data-lucide="layers" class="w-3.5 h-3.5 text-tv-yellow"></i>
+      <span>${data.total} İçerik</span>
+    `;
+    document.getElementById('platform-stat-movies').innerHTML = `
+      <i data-lucide="film" class="w-3.5 h-3.5 text-sky-400"></i>
+      <span>${data.movieCount} Film</span>
+    `;
+    document.getElementById('platform-stat-series').innerHTML = `
+      <i data-lucide="clapperboard" class="w-3.5 h-3.5 text-purple-400"></i>
+      <span>${data.seriesCount} Dizi</span>
+    `;
+
+    // Filtre butonlarındaki sayıları güncelle
+    const filterAllBtn = document.getElementById('plat-filter-all');
+    if (filterAllBtn) filterAllBtn.textContent = `Tümü (${data.movieCount + data.seriesCount})`;
+    const filterMoviesBtn = document.getElementById('plat-filter-movies');
+    if (filterMoviesBtn) filterMoviesBtn.textContent = `Filmler (${data.movieCount})`;
+    const filterSeriesBtn = document.getElementById('plat-filter-series');
+    if (filterSeriesBtn) filterSeriesBtn.textContent = `Diziler (${data.seriesCount})`;
+
+    const countInfo = document.getElementById('platform-count-info');
+    if (countInfo) {
+      countInfo.textContent = `Toplam ${data.total} içerikten ${Math.min(STATE.platformOffset + data.items.length, data.total)} tanesi gösteriliyor`;
+    }
+
+    if (data.items.length === 0 && reset) {
+      emptyEl?.classList.remove('hidden');
+      return;
+    }
+
+    // Kartları çiz
+    const cardsHtml = data.items.map(item => {
+      const isMovie = item.mediaType === 'movie';
+      const poster = isMovie ? item.icon : (item.cover || item.backdrop);
+      const rating = item.rating ? parseFloat(item.rating).toFixed(1) : (isMovie ? '7.5' : '8.0');
+      const year = item.year || (item.releaseDate ? item.releaseDate.slice(0, 4) : '');
+
+      const clickAction = isMovie 
+        ? `openMediaItem(${JSON.stringify(item).replace(/"/g, '&quot;')}, 'movie')`
+        : `openSeriesDetailPage(${item.id})`;
+
+      return `
+        <div 
+          onclick="${clickAction}" 
+          class="group cursor-pointer bg-zinc-900/60 rounded-xl overflow-hidden border border-white/10 hover:border-tv-yellow/70 hover:scale-[1.03] transition-all duration-300 shadow-md flex flex-col justify-between"
+        >
+          <div class="relative aspect-[2/3] w-full overflow-hidden bg-black/40">
+            <img 
+              src="${poster || ''}" 
+              alt="${item.name}" 
+              class="w-full h-full object-cover group-hover:scale-105 transition duration-500" 
+              loading="lazy"
+              onerror="this.src='https://images.unsplash.com/photo-1594909122845-11baa439b7bf?auto=format&fit=crop&w=400&q=80'"
+            />
+            <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition flex items-center justify-center">
+              <div class="w-10 h-10 rounded-full bg-tv-yellow text-black flex items-center justify-center shadow-lg transform scale-90 group-hover:scale-100 transition">
+                <i data-lucide="play" class="w-5 h-5 fill-current"></i>
+              </div>
+            </div>
+            <!-- Type badge -->
+            <div class="absolute top-2 left-2 px-1.5 py-0.5 rounded text-[10px] font-bold ${isMovie ? 'bg-sky-500 text-black' : 'bg-purple-600 text-white'}">
+              ${isMovie ? 'FİLM' : 'DİZİ'}
+            </div>
+            <!-- Rating badge -->
+            <div class="absolute top-2 right-2 px-1.5 py-0.5 rounded bg-black/60 backdrop-blur text-[10px] font-bold text-yellow-400 border border-white/10 flex items-center space-x-0.5">
+              <span>★</span><span>${rating}</span>
+            </div>
+          </div>
+          <div class="p-3">
+            <h4 class="text-xs sm:text-sm font-semibold text-gray-200 group-hover:text-tv-yellow truncate transition" title="${item.name}">
+              ${item.name}
+            </h4>
+            <div class="flex items-center justify-between mt-1 text-[10px] text-gray-400">
+              <span>${isMovie ? 'Film' : (item.genre || 'Dizi')}</span>
+              ${year ? `<span>${year}</span>` : ''}
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    if (reset) {
+      gridEl.innerHTML = cardsHtml;
+    } else {
+      gridEl.insertAdjacentHTML('beforeend', cardsHtml);
+    }
+
+    // Load More visibility
+    if (STATE.platformOffset + data.items.length < data.total) {
+      loadMoreEl?.classList.remove('hidden');
+    } else {
+      loadMoreEl?.classList.add('hidden');
+    }
+
+    initIcons();
+  } catch (err) {
+    console.error('Platform load error:', err);
+    loadingEl?.classList.add('hidden');
+  }
+}
+
+function updatePlatformFilterButtons() {
+  const allBtn = document.getElementById('plat-filter-all');
+  const moviesBtn = document.getElementById('plat-filter-movies');
+  const seriesBtn = document.getElementById('plat-filter-series');
+
+  const activeClass = 'px-5 py-2 rounded-full text-xs font-bold transition bg-tv-yellow text-black shadow-lg';
+  const inactiveClass = 'px-5 py-2 rounded-full text-xs font-semibold transition bg-white/5 hover:bg-white/10 text-gray-300 hover:text-white border border-white/10';
+
+  if (allBtn) allBtn.className = STATE.platformFilter === 'all' ? activeClass : inactiveClass;
+  if (moviesBtn) moviesBtn.className = STATE.platformFilter === 'movies' ? activeClass : inactiveClass;
+  if (seriesBtn) seriesBtn.className = STATE.platformFilter === 'series' ? activeClass : inactiveClass;
+}
+
+function setPlatformFilter(filterType) {
+  if (STATE.platformFilter === filterType) return;
+  STATE.platformFilter = filterType;
+  updateUrl(`/platform/${STATE.activePlatform}${filterType !== 'all' ? '/' + filterType : ''}`);
+  loadPlatformContent(true);
+}
+
+function loadMorePlatformContent() {
+  STATE.platformOffset += STATE.platformLimit;
+  loadPlatformContent(false);
+}
+
+function clearPlatformSearch() {
+  const input = document.getElementById('platform-search-input');
+  if (input) input.value = '';
+  document.getElementById('platform-clear-search')?.classList.add('hidden');
+  STATE.platformSearchQuery = '';
+  loadPlatformContent(true);
+}
+
+window.openPlatformPage = openPlatformPage;
+window.setPlatformFilter = setPlatformFilter;
+window.loadMorePlatformContent = loadMorePlatformContent;
+window.clearPlatformSearch = clearPlatformSearch;
+

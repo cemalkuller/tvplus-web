@@ -1069,6 +1069,315 @@ app.get('/api/series-info/:series_id', async (req, res) => {
 });
 
 // =============================================================
+// PLATFORM VE ANASAYFA (GOOGLE TV TARZI) MOTORU
+// =============================================================
+const PLATFORMS = [
+  {
+    id: 'netflix',
+    name: 'Netflix',
+    tagline: 'Filmler, Diziler ve Özel Yapımlar',
+    color: '#E50914',
+    bgGradient: 'from-red-950/70 via-zinc-950 to-black',
+    borderColor: 'border-red-600/40 hover:border-red-500',
+    accentColor: 'text-red-500',
+    badgeBg: 'bg-red-600/20 text-red-400 border border-red-500/30',
+    vodKeywords: ['netflix'],
+    seriesKeywords: ['netflix']
+  },
+  {
+    id: 'prime',
+    name: 'Prime Video',
+    tagline: 'Amazon Orijinal ve Popüler İçerikler',
+    color: '#00A8E1',
+    bgGradient: 'from-sky-950/70 via-zinc-950 to-black',
+    borderColor: 'border-sky-600/40 hover:border-sky-400',
+    accentColor: 'text-sky-400',
+    badgeBg: 'bg-sky-600/20 text-sky-400 border border-sky-500/30',
+    vodKeywords: ['amazon'],
+    seriesKeywords: ['amazon']
+  },
+  {
+    id: 'disney',
+    name: 'Disney+',
+    tagline: 'Disney, Pixar, Marvel, Star Wars & Nat Geo',
+    color: '#113CCF',
+    bgGradient: 'from-blue-950/70 via-zinc-950 to-black',
+    borderColor: 'border-blue-600/40 hover:border-blue-400',
+    accentColor: 'text-blue-400',
+    badgeBg: 'bg-blue-600/20 text-blue-400 border border-blue-500/30',
+    vodKeywords: ['disney'],
+    seriesKeywords: ['disney']
+  },
+  {
+    id: 'blutv',
+    name: 'BluTV / Max',
+    tagline: 'HBO Max & Özel Yerli Yapımlar',
+    color: '#00BAFF',
+    bgGradient: 'from-cyan-950/70 via-zinc-950 to-black',
+    borderColor: 'border-cyan-600/40 hover:border-cyan-400',
+    accentColor: 'text-cyan-400',
+    badgeBg: 'bg-cyan-600/20 text-cyan-400 border border-cyan-500/30',
+    vodKeywords: ['blutv', 'blu tv'],
+    seriesKeywords: ['blu tv', 'hbo max']
+  },
+  {
+    id: 'exxen',
+    name: 'Exxen',
+    tagline: 'Diziler, Programlar ve Eğlence',
+    color: '#FFDE00',
+    bgGradient: 'from-amber-950/70 via-zinc-950 to-black',
+    borderColor: 'border-yellow-500/40 hover:border-yellow-400',
+    accentColor: 'text-yellow-400',
+    badgeBg: 'bg-yellow-500/20 text-yellow-300 border border-yellow-400/30',
+    vodKeywords: ['exxen'],
+    seriesKeywords: ['exxen']
+  },
+  {
+    id: 'tabii',
+    name: 'Tabii',
+    tagline: 'TRT Tabii Orijinal Yapımları',
+    color: '#00E2AA',
+    bgGradient: 'from-emerald-950/70 via-zinc-950 to-black',
+    borderColor: 'border-emerald-500/40 hover:border-emerald-400',
+    accentColor: 'text-emerald-400',
+    badgeBg: 'bg-emerald-500/20 text-emerald-300 border border-emerald-400/30',
+    vodKeywords: ['tabi', 'tabii'],
+    seriesKeywords: ['tabi', 'tabii']
+  },
+  {
+    id: 'bein',
+    name: 'beIN / TOD',
+    tagline: 'TOD Studios & beIN Originals',
+    color: '#6F2C91',
+    bgGradient: 'from-purple-950/70 via-zinc-950 to-black',
+    borderColor: 'border-purple-600/40 hover:border-purple-400',
+    accentColor: 'text-purple-400',
+    badgeBg: 'bg-purple-600/20 text-purple-300 border border-purple-500/30',
+    vodKeywords: ['bein'],
+    seriesKeywords: ['bein', 'tod']
+  },
+  {
+    id: 'appletv',
+    name: 'Apple TV+',
+    tagline: 'Apple Orijinal Film ve Dizileri',
+    color: '#FFFFFF',
+    bgGradient: 'from-zinc-800/70 via-zinc-950 to-black',
+    borderColor: 'border-gray-500/40 hover:border-white',
+    accentColor: 'text-white',
+    badgeBg: 'bg-white/15 text-white border border-white/20',
+    vodKeywords: ['apple'],
+    seriesKeywords: ['apple']
+  },
+  {
+    id: 'gain',
+    name: 'GAİN',
+    tagline: 'Farklı Sesler, Yepyeni Hikayeler',
+    color: '#FFEA00',
+    bgGradient: 'from-yellow-950/70 via-zinc-950 to-black',
+    borderColor: 'border-amber-500/40 hover:border-amber-400',
+    accentColor: 'text-amber-400',
+    badgeBg: 'bg-amber-500/20 text-amber-300 border border-amber-400/30',
+    vodKeywords: ['gain'],
+    seriesKeywords: ['gain']
+  },
+  {
+    id: 'tvplus',
+    name: 'Turkcell TV+',
+    tagline: 'TV+ Özel Seçkisi ve Sinema',
+    color: '#FFBE00',
+    bgGradient: 'from-yellow-950/70 via-zinc-950 to-black',
+    borderColor: 'border-tv-yellow/50 hover:border-tv-yellow',
+    accentColor: 'text-tv-yellow',
+    badgeBg: 'bg-tv-yellow/20 text-tv-yellow border border-tv-yellow/40',
+    vodKeywords: ['turkcell'],
+    seriesKeywords: ['turkcell']
+  }
+];
+
+// Helper: Platforma ait VOD & Dizi içeriklerini getir
+async function getPlatformData(platformId) {
+  const platform = PLATFORMS.find(p => p.id === platformId);
+  if (!platform) return null;
+
+  const [vodCats, serCats] = await Promise.all([
+    getVodCategories(),
+    getSeriesCategories()
+  ]);
+
+  const matchedVodCats = vodCats.filter(c => 
+    platform.vodKeywords.some(k => c.category_name.toLowerCase().includes(k))
+  );
+  const matchedSerCats = serCats.filter(c => 
+    platform.seriesKeywords.some(k => c.category_name.toLowerCase().includes(k))
+  );
+
+  const [movieLists, seriesLists] = await Promise.all([
+    Promise.all(matchedVodCats.map(c => getVodStreamsByCategory(c.category_id))),
+    Promise.all(matchedSerCats.map(c => getSeriesByCategory(c.category_id)))
+  ]);
+
+  // Tekilleştir ve etiketle
+  const movieMap = new Map();
+  movieLists.flat().forEach(m => {
+    if (!movieMap.has(String(m.id))) {
+      movieMap.set(String(m.id), {
+        ...m,
+        mediaType: 'movie',
+        platformId: platform.id,
+        platformName: platform.name
+      });
+    }
+  });
+
+  const seriesMap = new Map();
+  seriesLists.flat().forEach(s => {
+    if (!seriesMap.has(String(s.id))) {
+      seriesMap.set(String(s.id), {
+        ...s,
+        mediaType: 'series',
+        platformId: platform.id,
+        platformName: platform.name
+      });
+    }
+  });
+
+  return {
+    platform,
+    movies: Array.from(movieMap.values()),
+    series: Array.from(seriesMap.values())
+  };
+}
+
+// REST: Tüm Platformları Listele
+app.get('/api/platforms', async (req, res) => {
+  try {
+    const list = PLATFORMS.map(p => ({
+      id: p.id,
+      name: p.name,
+      tagline: p.tagline,
+      color: p.color,
+      bgGradient: p.bgGradient,
+      borderColor: p.borderColor,
+      accentColor: p.accentColor,
+      badgeBg: p.badgeBg
+    }));
+    res.json({ platforms: list });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// REST: Belirli bir platformun detay ve içerikleri (Filmler & Diziler filtreli)
+app.get('/api/platform/:slug', async (req, res) => {
+  try {
+    const { slug } = req.params;
+    const { type = 'all', search, limit = 50, offset = 0 } = req.query;
+
+    const data = await getPlatformData(slug);
+    if (!data) {
+      return res.status(404).json({ error: 'Platform bulunamadı' });
+    }
+
+    let items = [];
+    if (type === 'movies') {
+      items = [...data.movies];
+    } else if (type === 'series') {
+      items = [...data.series];
+    } else {
+      // Tümü: Filmleri ve dizileri harmanla
+      const maxLen = Math.max(data.movies.length, data.series.length);
+      for (let i = 0; i < maxLen; i++) {
+        if (i < data.movies.length) items.push(data.movies[i]);
+        if (i < data.series.length) items.push(data.series[i]);
+      }
+    }
+
+    if (search) {
+      const q = search.toLowerCase().trim();
+      items = items.filter(it => (it.name || '').toLowerCase().includes(q) || (it.genre || '').toLowerCase().includes(q));
+    }
+
+    const total = items.length;
+    const paginated = items.slice(parseInt(offset), parseInt(offset) + parseInt(limit));
+
+    res.json({
+      platform: data.platform,
+      total,
+      movieCount: data.movies.length,
+      seriesCount: data.series.length,
+      offset: parseInt(offset),
+      limit: parseInt(limit),
+      items: paginated
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// REST: Anasayfa (Google TV tarzı Hero & Vitrinler)
+app.get('/api/featured', async (req, res) => {
+  try {
+    await getOrUpdateData();
+
+    // Öne çıkan film ve dizi kategorilerinden çek
+    const [vizyonMovies, netflixSeries, primeSeries] = await Promise.all([
+      getVodStreamsByCategory('132').catch(() => []), // VIZYON FILMLER
+      getSeriesByCategory('832').catch(() => []),    // NETFLIX DIZILER
+      getSeriesByCategory('295').catch(() => [])     // AMAZON PRIME DIZILER
+    ]);
+
+    // Hero banner için en kaliteli afişe/puanlamaya sahip 5 içerik
+    const heroPool = [
+      ...vizyonMovies.slice(0, 4).map(m => ({
+        id: m.id,
+        name: m.name,
+        type: 'movie',
+        poster: m.icon,
+        rating: m.rating || '8.4',
+        year: m.year || '2024',
+        tagline: 'Vizyonda Çok Sevilenler',
+        plot: 'Sinemalarda gişe rekorları kıran ve seyircilerin beğenisini toplayan en popüler yapım.',
+        playUrl: m.streamUrl
+      })),
+      ...netflixSeries.slice(0, 3).map(s => ({
+        id: s.id,
+        name: s.name,
+        type: 'series',
+        poster: s.backdrop || s.cover,
+        cover: s.cover,
+        rating: s.rating || '8.8',
+        year: '2024',
+        genre: s.genre || 'Dram, Gerilim',
+        tagline: 'En Çok İzlenen Dizi',
+        plot: s.plot || 'Dünya genelinde milyonlarca izleyicinin takip ettiği heyecan dolu serüven.',
+        detailUrl: `/dizi/${s.id}`
+      }))
+    ];
+
+    // Popüler ulusal ve spor kanalları
+    const priorityChannelNames = ['TRT 1', 'ATV', 'KANAL D', 'SHOW TV', 'TV8', 'NOW', 'STAR', 'BEIN SPORTS 1', 'S SPORT', 'A SPOR'];
+    const topChannels = (cache.streams || []).filter(s => {
+      const u = s.name.toUpperCase();
+      return priorityChannelNames.some(p => u.includes(p)) && !u.includes('XXX');
+    }).slice(0, 12).map(s => ({
+      id: s.stream_id,
+      name: cleanName(s.name),
+      icon: s.stream_icon,
+      streamUrl: `/stream/${s.stream_id}.m3u8`
+    }));
+
+    res.json({
+      heroes: heroPool,
+      trendingMovies: vizyonMovies.slice(0, 20).map(m => ({ ...m, mediaType: 'movie' })),
+      popularSeries: [...netflixSeries.slice(0, 10), ...primeSeries.slice(0, 10)].map(s => ({ ...s, mediaType: 'series' })),
+      topChannels
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// =============================================================
 // TELEVİZYON VE DIŞ OYNATICILAR İÇİN GÜVENLİ M3U & XTREAM API
 // (Yetişkin içerikler 100% filtrelenmiş, orijinal kaynak gizli)
 // =============================================================
