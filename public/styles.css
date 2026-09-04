@@ -606,3 +606,14 @@ body {
   .platform-ranked-card { flex-basis: 180px; padding-left: 3rem; }
   .platform-rank { font-size: 6rem; }
 }
+
+/* Google Cast Button Styling */
+google-cast-launcher {
+  width: 22px;
+  height: 22px;
+  display: inline-block;
+  cursor: pointer;
+  vertical-align: middle;
+  --connected-color: #FFC700;
+  --disconnected-color: #FFFFFF;
+}

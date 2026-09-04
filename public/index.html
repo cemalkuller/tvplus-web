@@ -37,10 +37,28 @@
   <script src="https://unpkg.com/lucide@latest"></script>
 
   <!-- Google Cast Framework SDK -->
+  <script>
+    window['__onGCastApiAvailable'] = function(isAvailable) {
+      if (isAvailable && window.cast && window.cast.framework) {
+        try {
+          cast.framework.CastContext.getInstance().setOptions({
+            receiverApplicationId: chrome.cast.media.DEFAULT_MEDIA_RECEIVER_APP_ID,
+            autoJoinPolicy: chrome.cast.AutoJoinPolicy.ORIGIN_SCOPED
+          });
+          console.log('[Google Cast SDK] Başarıyla başlatıldı.');
+          if (typeof onCastFrameworkReady === 'function') {
+            onCastFrameworkReady();
+          }
+        } catch (e) {
+          console.warn('[Google Cast SDK] Init hatası:', e);
+        }
+      }
+    };
+  </script>
   <script src="https://www.gstatic.com/cv/js/sender/v1/cast_sender.js?loadCastFramework=1"></script>
 
   <!-- Custom Stylesheet -->
-  <link rel="stylesheet" href="/styles.css?v=5.0">
+  <link rel="stylesheet" href="/styles.css?v=6.0">
 </head>
 <body class="bg-black text-gray-100 min-h-screen selection:bg-tv-yellow selection:text-black">
 
@@ -162,6 +180,11 @@
           <input 
             id="global-search-input" 
             type="text" 
+            name="tvplus-global-search"
+            autocomplete="off"
+            autocorrect="off"
+            autocapitalize="none"
+            spellcheck="false"
             placeholder="Kanal veya program ara..." 
             class="w-full bg-[#111622] border border-[#1E2738] rounded-full pl-9 pr-8 py-1.5 text-xs sm:text-sm text-gray-200 placeholder-gray-500 focus:outline-none focus:border-tv-yellow transition"
           >
@@ -424,6 +447,11 @@
           <input 
             id="guide-search-input" 
             type="text" 
+            name="tvplus-guide-search"
+            autocomplete="off"
+            autocorrect="off"
+            autocapitalize="none"
+            spellcheck="false"
             placeholder="Kanal veya program ara..." 
             class="w-full bg-[#10141F] border border-[#1E273A] rounded-full pl-11 pr-10 py-2.5 text-xs sm:text-sm text-gray-100 placeholder-gray-500 focus:outline-none focus:border-tv-yellow transition shadow-inner"
           >
@@ -473,6 +501,11 @@
           <input 
             id="movies-search-input" 
             type="text" 
+            name="tvplus-movie-search"
+            autocomplete="off"
+            autocorrect="off"
+            autocapitalize="none"
+            spellcheck="false"
             placeholder="Film adı veya tür ara..." 
             class="w-full bg-[#10141F] border border-[#1E273A] rounded-full pl-11 pr-10 py-2.5 text-xs sm:text-sm text-gray-100 placeholder-gray-500 focus:outline-none focus:border-tv-yellow transition shadow-inner"
           >
@@ -522,6 +555,11 @@
           <input 
             id="series-search-input" 
             type="text" 
+            name="tvplus-series-search"
+            autocomplete="off"
+            autocorrect="off"
+            autocapitalize="none"
+            spellcheck="false"
             placeholder="Dizi adı veya tür ara..." 
             class="w-full bg-[#10141F] border border-[#1E273A] rounded-full pl-11 pr-10 py-2.5 text-xs sm:text-sm text-gray-100 placeholder-gray-500 focus:outline-none focus:border-tv-yellow transition shadow-inner"
           >
@@ -679,6 +717,11 @@
                 <input
                   id="platform-search-input"
                   type="text"
+                  name="tvplus-platform-search"
+                  autocomplete="off"
+                  autocorrect="off"
+                  autocapitalize="none"
+                  spellcheck="false"
                   placeholder="Ara..."
                   class="w-48 sm:w-64 bg-transparent px-2 py-1.5 text-sm text-white placeholder-gray-500 focus:outline-none"
                 >
@@ -892,8 +935,8 @@
         </div>
 
         <!-- Top Right: Cast, PiP, Settings, Close -->
-        <div class="flex items-center space-x-3 sm:space-x-4 text-white">
-          <button onclick="handleCastClick()" id="btn-cast" title="Chromecast ile Yayınla" class="hover:text-tv-yellow transition p-1.5 rounded-lg hover:bg-white/10 flex items-center">
+        <div class="flex items-center space-x-3 sm:space-x-4 text-white relative">
+          <button onclick="toggleCastPanel()" id="btn-cast" title="TV'ye Yayınla (Chromecast & Philips TV)" class="hover:text-tv-yellow transition p-1.5 rounded-lg hover:bg-white/10 flex items-center">
             <i data-lucide="cast" class="w-5 h-5"></i>
           </button>
           <button onclick="togglePiP()" title="Resim İçinde Resim (PiP)" class="hover:text-tv-yellow transition p-1.5 rounded-lg hover:bg-white/10">
@@ -905,6 +948,80 @@
           <button onclick="closePlayer()" title="Kapat (X)" class="hover:text-tv-yellow transition p-1.5 rounded-lg hover:bg-white/10">
             <i data-lucide="x" class="w-6 h-6"></i>
           </button>
+
+          <!-- Cast Cihaz Seçim Paneli (Philips Titan OS, Smart TV & Chromecast) -->
+          <div id="cast-options-panel" class="hidden absolute right-0 top-12 z-50 w-80 sm:w-96 rounded-2xl border border-white/20 bg-[#121620]/95 p-5 shadow-2xl backdrop-blur-xl space-y-3.5">
+            <div class="flex items-center justify-between border-b border-white/10 pb-2.5">
+              <div class="flex items-center space-x-2">
+                <i data-lucide="tv" class="w-4 h-4 text-tv-yellow"></i>
+                <h3 class="text-xs sm:text-sm font-bold text-white">TV'ye Yayınla</h3>
+              </div>
+              <button onclick="toggleCastPanel()" class="text-gray-400 hover:text-white p-1">
+                <i data-lucide="x" class="w-4 h-4"></i>
+              </button>
+            </div>
+
+            <div class="space-y-2">
+              <!-- Seçenek 1: Philips Titan OS & Tüm Smart TV'ler (Chrome Yerel Yayınlayıcı) -->
+              <div onclick="castToSmartTvOrRemote()" class="group p-3 rounded-xl bg-white/5 hover:bg-white/15 border border-white/10 hover:border-tv-yellow/50 transition cursor-pointer flex items-start space-x-3">
+                <div class="w-9 h-9 rounded-lg bg-blue-500/20 text-blue-400 flex items-center justify-center flex-shrink-0 mt-0.5 group-hover:scale-110 transition">
+                  <i data-lucide="monitor" class="w-5 h-5"></i>
+                </div>
+                <div class="flex-1 min-w-0">
+                  <div class="flex items-center justify-between">
+                    <h4 class="text-xs font-bold text-white group-hover:text-tv-yellow transition">Philips TV & Smart TV</h4>
+                    <span class="text-[9px] px-1.5 py-0.5 rounded bg-blue-500/30 text-blue-300 font-semibold">Titan OS / Saphi</span>
+                  </div>
+                  <p class="text-[11px] text-gray-400 mt-1 leading-snug">
+                    Philips Titan OS, Saphi ve ağdaki tüm Smart TV'leri listeler (Chrome Yerel Cihaz Seçici).
+                  </p>
+                </div>
+              </div>
+
+              <!-- Seçenek 2: Chromecast & Google TV (Resmi Cast SDK) -->
+              <div onclick="castToChromecastSdk()" class="group p-3 rounded-xl bg-white/5 hover:bg-white/15 border border-white/10 hover:border-tv-yellow/50 transition cursor-pointer flex items-start space-x-3">
+                <div class="w-9 h-9 rounded-lg bg-tv-yellow/20 text-tv-yellow flex items-center justify-center flex-shrink-0 mt-0.5 group-hover:scale-110 transition">
+                  <i data-lucide="cast" class="w-5 h-5"></i>
+                </div>
+                <div class="flex-1 min-w-0">
+                  <div class="flex items-center justify-between">
+                    <h4 class="text-xs font-bold text-white group-hover:text-tv-yellow transition">Chromecast / Google TV</h4>
+                    <span class="text-[9px] px-1.5 py-0.5 rounded bg-tv-yellow/30 text-tv-yellow font-semibold">Google Cast</span>
+                  </div>
+                  <p class="text-[11px] text-gray-400 mt-1 leading-snug">
+                    Chromecast cihazlarına doğrudan aktarır ve TV kapatılınca kalınan süreyi bilgisayarla eşitler.
+                  </p>
+                </div>
+              </div>
+
+              <!-- Seçenek 3: TV Tarayıcısı / QR Eşleme -->
+              <div onclick="openTvLoginModal(); toggleCastPanel();" class="group p-3 rounded-xl bg-white/5 hover:bg-white/15 border border-white/10 hover:border-tv-yellow/50 transition cursor-pointer flex items-start space-x-3">
+                <div class="w-9 h-9 rounded-lg bg-purple-500/20 text-purple-400 flex items-center justify-center flex-shrink-0 mt-0.5 group-hover:scale-110 transition">
+                  <i data-lucide="qr-code" class="w-5 h-5"></i>
+                </div>
+                <div class="flex-1 min-w-0">
+                  <div class="flex items-center justify-between">
+                    <h4 class="text-xs font-bold text-white group-hover:text-tv-yellow transition">QR Giriş / TV Linki</h4>
+                    <span class="text-[9px] px-1.5 py-0.5 rounded bg-purple-500/30 text-purple-300 font-semibold">M3U / Tarayıcı</span>
+                  </div>
+                  <p class="text-[11px] text-gray-400 mt-1 leading-snug">
+                    Philips TV tarayıcısından izlemek için QR kod veya direkt yayın adresi alın.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Bilgilendirme Notu -->
+            <div class="p-2.5 rounded-xl bg-black/40 border border-white/10 text-[10px] text-gray-400 space-y-1">
+              <div class="flex items-center space-x-1.5 text-tv-yellow font-bold text-[10px]">
+                <i data-lucide="info" class="w-3.5 h-3.5"></i>
+                <span>Philips Titan OS Bilgisi:</span>
+              </div>
+              <p class="leading-relaxed">
+                Philips Titan OS televizyonlar Google Cast yerine Chrome'un yerel DLNA/DIAL protokolünü destekler. "Philips TV & Smart TV" butonuna tıklayarak açılan pencereden televizyonunuzu seçebilirsiniz.
+              </p>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -1065,6 +1182,11 @@
           <input 
             id="switcher-search-input" 
             type="text" 
+            name="tvplus-switcher-search"
+            autocomplete="off"
+            autocorrect="off"
+            autocapitalize="none"
+            spellcheck="false"
             placeholder="Kanal ara" 
             class="w-full bg-[#131926] border border-[#212C42] rounded-lg pl-8 pr-3 py-1.5 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-tv-yellow"
           >
@@ -1447,6 +1569,6 @@
   </div>
 
   <!-- Main Application Logic -->
-  <script src="/app.js?v=5.0"></script>
+  <script src="/app.js?v=6.1"></script>
 </body>
 </html>

@@ -6,6 +6,7 @@ import os from 'os';
 import { fileURLToPath } from 'url';
 import { Readable } from 'stream';
 import { spawn } from 'child_process';
+import dgram from 'dgram';
 import QRCode from 'qrcode';
 import { CONFIG, saveEnvFile } from './config.js';
 import { initDatabase, getDb } from './db.js';
@@ -17,6 +18,75 @@ const CACHE_FILE = path.join(__dirname, 'iptv_cache.json');
 const app = express();
 app.use(cors());
 app.use(express.json());
+
+const dlnaDevices = new Map();
+
+function xmlValue(xml, tag) {
+  const match = String(xml).match(new RegExp(`<${tag}[^>]*>([\\s\\S]*?)<\\/${tag}>`, 'i'));
+  return match ? match[1].replace(/<[^>]+>/g, '').trim() : '';
+}
+
+async function inspectDlnaDevice(location) {
+  const response = await fetch(location, { signal: AbortSignal.timeout(4000) });
+  const xml = await response.text();
+  const service = xml.match(/<service>[\s\S]*?<serviceType>urn:schemas-upnp-org:service:AVTransport:1<\/serviceType>[\s\S]*?<controlURL>([\s\S]*?)<\/controlURL>[\s\S]*?<\/service>/i);
+  if (!service) return null;
+  const url = new URL(location);
+  const controlUrl = new URL(service[1].trim(), `${url.protocol}//${url.host}`).href;
+  return { id: Buffer.from(location).toString('base64url'), name: xmlValue(xml, 'friendlyName') || url.hostname, model: xmlValue(xml, 'modelName'), location, controlUrl };
+}
+
+function discoverDlnaDevices(timeoutMs = 2500) {
+  return new Promise(resolve => {
+    const sockets = [];
+    const locations = new Set();
+    const query = Buffer.from('M-SEARCH * HTTP/1.1\r\nHOST: 239.255.255.250:1900\r\nMAN: "ssdp:discover"\r\nMX: 2\r\nST: urn:schemas-upnp-org:device:MediaRenderer:1\r\n\r\n');
+    const addresses = Object.values(os.networkInterfaces()).flat().filter(info => info && info.family === 'IPv4' && !info.internal).map(info => info.address);
+    addresses.forEach(address => {
+      const socket = dgram.createSocket({ type: 'udp4', reuseAddr: true });
+      sockets.push(socket);
+      socket.on('message', message => {
+        const match = message.toString().match(/^location:\s*(.+)$/im);
+        if (match) locations.add(match[1].trim());
+      });
+      socket.on('error', () => {});
+      socket.bind(0, address, () => {
+        try { socket.setMulticastInterface(address); } catch (_) {}
+        socket.send(query, 1900, '239.255.255.250');
+      });
+    });
+    setTimeout(async () => {
+      sockets.forEach(socket => { try { socket.close(); } catch (_) {} });
+      const devices = (await Promise.all([...locations].map(location => inspectDlnaDevice(location).catch(() => null)))).filter(Boolean);
+      devices.forEach(device => dlnaDevices.set(device.id, device));
+      resolve(devices);
+    }, timeoutMs);
+  });
+}
+
+app.get('/api/dlna/devices', async (_req, res) => {
+  res.json({ devices: await discoverDlnaDevices() });
+});
+
+app.post('/api/dlna/cast', async (req, res) => {
+  const device = dlnaDevices.get(req.body.deviceId);
+  const mediaUrl = String(req.body.mediaUrl || '');
+  if (!device || !/^https?:\/\//i.test(mediaUrl)) return res.status(400).json({ error: 'Cihaz veya medya adresi geçersiz.' });
+  const soap = async (action, body) => fetch(device.controlUrl, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/xml; charset="utf-8"', SOAPAction: `"urn:schemas-upnp-org:service:AVTransport:1#${action}"` },
+    body: `<?xml version="1.0"?><s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/" s:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/"><s:Body><u:${action} xmlns:u="urn:schemas-upnp-org:service:AVTransport:1">${body}</u:${action}></s:Body></s:Envelope>`,
+    signal: AbortSignal.timeout(8000)
+  });
+  try {
+    const escapedUrl = mediaUrl.replace(/&/g, '&amp;').replace(/</g, '&lt;');
+    let response = await soap('SetAVTransportURI', `<InstanceID>0</InstanceID><CurrentURI>${escapedUrl}</CurrentURI><CurrentURIMetaData></CurrentURIMetaData>`);
+    if (!response.ok) throw new Error(`TV medya adresini reddetti (${response.status})`);
+    response = await soap('Play', '<InstanceID>0</InstanceID><Speed>1</Speed>');
+    if (!response.ok) throw new Error(`TV oynatmayı başlatamadı (${response.status})`);
+    res.json({ ok: true, device: device.name });
+  } catch (err) { res.status(502).json({ error: err.message }); }
+});
 app.use(express.static(path.join(__dirname, 'public'), {
   setHeaders: (res, filePath) => {
     if (filePath.endsWith('.html') || filePath.endsWith('.js') || filePath.endsWith('.css')) {

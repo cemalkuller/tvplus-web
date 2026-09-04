@@ -18,6 +18,8 @@ const STATE = {
   volume: parseFloat(localStorage.getItem('tvplus_volume') || '1'),
   isMuted: false, // Ses her zaman açık başlasın, ses seviyesi hatırlansın
   profileName: localStorage.getItem('tvplus_profile_name') || 'Cemal Küller',
+  localIp: '192.168.1.112',
+  port: 3000,
   hls: null,
   clockInterval: null,
   inactivityTimer: null,
@@ -97,6 +99,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   try {
+    loadLocalNetworkInfo();
     await Promise.all([
       loadUserInfo(),
       loadCategories(),
@@ -905,6 +908,10 @@ function openPlayer(channel, push = true) {
   // Play stream with Hls.js
   startPlayback(channel);
 
+  if (isCastSessionActive()) {
+    loadMediaOnCastSession();
+  }
+
   // Trigger inactivity timer (5 seconds)
   resetInactivity();
   initIcons();
@@ -1099,6 +1106,10 @@ function openMediaItem(item, type = 'movie') {
     if (mId) {
       updateUrl(`/film/${mId}`);
     }
+  }
+
+  if (isCastSessionActive()) {
+    loadMediaOnCastSession();
   }
 
   resetInactivity();
@@ -1435,12 +1446,13 @@ function seekMediaTo(targetSec) {
     return;
   }
 
-  // VOD: yeni akış aç. Hızlı tekrarlanan atlamalarda gereksiz ffmpeg süreci açmamak için kısa gecikme.
+  // VOD: yeni akışı doğrudan bu kullanıcı tıklaması içinde aç.
+  // Gecikmeli setTimeout kullanılırsa Chrome kullanıcı aktivasyonunu kaybedip play() çağrısını engeller.
   STATE.mediaSeekTarget = target;
   updateVodTimeDisplay();
   showLoading(true, `${formatDuration(target)} konumuna atlanıyor...`);
   clearTimeout(STATE.mediaSeekTimer);
-  STATE.mediaSeekTimer = setTimeout(() => restartMediaAt(target), 400);
+  restartMediaAt(target);
 }
 
 // Rewind / Forward 10 seconds (Sadece VOD/Dizi/Film için, Canlı TV'de yok)
@@ -1742,35 +1754,158 @@ function setupAutoUnmuteOnFirstGesture() {
 // =============================================================
 // CHROMECAST YAYINLAMA DESTEĞİ (Google Cast & RemotePlayback)
 // =============================================================
-function handleCastClick() {
-  // 1. HTML5 Video RemotePlayback API (Chrome ve Android TV desteği)
-  if (video && video.remote && typeof video.remote.prompt === 'function') {
-    video.remote.prompt()
-      .then(() => {
-        showToast('Yayınlama cihazına bağlanılıyor...');
-      })
-      .catch(err => {
-        if (err.name !== 'NotFoundError' && err.name !== 'NotAllowedError') {
-          console.warn('[Cast Remote Error]', err);
-          showToast('Yayınlama cihazı arandı.');
-        }
-      });
+
+async function loadLocalNetworkInfo() {
+  try {
+    const res = await fetch('/api/tv-info');
+    if (res.ok) {
+      const data = await res.json();
+      if (data.localIp) STATE.localIp = data.localIp;
+      if (data.port) STATE.port = data.port;
+    }
+  } catch (_) {}
+}
+
+function getActualMediaUrlForCast() {
+  const hostIp = STATE.localIp || '192.168.1.112';
+  const port = STATE.port || 3000;
+  const baseUrl = `http://${hostIp}:${port}`;
+
+  if (STATE.currentMedia) {
+    // VOD (Film / Dizi)
+    const mediaId = STATE.currentMedia.type === 'episode' ? STATE.currentMedia.id : (STATE.currentMedia.stream_id || STATE.currentMedia.id);
+    const mediaKind = STATE.currentMedia.type === 'episode' ? 'series' : 'movie';
+    const mediaExt = STATE.currentMedia.container_extension || 'mp4';
+    const trackBase = `${mediaKind}/${mediaId}.${mediaExt}`;
+
+    const startSec = getMediaPosition();
+    const params = new URLSearchParams();
+    if (STATE.selectedAudioTrack !== '') params.set('audio', STATE.selectedAudioTrack);
+    if (STATE.selectedQuality !== 'original') params.set('quality', STATE.selectedQuality);
+    if (startSec > 0) params.set('start', Math.floor(startSec));
+    params.set('sid', 'cast_' + Date.now().toString(36));
+    const qs = params.toString();
+
+    const title = cleanName(STATE.currentMedia.name || STATE.currentMedia.title || 'Film', STATE.currentMedia.type === 'episode' ? 'episode' : 'movie');
+    const subtitle = STATE.currentMedia.type === 'episode' ? `${STATE.currentMedia.seasonNum || 1}. Sezon ${STATE.currentMedia.episodeNum || 1}. Bölüm` : 'Film';
+    const poster = STATE.currentMedia.icon || STATE.currentMedia.cover || STATE.currentMedia.backdrop || '';
+
+    return {
+      url: `${baseUrl}/vod/browser/${trackBase}${qs ? '?' + qs : ''}`,
+      contentType: 'video/mp4',
+      streamType: window.chrome?.cast?.media?.StreamType?.BUFFERED || 'BUFFERED',
+      title,
+      subtitle,
+      poster,
+      currentTime: 0
+    };
+  } else if (STATE.currentChannel) {
+    // Canlı TV Kanalı
+    const title = cleanName(STATE.currentChannel.name, 'channel');
+    const poster = STATE.currentChannel.icon || '';
+
+    return {
+      url: `${baseUrl}/stream/${STATE.currentChannel.id}.m3u8`,
+      contentType: 'application/x-mpegurl',
+      streamType: window.chrome?.cast?.media?.StreamType?.LIVE || 'LIVE',
+      title,
+      subtitle: 'Canlı TV',
+      poster,
+      currentTime: 0
+    };
+  }
+  return null;
+}
+
+let remoteCastPlayer = null;
+let remoteCastPlayerController = null;
+let lastKnownCastTime = 0;
+let castTimePollInterval = null;
+
+function toggleCastPanel() {
+  const panel = document.getElementById('cast-options-panel');
+  if (panel) {
+    panel.classList.toggle('hidden');
+    initIcons();
+  }
+}
+
+// 1. Philips Titan OS & Smart TV (Chrome Yerel Arayıcı / RemotePlayback)
+async function castToSmartTvOrRemote() {
+  toggleCastPanel();
+  if (!STATE.currentChannel && !STATE.currentMedia) {
+    showToast('Lütfen önce bir kanal veya film başlatın.');
     return;
   }
 
-  // 2. Google Cast Framework SDK
+  // Chrome cihaz seçicisi yalnızca doğrudan kullanıcı tıklaması sırasında açılabilir.
+  // Önce bunu dene; sonuç alınamazsa gerçek DLNA taramasına geç.
+  if (video?.remote && typeof video.remote.prompt === 'function') {
+    try {
+      await video.remote.prompt();
+      showToast('✅ Philips TV bağlantısı kuruldu');
+      return;
+    } catch (err) {
+      if (err.name === 'NotAllowedError') {
+        showToast('Cihaz seçici tarayıcı tarafından engellendi. Düğmeye tekrar basın.');
+        return;
+      }
+      if (err.name !== 'NotFoundError') console.warn('[Remote Playback]', err);
+    }
+  }
+
+  showToast('Yerel ağdaki Philips / DLNA televizyonlar aranıyor...');
+  try {
+    const response = await fetch('/api/dlna/devices');
+    const { devices = [] } = await response.json();
+    if (!devices.length) throw new Error('DLNA televizyon bulunamadı. TV ve bilgisayarın aynı Wi-Fi ağında olduğundan emin olun.');
+    const selectedName = devices.length === 1
+      ? devices[0].name
+      : window.prompt(`TV adını yazın:\n${devices.map(device => `• ${device.name}${device.model ? ` (${device.model})` : ''}`).join('\n')}`, devices[0].name);
+    const device = devices.find(item => item.name === selectedName);
+    if (!device) return;
+    const media = getActualMediaUrlForCast();
+    if (!media) throw new Error('Aktarılacak yayın bulunamadı.');
+    const castResponse = await fetch('/api/dlna/cast', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ deviceId: device.id, mediaUrl: media.url })
+    });
+    const result = await castResponse.json();
+    if (!castResponse.ok) throw new Error(result.error || 'TV aktarımı başarısız.');
+    video.pause();
+    showToast(`✅ ${result.device} ekranında oynatılıyor`);
+  } catch (err) {
+    console.warn('[DLNA Cast]', err);
+    showToast(err.message);
+  }
+}
+
+// 2. Google Cast / Chromecast SDK
+function castToChromecastSdk() {
+  toggleCastPanel();
+  if (!STATE.currentChannel && !STATE.currentMedia) {
+    showToast('Lütfen önce bir kanal veya film başlatın.');
+    return;
+  }
+
   if (window.cast && window.cast.framework) {
     try {
       const castContext = cast.framework.CastContext.getInstance();
+      const currentSession = castContext.getCurrentSession();
+      if (currentSession && currentSession.getSessionState() === cast.framework.SessionState.SESSION_STARTED) {
+        loadMediaOnCastSession();
+        return;
+      }
       castContext.requestSession()
         .then(() => {
-          showToast('Chromecast oturumu başlatıldı');
+          showToast('Chromecast bağlantısı kuruldu.');
           loadMediaOnCastSession();
         })
         .catch(err => {
-          if (err !== 'cancel') {
+          if (err !== 'cancel' && err !== 'cancel_session') {
             console.warn('[Cast Framework Error]', err);
-            showToast('Chromecast cihazı seçilmedi');
+            showToast('Chromecast seçilmedi.');
           }
         });
       return;
@@ -1779,49 +1914,140 @@ function handleCastClick() {
     }
   }
 
-  showToast('Chrome menüsünden (⋮) "Yayınla..." seçeneği ile TV nize aktarabilirsiniz.');
+  showToast('Chromecast kütüphanesi hazır değil, lütfen sayfayı yenileyin.');
+}
+
+function isCastSessionActive() {
+  if (window.cast && cast.framework) {
+    try {
+      const castContext = cast.framework.CastContext.getInstance();
+      const session = castContext.getCurrentSession();
+      return !!session && session.getSessionState() === cast.framework.SessionState.SESSION_STARTED;
+    } catch (_) {}
+  }
+  return false;
 }
 
 function loadMediaOnCastSession() {
-  if (!window.chrome || !chrome.cast || !chrome.cast.media) return;
+  if (!window.chrome || !chrome.cast || !chrome.cast.media || !window.cast || !cast.framework) return;
   try {
     const castSession = cast.framework.CastContext.getInstance().getCurrentSession();
-    if (!castSession) return;
+    if (!castSession || castSession.getSessionState() !== cast.framework.SessionState.SESSION_STARTED) return;
 
-    let mediaUrl = video.currentSrc || video.src;
-    if (mediaUrl && mediaUrl.startsWith('/')) {
-      mediaUrl = window.location.origin + mediaUrl;
+    const mediaData = getActualMediaUrlForCast();
+    if (!mediaData) {
+      showToast('Oynatılan medya bulunamadı.');
+      return;
     }
-    const contentType = STATE.currentMedia ? 'video/mp4' : 'application/x-mpegurl';
-    const mediaInfo = new chrome.cast.media.MediaInfo(mediaUrl, contentType);
+
+    showToast(`"${mediaData.title}" TV ekranına aktarılıyor...`);
+
+    const mediaInfo = new chrome.cast.media.MediaInfo(mediaData.url, mediaData.contentType);
+    mediaInfo.streamType = mediaData.streamType;
     mediaInfo.metadata = new chrome.cast.media.GenericMediaMetadata();
-    mediaInfo.metadata.title = document.getElementById('player-channel-title')?.textContent || 'TV+';
-    mediaInfo.metadata.subtitle = document.getElementById('player-program-title')?.textContent || '';
+    mediaInfo.metadata.title = mediaData.title;
+    mediaInfo.metadata.subtitle = mediaData.subtitle;
+
+    if (mediaData.poster && mediaData.poster.startsWith('http')) {
+      mediaInfo.metadata.images = [{ url: mediaData.poster }];
+    }
 
     const request = new chrome.cast.media.LoadRequest(mediaInfo);
-    request.currentTime = video.currentTime || 0;
+    request.autoplay = true;
+    request.currentTime = mediaData.currentTime || 0;
+
     castSession.loadMedia(request).then(
-      () => { showToast('Yayın TV ekranına aktarıldı'); },
-      (errorCode) => { console.warn('Cast load media error:', errorCode); }
+      () => {
+        showToast('✅ TV ekranında oynatılıyor');
+        // Bilgisayardaki yerel oynatmayı duraklat
+        if (video) video.pause();
+        startCastTimeTracking(castSession);
+      },
+      (errorCode) => {
+        if (errorCode !== 'session_error') {
+          console.error('[Cast Error] Medya yükleme hatası:', errorCode);
+          showToast('TV de medya başlatılamadı (' + errorCode + ')');
+        }
+      }
     );
   } catch (err) {
-    console.warn('loadMediaOnCastSession error:', err);
+    console.error('[Cast Error]', err);
   }
 }
 
-window['__onGCastApiAvailable'] = function(isAvailable) {
-  if (isAvailable && window.cast && window.cast.framework) {
+function startCastTimeTracking(castSession) {
+  clearInterval(castTimePollInterval);
+  castTimePollInterval = setInterval(() => {
     try {
-      cast.framework.CastContext.getInstance().setOptions({
-        receiverApplicationId: chrome.cast.media.DEFAULT_MEDIA_RECEIVER_APP_ID,
-        autoJoinPolicy: chrome.cast.AutoJoinPolicy.ORIGIN_SCOPED
-      });
-      console.log('[Google Cast SDK] Hazır.');
-    } catch (e) {
-      console.warn('[Google Cast SDK] Init hatası:', e);
-    }
+      if (!isCastSessionActive()) {
+        clearInterval(castTimePollInterval);
+        return;
+      }
+      const mediaSession = castSession.getMediaSession();
+      if (mediaSession && typeof mediaSession.getEstimatedTime === 'function') {
+        const est = mediaSession.getEstimatedTime();
+        if (est > 0) {
+          lastKnownCastTime = est;
+        }
+      } else if (remoteCastPlayer && remoteCastPlayer.currentTime > 0) {
+        lastKnownCastTime = remoteCastPlayer.currentTime;
+      }
+    } catch (_) {}
+  }, 1000);
+}
+
+function handleCastSessionEnded() {
+  clearInterval(castTimePollInterval);
+  console.log('[Google Cast] Oturum kapandı. TV son saniyesi:', lastKnownCastTime);
+
+  if (lastKnownCastTime > 3 && STATE.currentMedia) {
+    const resumeSec = Math.floor(lastKnownCastTime);
+    lastKnownCastTime = 0; // Bir kez kullan
+
+    // 1. İlerlemeyi yerel hafızaya ve MySQL'e kaydet
+    const mediaType = STATE.currentMedia.type;
+    const id = mediaType === 'episode' ? STATE.currentMedia.id : (STATE.currentMedia.stream_id || STATE.currentMedia.id);
+    localStorage.setItem(`tvplus_resume_${mediaType}_${id}`, resumeSec);
+
+    // 2. Bilgisayardaki oynatıcıyı TV'de kalınan saniyeden başlat
+    showToast(`TV'de kalınan ${formatDuration(resumeSec)} konumundan devam ediliyor`);
+    restartMediaAt(resumeSec);
   }
-};
+}
+
+function onCastFrameworkReady() {
+  if (!window.cast || !cast.framework) return;
+  try {
+    const castContext = cast.framework.CastContext.getInstance();
+    remoteCastPlayer = new cast.framework.RemotePlayer();
+    remoteCastPlayerController = new cast.framework.RemotePlayerController(remoteCastPlayer);
+
+    remoteCastPlayerController.addEventListener(
+      cast.framework.RemotePlayerEventType.CURRENT_TIME_CHANGED,
+      function() {
+        if (remoteCastPlayer.currentTime > 0) {
+          lastKnownCastTime = remoteCastPlayer.currentTime;
+        }
+      }
+    );
+
+    castContext.addEventListener(
+      cast.framework.CastContextEventType.SESSION_STATE_CHANGED,
+      function(event) {
+        if (event.sessionState === cast.framework.SessionState.SESSION_STARTED ||
+            event.sessionState === cast.framework.SessionState.SESSION_RESUMED) {
+          console.log('[Google Cast] Oturum aktif, TV ye aktarılıyor...');
+          loadMediaOnCastSession();
+        } else if (event.sessionState === cast.framework.SessionState.SESSION_ENDING ||
+                   event.sessionState === cast.framework.SessionState.SESSION_ENDED) {
+          handleCastSessionEnded();
+        }
+      }
+    );
+  } catch (e) {
+    console.warn('[Cast Ready Error]', e);
+  }
+}
 
 function toggleFullscreen() {
   if (!document.fullscreenElement) {
