@@ -2,9 +2,12 @@ import express from 'express';
 import cors from 'cors';
 import path from 'path';
 import fs from 'fs';
+import os from 'os';
 import { fileURLToPath } from 'url';
 import { Readable } from 'stream';
+import QRCode from 'qrcode';
 import { CONFIG, saveEnvFile } from './config.js';
+import { initDatabase, getDb } from './db.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -1378,6 +1381,289 @@ app.get('/api/featured', async (req, res) => {
 });
 
 // =============================================================
+// MYSQL İZLEME GEÇMİŞİ & KALDIĞIN YERDEN DEVAM ETME API
+// =============================================================
+
+// Helper: Yerel LAN IP'sini tespit et (Telefonun erişebilmesi için fiziksel Wi-Fi/Modem IP'si)
+function getLocalIpAddress() {
+  try {
+    const interfaces = os.networkInterfaces();
+    let candidate = null;
+
+    for (const name of Object.keys(interfaces)) {
+      const lowerName = name.toLowerCase();
+      // Sanal vEthernet, WSL ve Hyper-V adaptörlerini atla
+      if (lowerName.includes('vethernet') || lowerName.includes('wsl') || lowerName.includes('virtual')) {
+        continue;
+      }
+      for (const iface of interfaces[name]) {
+        if (iface.family === 'IPv4' && !iface.internal) {
+          if (iface.address.startsWith('192.168.')) {
+            return iface.address; // En ideal yerel ağ IP'si
+          }
+          if (iface.address.startsWith('10.')) {
+            candidate = iface.address;
+          }
+        }
+      }
+    }
+    if (candidate) return candidate;
+  } catch (_) {}
+  return '192.168.1.112';
+}
+
+// REST: İlerleme Kaydet (Saniye, Süre, Bölüm, vb.)
+app.post('/api/progress', async (req, res) => {
+  try {
+    const db = getDb();
+    const {
+      profileName = 'Cemal Küller',
+      mediaType,
+      seriesId,
+      seasonNum = 1,
+      episodeId,
+      movieId,
+      title = 'İçerik',
+      poster = '',
+      currentTime = 0,
+      duration = 0
+    } = req.body;
+
+    if (!mediaType) return res.status(400).json({ error: 'mediaType gerekli' });
+
+    const cur = Math.max(0, parseFloat(currentTime) || 0);
+    const dur = Math.max(0, parseFloat(duration) || 0);
+    const pct = dur > 0 ? Math.min(100, Math.round((cur / dur) * 100)) : 0;
+
+    if (mediaType === 'episode') {
+      await db.query(`
+        INSERT INTO watch_progress 
+          (user_id, profile_name, media_type, series_id, season_num, episode_id, title, poster, progress_seconds, duration_seconds, percentage)
+        VALUES (1, ?, 'episode', ?, ?, ?, ?, ?, ?, ?, ?)
+        ON DUPLICATE KEY UPDATE
+          progress_seconds = VALUES(progress_seconds),
+          duration_seconds = VALUES(duration_seconds),
+          percentage = VALUES(percentage),
+          season_num = VALUES(season_num),
+          title = VALUES(title),
+          poster = VALUES(poster),
+          updated_at = NOW();
+      `, [profileName, seriesId || null, seasonNum, episodeId || null, title, poster, cur, dur, pct]);
+    } else if (mediaType === 'movie') {
+      await db.query(`
+        INSERT INTO watch_progress 
+          (user_id, profile_name, media_type, movie_id, title, poster, progress_seconds, duration_seconds, percentage)
+        VALUES (1, ?, 'movie', ?, ?, ?, ?, ?, ?)
+        ON DUPLICATE KEY UPDATE
+          progress_seconds = VALUES(progress_seconds),
+          duration_seconds = VALUES(duration_seconds),
+          percentage = VALUES(percentage),
+          title = VALUES(title),
+          poster = VALUES(poster),
+          updated_at = NOW();
+      `, [profileName, movieId || null, title, poster, cur, dur, pct]);
+    }
+
+    res.json({ success: true, percentage: pct, currentTime: cur });
+  } catch (err) {
+    console.error('[Progress Save Error]', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// REST: Profilin Devam Eden İçerikleri (Anasayfa "Kaldığın Yerden Devam Et" rafı için)
+app.get('/api/progress', async (req, res) => {
+  try {
+    const db = getDb();
+    const profile = req.query.profile || 'Cemal Küller';
+    const [rows] = await db.query(`
+      SELECT * FROM watch_progress 
+      WHERE profile_name = ? AND percentage < 95 AND progress_seconds > 10 
+      ORDER BY updated_at DESC LIMIT 20;
+    `, [profile]);
+    res.json({ items: rows });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// REST: Dizinin en son izlenen bölüm ve saniyesi
+app.get('/api/progress/series/:seriesId', async (req, res) => {
+  try {
+    const db = getDb();
+    const profile = req.query.profile || 'Cemal Küller';
+    const [rows] = await db.query(`
+      SELECT * FROM watch_progress 
+      WHERE profile_name = ? AND series_id = ? AND media_type = 'episode' 
+      ORDER BY updated_at DESC LIMIT 1;
+    `, [profile, req.params.seriesId]);
+    res.json({ item: rows[0] || null });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// REST: Tekil Bölümün kaldığı saniye
+app.get('/api/progress/episode/:episodeId', async (req, res) => {
+  try {
+    const db = getDb();
+    const profile = req.query.profile || 'Cemal Küller';
+    const [rows] = await db.query(`
+      SELECT * FROM watch_progress 
+      WHERE profile_name = ? AND episode_id = ? AND media_type = 'episode' 
+      LIMIT 1;
+    `, [profile, req.params.episodeId]);
+    res.json({ item: rows[0] || null });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// REST: Tekil Filmin kaldığı saniye
+app.get('/api/progress/movie/:movieId', async (req, res) => {
+  try {
+    const db = getDb();
+    const profile = req.query.profile || 'Cemal Küller';
+    const [rows] = await db.query(`
+      SELECT * FROM watch_progress 
+      WHERE profile_name = ? AND movie_id = ? AND media_type = 'movie' 
+      LIMIT 1;
+    `, [profile, req.params.movieId]);
+    res.json({ item: rows[0] || null });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// =============================================================
+// SMART TV QR KOD & 6 HANELİ EŞLEŞME İLE GİRİŞ API
+// =============================================================
+
+// REST: TV için 6 Haneli Eşleşme Kodu & QR Kod Üret
+app.get('/api/auth/tv-code', async (req, res) => {
+  try {
+    const db = getDb();
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    const localIp = getLocalIpAddress();
+    const port = CONFIG.port;
+    const pairUrl = `http://${localIp}:${port}/tv-login?code=${code}`;
+
+    const qrDataUrl = await QRCode.toDataURL(pairUrl, {
+      width: 256,
+      margin: 1,
+      color: {
+        dark: '#000000',
+        light: '#ffffff'
+      }
+    });
+
+    await db.query(`
+      INSERT INTO tv_pairings (code, status, expires_at)
+      VALUES (?, 'pending', DATE_ADD(NOW(), INTERVAL 10 MINUTE))
+      ON DUPLICATE KEY UPDATE status = 'pending', expires_at = DATE_ADD(NOW(), INTERVAL 10 MINUTE);
+    `, [code]);
+
+    res.json({
+      code,
+      pairUrl,
+      qrDataUrl,
+      localIp
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// REST: TV'nin Eşleşme Durumunu Sorgulaması (Polling)
+app.get('/api/auth/tv-status', async (req, res) => {
+  try {
+    const db = getDb();
+    const { code } = req.query;
+    if (!code) return res.status(400).json({ error: 'Kod eksik' });
+
+    const [rows] = await db.query(`
+      SELECT * FROM tv_pairings WHERE code = ? AND expires_at > NOW();
+    `, [code]);
+
+    if (rows.length === 0) {
+      return res.json({ status: 'expired' });
+    }
+
+    const pairing = rows[0];
+    if (pairing.status === 'authorized') {
+      return res.json({
+        status: 'authorized',
+        user: {
+          id: pairing.user_id,
+          username: pairing.username || 'cemal',
+          profileName: 'Cemal Küller'
+        }
+      });
+    }
+
+    res.json({ status: 'pending' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// REST: Telefondan TV Kodunu Onayla (Giriş Yetkisi Ver)
+app.post('/api/auth/tv-authorize', async (req, res) => {
+  try {
+    const db = getDb();
+    const { code, profileName = 'Cemal Küller' } = req.body;
+    if (!code) return res.status(400).json({ error: 'Kod gerekli' });
+
+    const cleanCode = code.replace(/\D/g, '');
+
+    const [rows] = await db.query(`
+      SELECT * FROM tv_pairings WHERE code = ? AND expires_at > NOW();
+    `, [cleanCode]);
+
+    if (rows.length === 0) {
+      return res.status(400).json({ success: false, error: 'Geçersiz veya süresi dolmuş kod' });
+    }
+
+    await db.query(`
+      UPDATE tv_pairings 
+      SET status = 'authorized', user_id = 1, username = 'cemal'
+      WHERE code = ?;
+    `, [cleanCode]);
+
+    res.json({ success: true, message: 'Televizyon girişi başarıyla onaylandı!' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// REST: Standart Kullanıcı Girişi (Kullanıcı Adı & Şifre)
+app.post('/api/auth/login', async (req, res) => {
+  try {
+    const db = getDb();
+    const { username, password } = req.body;
+    if (!username || !password) {
+      return res.status(400).json({ error: 'Kullanıcı adı ve şifre zorunludur' });
+    }
+
+    const [users] = await db.query('SELECT * FROM users WHERE username = ? AND password = ?', [username.trim(), password.trim()]);
+    if (users.length === 0) {
+      return res.status(401).json({ error: 'Kullanıcı adı veya şifre hatalı' });
+    }
+
+    const user = users[0];
+    const [profiles] = await db.query('SELECT * FROM profiles WHERE user_id = ?', [user.id]);
+
+    res.json({
+      success: true,
+      user: { id: user.id, username: user.username, role: user.role },
+      profiles
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// =============================================================
 // TELEVİZYON VE DIŞ OYNATICILAR İÇİN GÜVENLİ M3U & XTREAM API
 // (Yetişkin içerikler 100% filtrelenmiş, orijinal kaynak gizli)
 // =============================================================
@@ -1578,6 +1864,11 @@ app.get('/api/tv-info', (req, res) => {
   });
 });
 
+// Mobil TV Giriş Onay Sayfası
+app.get(['/tv-login', '/esle'], (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'tv-login.html'));
+});
+
 // SPA Fallback: Tüm menü rotaları ve doğrudan linkler için index.html döndür
 app.get('*', (req, res, next) => {
   if (
@@ -1601,5 +1892,6 @@ app.listen(CONFIG.port, async () => {
   console.log(` Web Arayüzü: http://localhost:${CONFIG.port}`);
   console.log(`====================================================`);
   
+  initDatabase().catch(e => console.error('MySQL başlatma hatası:', e.message));
   getOrUpdateData().catch(e => console.error('Önbellek başlatma hatası:', e.message));
 });

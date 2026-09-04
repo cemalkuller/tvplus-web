@@ -55,7 +55,9 @@ const STATE = {
   seriesSearchQuery: '',
   currentSeries: null,
   activeSeriesSeason: 1,
-  currentMedia: null
+  currentMedia: null,
+  resumeBannerTimer: null,
+  lastWatchedSeriesEpisode: null
 };
 
 // DOM References
@@ -947,6 +949,30 @@ function openMediaItem(item, type = 'movie') {
 
   document.getElementById('player-time-range').textContent = '00:00 / 00:00';
 
+  // Kaldığın Yerden Devam Et Hazırlığı
+  const resumeBanner = document.getElementById('resume-banner');
+  if (resumeBanner) resumeBanner.classList.add('hidden');
+  clearTimeout(STATE.resumeBannerTimer);
+
+  const mediaId = type === 'episode' ? item.id : (item.stream_id || item.id);
+  const cacheKey = `tvplus_resume_${type}_${mediaId}`;
+  let targetResumeSec = parseFloat(localStorage.getItem(cacheKey) || '0');
+
+  // MySQL veritabanından en son saniyeyi asenkron sorgula
+  const progressQueryUrl = type === 'episode'
+    ? `/api/progress/episode/${mediaId}?profile=${encodeURIComponent(STATE.profileName)}`
+    : `/api/progress/movie/${mediaId}?profile=${encodeURIComponent(STATE.profileName)}`;
+
+  fetch(progressQueryUrl).then(r => r.json()).then(data => {
+    if (data.item && data.item.progress_seconds > 5 && data.item.percentage < 95) {
+      const serverSec = parseFloat(data.item.progress_seconds);
+      targetResumeSec = serverSec;
+      if (video.currentTime < 5 && Math.abs(serverSec - video.currentTime) > 5) {
+        applyResumeSeconds(serverSec);
+      }
+    }
+  }).catch(() => {});
+
   showLoading(true, `${title} yükleniyor...`);
   hideError();
 
@@ -961,6 +987,16 @@ function openMediaItem(item, type = 'movie') {
 
   video.src = item.streamUrl;
   video.load();
+
+  // Medya meta verileri yüklendiğinde veya oynatma başladığında kaldığı yere atla
+  const onReadyToResume = () => {
+    video.removeEventListener('loadedmetadata', onReadyToResume);
+    if (targetResumeSec > 5 && video.currentTime < 5) {
+      applyResumeSeconds(targetResumeSec);
+    }
+  };
+  video.addEventListener('loadedmetadata', onReadyToResume, { once: true });
+
   const playPromise = video.play();
   if (playPromise !== undefined) {
     playPromise.then(() => {
@@ -970,6 +1006,8 @@ function openMediaItem(item, type = 'movie') {
         video.volume = 0;
         video.removeAttribute('src');
         video.src = '';
+      } else if (targetResumeSec > 5 && video.currentTime < 5) {
+        applyResumeSeconds(targetResumeSec);
       }
     }).catch(e => {
       if (playerModal.classList.contains('hidden')) return;
@@ -999,11 +1037,18 @@ function openMediaItem(item, type = 'movie') {
 }
 
 function closePlayer(push = true) {
+  // Oynatma sonlanırken ilerlemeyi anında MySQL ve localStorage'a kaydet
+  saveCurrentProgress(true);
+
   const prevMedia = STATE.currentMedia;
   STATE.currentChannel = null;
   STATE.currentMedia = null;
   STATE.playbackSession = null;
   cancelNextEpisodeAutoplay();
+
+  // Resume banner'ı kapat
+  document.getElementById('resume-banner')?.classList.add('hidden');
+  clearTimeout(STATE.resumeBannerTimer);
 
   playerModal.classList.add('hidden');
   document.body.style.overflow = '';
@@ -1238,6 +1283,9 @@ function initPlayerEvents() {
     updatePlayPauseIcons(false);
     clearTimeout(STATE.inactivityTimer);
     playerModal.classList.remove('user-inactive');
+    if (STATE.currentMedia) {
+      saveCurrentProgress(true);
+    }
   });
   video.addEventListener('timeupdate', () => {
     if (playerModal.classList.contains('hidden')) {
@@ -1256,14 +1304,26 @@ function initPlayerEvents() {
         const dur = formatDuration(video.duration);
         const timeRange = document.getElementById('player-time-range');
         if (timeRange) timeRange.textContent = `${cur} / ${dur}`;
+
+        // MySQL ve Cache senkronizasyonu (5 saniyede bir)
+        saveCurrentProgress(false);
       }
     }
   });
 
   // Otomatik Sonraki Bölüm Geçişi (Bölüm bittiğinde)
   video.addEventListener('ended', () => {
+    if (STATE.currentMedia) {
+      saveCurrentProgress(true);
+    }
     if (STATE.currentMedia?.type === 'episode') {
       prepareAndShowNextEpisode();
+    }
+  });
+
+  window.addEventListener('beforeunload', () => {
+    if (STATE.currentMedia) {
+      saveCurrentProgress(true);
     }
   });
 
@@ -2491,22 +2551,62 @@ async function openSeriesDetailPage(seriesId, push = true) {
       posterElem.src = info.cover;
     }
 
+    // MySQL'den bu dizide en son kalınan bölümü ve saniyeyi sorgula
+    let lastWatched = null;
+    try {
+      const pRes = await fetch(`/api/progress/series/${seriesId}?profile=${encodeURIComponent(STATE.profileName)}`);
+      if (pRes.ok) {
+        const pData = await pRes.json();
+        if (pData.item && pData.item.episode_id) {
+          lastWatched = pData.item;
+          STATE.lastWatchedSeriesEpisode = lastWatched;
+        } else {
+          STATE.lastWatchedSeriesEpisode = null;
+        }
+      }
+    } catch (_) {
+      STATE.lastWatchedSeriesEpisode = null;
+    }
+
     // Sezon Sekmelerini hazırla
     const seasonTabs = document.getElementById('series-detail-season-tabs');
     const seasons = data.seasons || [];
     const availableSeasons = Object.keys(data.episodes || {});
 
-    let firstSeason = seasons[0]?.season_number || availableSeasons[0] || 1;
-    STATE.activeSeriesSeason = firstSeason;
+    // Eğer izlenen bir bölüm varsa doğrudan o sezona git, yoksa 1. sezona
+    let targetSeason = (lastWatched && lastWatched.season_num) ? lastWatched.season_num : (seasons[0]?.season_number || availableSeasons[0] || 1);
+    STATE.activeSeriesSeason = targetSeason;
 
-    const epCount = (data.episodes?.[String(firstSeason)] || []).length;
+    // Üstteki "Bölümü Başlat" butonunu güncelle
+    const playFirstBtn = document.getElementById('btn-series-play-first');
+    if (playFirstBtn) {
+      if (lastWatched) {
+        playFirstBtn.innerHTML = `
+          <i data-lucide="play" class="w-4 h-4 fill-current"></i>
+          <span>Kaldığın Yerden Devam Et (${lastWatched.season_num}. Sezon %${lastWatched.percentage || 0})</span>
+        `;
+        playFirstBtn.onclick = () => {
+          resumeSeriesEpisode(lastWatched);
+        };
+      } else {
+        playFirstBtn.innerHTML = `
+          <i data-lucide="play" class="w-4 h-4 fill-current"></i>
+          <span>1. Bölümü Başlat</span>
+        `;
+        playFirstBtn.onclick = () => {
+          playFirstEpisodeOfSeries();
+        };
+      }
+    }
+
+    const epCount = (data.episodes?.[String(targetSeason)] || []).length;
     document.getElementById('series-detail-season-count').textContent = `${seasons.length || availableSeasons.length || 1} Sezon • ${epCount} Bölüm`;
 
     let tabsHtml = '';
     if (seasons.length > 0) {
       for (const s of seasons) {
         const sNum = s.season_number;
-        const isActive = String(sNum) === String(firstSeason);
+        const isActive = String(sNum) === String(targetSeason);
         tabsHtml += `
           <button onclick="selectSeriesDetailSeason(${sNum})" id="s-detail-tab-${sNum}" class="vod-cat-pill ${isActive ? 'active' : ''}">
             ${s.name || `Sezon ${sNum}`}
@@ -2515,7 +2615,7 @@ async function openSeriesDetailPage(seriesId, push = true) {
       }
     } else {
       for (const sNum of availableSeasons) {
-        const isActive = String(sNum) === String(firstSeason);
+        const isActive = String(sNum) === String(targetSeason);
         tabsHtml += `
           <button onclick="selectSeriesDetailSeason(${sNum})" id="s-detail-tab-${sNum}" class="vod-cat-pill ${isActive ? 'active' : ''}">
             Sezon ${sNum}
@@ -2525,7 +2625,7 @@ async function openSeriesDetailPage(seriesId, push = true) {
     }
     if (seasonTabs) seasonTabs.innerHTML = tabsHtml;
 
-    renderSeriesDetailEpisodes(firstSeason);
+    renderSeriesDetailEpisodes(targetSeason);
     initIcons();
   } catch (err) {
     console.error('Series detail load error:', err);
@@ -2567,12 +2667,17 @@ function renderSeriesDetailEpisodes(seasonNum) {
   }
 
   const seriesTitle = STATE.currentSeries.info?.name || 'Dizi';
+  const lastWatched = STATE.lastWatchedSeriesEpisode;
 
   let html = '';
   for (const ep of episodes) {
     const epTitle = cleanName(ep.title || `${ep.episode_num}. Bölüm`);
     const epThumb = ep.info?.movie_image || STATE.currentSeries.info?.cover || '';
     const duration = ep.info?.duration || (ep.info?.duration_secs ? `${Math.round(ep.info.duration_secs / 60)} dk` : '');
+    const isLastWatched = lastWatched && String(ep.id) === String(lastWatched.episode_id);
+    const borderClass = isLastWatched 
+      ? 'border-tv-yellow ring-2 ring-tv-yellow/50 shadow-lg shadow-tv-yellow/10' 
+      : 'border-[#1E2738] hover:border-tv-yellow/70';
 
     const epPayload = {
       id: ep.id,
@@ -2586,7 +2691,7 @@ function renderSeriesDetailEpisodes(seasonNum) {
     };
 
     html += `
-      <div class="bg-[#10141F] border border-[#1E2738] hover:border-tv-yellow/70 rounded-2xl p-3 flex flex-col justify-between space-y-3 cursor-pointer transition group shadow-md hover:shadow-xl" onclick='playSeriesEpisode(${JSON.stringify(epPayload).replace(/'/g, "&#39;")})'>
+      <div class="bg-[#10141F] border ${borderClass} rounded-2xl p-3 flex flex-col justify-between space-y-3 cursor-pointer transition group shadow-md hover:shadow-xl relative" onclick='playSeriesEpisode(${JSON.stringify(epPayload).replace(/'/g, "&#39;")})'>
         <div class="relative w-full aspect-video rounded-xl overflow-hidden bg-black/60">
           <img src="${epThumb}" alt="${escapeHtml(epTitle)}" class="w-full h-full object-cover group-hover:scale-105 transition duration-300" onerror="this.src='https://images.unsplash.com/photo-1522869635100-9f4c5e86aa37?auto=format&fit=crop&w=400&q=80'">
           <div class="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition">
@@ -2595,9 +2700,20 @@ function renderSeriesDetailEpisodes(seasonNum) {
             </div>
           </div>
           ${duration ? `<span class="absolute bottom-2 right-2 px-2 py-0.5 rounded-md bg-black/80 text-[10px] font-mono text-gray-300 backdrop-blur">${duration}</span>` : ''}
+          ${isLastWatched ? `
+            <div class="absolute bottom-0 left-0 right-0 h-1.5 bg-black/60">
+              <div class="h-full bg-tv-yellow transition-all duration-300" style="width: ${lastWatched.percentage}%"></div>
+            </div>
+            <div class="absolute top-2 left-2 px-2 py-0.5 rounded-full bg-tv-yellow text-black font-black text-[9px] uppercase tracking-wider shadow">
+              Kaldığın Yer
+            </div>
+          ` : ''}
         </div>
         <div>
-          <div class="text-[10px] text-tv-yellow font-black tracking-wide">${ep.episode_num || '1'}. Bölüm</div>
+          <div class="flex items-center justify-between">
+            <div class="text-[10px] text-tv-yellow font-black tracking-wide">${ep.episode_num || '1'}. Bölüm</div>
+            ${isLastWatched ? `<div class="text-[10px] text-tv-yellow font-bold">%${lastWatched.percentage} (${formatDuration(lastWatched.progress_seconds)})</div>` : ''}
+          </div>
           <h4 class="text-xs font-bold text-white group-hover:text-tv-yellow transition line-clamp-1">${escapeHtml(epTitle)}</h4>
         </div>
       </div>
@@ -3063,15 +3179,17 @@ function getPlatformLogoHtml(id) {
 
 async function loadHomeData() {
   try {
-    const [platRes, featRes] = await Promise.all([
+    const [platRes, featRes, progressRes] = await Promise.all([
       fetch('/api/platforms').then(r => r.json()).catch(() => ({ platforms: [] })),
-      fetch('/api/featured').then(r => r.json()).catch(() => ({ heroes: [], trendingMovies: [], popularSeries: [], topChannels: [] }))
+      fetch('/api/featured').then(r => r.json()).catch(() => ({ heroes: [], trendingMovies: [], popularSeries: [], topChannels: [] })),
+      fetch(`/api/progress?profile=${encodeURIComponent(STATE.profileName || 'Cemal Küller')}`).then(r => r.json()).catch(() => ({ items: [] }))
     ]);
 
     STATE.platforms = platRes.platforms || [];
     STATE.homeFeatured = featRes;
 
     renderHomePlatforms(STATE.platforms);
+    renderHomeContinueWatching(progressRes.items || []);
 
     if (featRes.heroes && featRes.heroes.length > 0) {
       renderHomeHero(featRes.heroes);
@@ -3482,8 +3600,330 @@ function clearPlatformSearch() {
   loadPlatformContent(true);
 }
 
+// =============================================================
+// KALDIĞIN YERDEN DEVAM ET (WATCH PROGRESS & RESUME)
+// =============================================================
+
+function renderHomeContinueWatching(items) {
+  const section = document.getElementById('home-continue-watching-section');
+  const shelf = document.getElementById('home-continue-watching-shelf');
+  if (!section || !shelf) return;
+
+  if (!items || items.length === 0) {
+    section.classList.add('hidden');
+    shelf.innerHTML = '';
+    return;
+  }
+
+  section.classList.remove('hidden');
+  shelf.innerHTML = items.map(item => {
+    const isEpisode = item.media_type === 'episode';
+    const pct = item.percentage || 0;
+    const progressTime = formatDuration(item.progress_seconds);
+    const totalTime = formatDuration(item.duration_seconds);
+    const subtitle = isEpisode ? `${item.season_num}. Sezon Bölüm` : 'Film';
+
+    return `
+      <div 
+        onclick='playContinueItem(${JSON.stringify(item).replace(/'/g, "&#39;")})'
+        class="group flex-shrink-0 w-48 sm:w-56 cursor-pointer"
+      >
+        <div class="relative aspect-video rounded-xl overflow-hidden bg-zinc-900 border border-white/10 group-hover:border-tv-yellow/80 group-hover:scale-105 transition-all duration-300 shadow-md">
+          <img 
+            src="${item.poster || ''}" 
+            alt="${escapeHtml(item.title)}" 
+            class="w-full h-full object-cover group-hover:scale-110 transition duration-500" 
+            loading="lazy"
+            onerror="this.src='https://images.unsplash.com/photo-1574375927938-d5a98e8ffe85?auto=format&fit=crop&w=400&q=80'"
+          />
+          <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition flex items-center justify-center">
+            <div class="w-10 h-10 rounded-full bg-tv-yellow text-black flex items-center justify-center shadow-lg transform scale-90 group-hover:scale-100 transition">
+              <i data-lucide="play" class="w-5 h-5 fill-current ml-0.5"></i>
+            </div>
+          </div>
+          <div class="absolute bottom-0 left-0 right-0 h-1.5 bg-black/60">
+            <div class="h-full bg-tv-yellow transition-all duration-300" style="width: ${pct}%"></div>
+          </div>
+          <div class="absolute top-2 left-2 px-1.5 py-0.5 rounded bg-black/75 backdrop-blur text-[10px] font-mono text-tv-yellow border border-tv-yellow/30 font-bold">
+            ${progressTime} / ${totalTime}
+          </div>
+          <div class="absolute top-2 right-2 px-1.5 py-0.5 rounded bg-black/75 backdrop-blur text-[10px] font-bold text-gray-300 border border-white/10">
+            %${pct}
+          </div>
+        </div>
+        <h3 class="text-xs sm:text-sm font-semibold text-gray-200 group-hover:text-tv-yellow truncate mt-2 transition">${escapeHtml(item.title)}</h3>
+        <p class="text-[11px] text-gray-400 truncate flex items-center justify-between">
+          <span>${subtitle}</span>
+          <span class="text-tv-yellow font-bold text-[10px]">Kaldığın Yerden</span>
+        </p>
+      </div>
+    `;
+  }).join('');
+  initIcons();
+}
+
+async function playContinueItem(item) {
+  if (!item) return;
+  if (item.media_type === 'movie') {
+    const mId = item.movie_id;
+    try {
+      showLoading(true, 'Film yükleniyor...');
+      const res = await fetch(`/api/vod/movie/${mId}`);
+      if (res.ok) {
+        const movie = await res.json();
+        openMediaItem(movie, 'movie');
+      }
+    } catch (e) {
+      console.error('Continue movie error:', e);
+    }
+  } else if (item.media_type === 'episode') {
+    const sId = item.series_id;
+    const epId = item.episode_id;
+    try {
+      showLoading(true, 'Dizi bölümü yükleniyor...');
+      await openSeriesDetailPage(sId, false);
+      if (STATE.currentSeries) {
+        let foundEp = null;
+        let foundSeason = item.season_num || 1;
+        for (const [sNum, epList] of Object.entries(STATE.currentSeries.episodes || {})) {
+          const ep = epList.find(e => String(e.id) === String(epId));
+          if (ep) {
+            foundEp = ep;
+            foundSeason = parseInt(sNum);
+            break;
+          }
+        }
+        if (foundEp) {
+          playSeriesEpisodeDirect(foundEp, foundSeason);
+        } else {
+          playFirstEpisodeOfSeries();
+        }
+      }
+    } catch (e) {
+      console.error('Continue episode error:', e);
+    }
+  }
+}
+
+function resumeSeriesEpisode(lastWatched) {
+  if (!STATE.currentSeries || !lastWatched) return;
+  const sNum = String(lastWatched.season_num || 1);
+  const eps = STATE.currentSeries.episodes?.[sNum] || [];
+  const found = eps.find(e => String(e.id) === String(lastWatched.episode_id));
+  if (found) {
+    playSeriesEpisodeDirect(found, parseInt(sNum));
+  } else if (eps.length > 0) {
+    playSeriesEpisodeDirect(eps[0], parseInt(sNum));
+  }
+}
+
+function applyResumeSeconds(sec) {
+  if (sec <= 5 || !video) return;
+  try {
+    video.currentTime = sec;
+  } catch (_) {}
+
+  const banner = document.getElementById('resume-banner');
+  const bannerText = document.getElementById('resume-time-text');
+  if (banner && bannerText) {
+    bannerText.textContent = formatDuration(sec);
+    banner.classList.remove('hidden');
+    clearTimeout(STATE.resumeBannerTimer);
+    STATE.resumeBannerTimer = setTimeout(() => {
+      banner.classList.add('hidden');
+    }, 7000);
+  }
+}
+
+function restartCurrentMedia() {
+  if (!video) return;
+  video.currentTime = 0;
+  const banner = document.getElementById('resume-banner');
+  if (banner) banner.classList.add('hidden');
+  clearTimeout(STATE.resumeBannerTimer);
+  saveCurrentProgress(true);
+  showToast('İçerik başa alındı.');
+}
+
+let lastSavedSec = 0;
+let lastSavedTs = 0;
+
+function saveCurrentProgress(force = false) {
+  if (!STATE.currentMedia || !video) return;
+  const dur = Math.floor(video.duration || 0);
+  const cur = Math.floor(video.currentTime || 0);
+  if (dur <= 0 || isNaN(dur)) return;
+
+  const now = Date.now();
+  if (!force && cur < 3) return;
+  if (!force && Math.abs(cur - lastSavedSec) < 4 && (now - lastSavedTs) < 4000) return;
+
+  lastSavedSec = cur;
+  lastSavedTs = now;
+
+  const mediaType = STATE.currentMedia.type;
+  const id = mediaType === 'episode' ? STATE.currentMedia.id : (STATE.currentMedia.stream_id || STATE.currentMedia.id);
+  const cacheKey = `tvplus_resume_${mediaType}_${id}`;
+  localStorage.setItem(cacheKey, cur);
+
+  const payload = {
+    profileName: STATE.profileName || 'Cemal Küller',
+    mediaType: mediaType,
+    seriesId: STATE.currentMedia.seriesId || (STATE.currentSeries?.info?.series_id) || null,
+    seasonNum: STATE.currentMedia.seasonNum || STATE.activeSeriesSeason || 1,
+    episodeId: mediaType === 'episode' ? id : null,
+    movieId: mediaType === 'movie' ? id : null,
+    title: STATE.currentMedia.title || STATE.currentMedia.name || 'İçerik',
+    poster: STATE.currentMedia.cover || STATE.currentMedia.icon || (STATE.currentSeries?.info?.cover) || '',
+    currentTime: cur,
+    duration: dur
+  };
+
+  fetch('/api/progress', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  }).catch(() => {});
+}
+
+// =============================================================
+// SMART TV QR KOD İLE TELEFON GİRİŞİ & KULLANICI GİRİŞ MODALI
+// =============================================================
+
+let tvAuthPollInterval = null;
+
+async function openTvLoginModal() {
+  const modal = document.getElementById('tv-auth-modal');
+  if (!modal) return;
+  modal.classList.remove('hidden');
+  initIcons();
+
+  const qrImg = document.getElementById('tv-auth-qr-img');
+  const qrLoading = document.getElementById('tv-auth-qr-loading');
+  const codeBox = document.getElementById('tv-auth-code-box');
+  const statusText = document.getElementById('tv-auth-status-text');
+  const errorMsg = document.getElementById('login-error-msg');
+  if (errorMsg) errorMsg.classList.add('hidden');
+
+  if (qrLoading) qrLoading.classList.remove('hidden');
+  if (codeBox) codeBox.textContent = '------';
+
+  try {
+    const res = await fetch('/api/auth/tv-code');
+    const data = await res.json();
+    if (data.code) {
+      if (qrImg) qrImg.src = data.qrDataUrl;
+      if (qrLoading) qrLoading.classList.add('hidden');
+      if (codeBox) codeBox.textContent = data.code;
+      if (statusText) {
+        statusText.innerHTML = `
+          <i data-lucide="radio" class="w-3 h-3"></i>
+          <span>Telefonunuz bekleniyor... (${data.localIp || ''})</span>
+        `;
+        initIcons();
+      }
+
+      // 2 saniyelik aralıklarla telefon onayını sorgula
+      if (tvAuthPollInterval) clearInterval(tvAuthPollInterval);
+      tvAuthPollInterval = setInterval(async () => {
+        try {
+          const pollRes = await fetch(`/api/auth/tv-status?code=${data.code}`);
+          const pollData = await pollRes.json();
+          if (pollData.status === 'authorized') {
+            clearInterval(tvAuthPollInterval);
+            tvAuthPollInterval = null;
+            if (pollData.user) {
+              STATE.profileName = pollData.user.profileName || 'Cemal Küller';
+              localStorage.setItem('tvplus_profile_name', STATE.profileName);
+              const headerUser = document.getElementById('header-user-name');
+              if (headerUser) headerUser.textContent = STATE.profileName;
+            }
+            closeTvLoginModal();
+            showToast('Televizyon girişi başarıyla onaylandı! Hoş geldiniz.');
+            if (STATE.activeTab === 'home') {
+              loadHomeData();
+            }
+          } else if (pollData.status === 'expired') {
+            clearInterval(tvAuthPollInterval);
+            tvAuthPollInterval = null;
+            if (statusText) statusText.innerHTML = '<span class="text-red-400">Süre doldu. Pencereyi tekrar açın.</span>';
+          }
+        } catch (_) {}
+      }, 2000);
+    }
+  } catch (err) {
+    console.error('TV code error:', err);
+    if (qrLoading) qrLoading.classList.add('hidden');
+  }
+}
+
+function closeTvLoginModal() {
+  const modal = document.getElementById('tv-auth-modal');
+  if (modal) modal.classList.add('hidden');
+  if (tvAuthPollInterval) {
+    clearInterval(tvAuthPollInterval);
+    tvAuthPollInterval = null;
+  }
+}
+
+async function handleClassicLogin(e) {
+  if (e) e.preventDefault();
+  const uInput = document.getElementById('login-username');
+  const pInput = document.getElementById('login-password');
+  const errorMsg = document.getElementById('login-error-msg');
+  if (!uInput || !pInput) return;
+
+  const username = uInput.value.trim();
+  const password = pInput.value.trim();
+
+  try {
+    const res = await fetch('/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password })
+    });
+    const data = await res.json();
+    if (!res.ok || data.error) {
+      if (errorMsg) {
+        errorMsg.textContent = data.error || 'Giriş yapılamadı';
+        errorMsg.classList.remove('hidden');
+      }
+      return;
+    }
+
+    if (errorMsg) errorMsg.classList.add('hidden');
+    const profile = data.profiles?.[0]?.name || data.user?.username || 'Cemal Küller';
+    STATE.profileName = profile;
+    localStorage.setItem('tvplus_profile_name', profile);
+    const headerUser = document.getElementById('header-user-name');
+    if (headerUser) headerUser.textContent = profile;
+
+    closeTvLoginModal();
+    showToast(`Hoş geldiniz, ${profile}!`);
+    if (STATE.activeTab === 'home') {
+      loadHomeData();
+    }
+  } catch (err) {
+    if (errorMsg) {
+      errorMsg.textContent = 'Bağlantı hatası oluştu';
+      errorMsg.classList.remove('hidden');
+    }
+  }
+}
+
+// Window Global Exports
 window.openPlatformPage = openPlatformPage;
 window.setPlatformFilter = setPlatformFilter;
 window.loadMorePlatformContent = loadMorePlatformContent;
 window.clearPlatformSearch = clearPlatformSearch;
+window.renderHomeContinueWatching = renderHomeContinueWatching;
+window.playContinueItem = playContinueItem;
+window.resumeSeriesEpisode = resumeSeriesEpisode;
+window.applyResumeSeconds = applyResumeSeconds;
+window.restartCurrentMedia = restartCurrentMedia;
+window.saveCurrentProgress = saveCurrentProgress;
+window.openTvLoginModal = openTvLoginModal;
+window.closeTvLoginModal = closeTvLoginModal;
+window.handleClassicLogin = handleClassicLogin;
+
 

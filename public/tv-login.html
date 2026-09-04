@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TV+ • TV Oturumunu Onayla</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    body { background-color: #000000; color: #FFFFFF; font-family: -apple-system, BlinkMacSystemFont, sans-serif; }
+    .tvplus-yellow { color: #FFC700; }
+    .bg-tvplus-yellow { background-color: #FFC700; }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between p-6">
+
+  <!-- Header -->
+  <header class="flex items-center justify-between border-b border-white/10 pb-4">
+    <div class="text-2xl font-black">
+      tv<span class="tvplus-yellow">+</span>
+    </div>
+    <span class="text-xs font-semibold px-2.5 py-1 rounded-full bg-white/10 text-gray-300">
+      TV Cihaz Eşleştirme
+    </span>
+  </header>
+
+  <!-- Main Box -->
+  <main class="max-w-md mx-auto w-full my-auto py-8">
+    <div class="bg-zinc-900/80 border border-white/10 rounded-2xl p-6 sm:p-8 shadow-2xl space-y-6 text-center">
+      
+      <!-- Icon -->
+      <div class="w-16 h-16 rounded-2xl bg-tvplus-yellow/10 border border-tvplus-yellow/30 flex items-center justify-center mx-auto text-tvplus-yellow">
+        <i data-lucide="tv" class="w-8 h-8"></i>
+      </div>
+
+      <!-- Title & Description -->
+      <div class="space-y-2">
+        <h1 class="text-2xl font-black text-white">TV Girişini Onayla</h1>
+        <p class="text-xs text-gray-400">
+          Televizyonunuzda Turkcell TV+ oturumunu açmak üzeresiniz. TV ekranınızdaki 6 haneli kodu kontrol edin.
+        </p>
+      </div>
+
+      <!-- Code Box -->
+      <div class="space-y-2">
+        <label class="text-[11px] font-bold text-gray-400 uppercase tracking-wider block">TV Eşleşme Kodu</label>
+        <div class="relative">
+          <input 
+            id="pair-code-input" 
+            type="text" 
+            maxlength="6"
+            placeholder="6 Haneli Kod" 
+            class="w-full text-center text-3xl font-black tracking-widest bg-black border-2 border-white/20 focus:border-tvplus-yellow rounded-xl py-3 text-tvplus-yellow placeholder-gray-600 focus:outline-none transition uppercase"
+          />
+        </div>
+      </div>
+
+      <!-- Profile Selection -->
+      <div class="space-y-2 text-left">
+        <label class="text-[11px] font-bold text-gray-400 uppercase tracking-wider block">Giriş Yapılacak Profil</label>
+        <select id="pair-profile-select" class="w-full bg-black border border-white/20 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-tvplus-yellow">
+          <option value="Cemal Küller">Cemal Küller (Ana Profil)</option>
+          <option value="Misafir">Misafir</option>
+        </select>
+      </div>
+
+      <!-- Authorize Button -->
+      <div>
+        <button 
+          id="btn-authorize" 
+          onclick="authorizeTv()" 
+          class="w-full py-3.5 rounded-xl bg-tvplus-yellow hover:bg-yellow-400 text-black font-extrabold text-sm transition transform active:scale-95 shadow-xl flex items-center justify-center space-x-2"
+        >
+          <i data-lucide="check-circle" class="w-5 h-5"></i>
+          <span>Televizyonda Oturumu Aç</span>
+        </button>
+      </div>
+
+      <!-- Result message -->
+      <div id="result-box" class="hidden p-4 rounded-xl border text-xs font-semibold"></div>
+
+    </div>
+  </main>
+
+  <!-- Footer -->
+  <footer class="text-center text-xs text-gray-500 pt-4 border-t border-white/5">
+    Turkcell TV+ Akıllı TV Güvenli Giriş Sistemi
+  </footer>
+
+  <script>
+    lucide.createIcons();
+
+    // URL'den kodu al
+    const urlParams = new URLSearchParams(window.location.search);
+    const codeParam = urlParams.get('code');
+    if (codeParam) {
+      document.getElementById('pair-code-input').value = codeParam.trim();
+    }
+
+    async function authorizeTv() {
+      const codeInput = document.getElementById('pair-code-input');
+      const profileSelect = document.getElementById('pair-profile-select');
+      const btn = document.getElementById('btn-authorize');
+      const resultBox = document.getElementById('result-box');
+
+      const code = codeInput.value.trim();
+      if (!code || code.length < 6) {
+        showResult(false, 'Lütfen televizyon ekranındaki 6 haneli kodu eksiksiz girin.');
+        return;
+      }
+
+      btn.disabled = true;
+      btn.innerHTML = '<span class="inline-block w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin"></span><span>Onaylanıyor...</span>';
+
+      try {
+        const res = await fetch('/api/auth/tv-authorize', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            code: code,
+            profileName: profileSelect.value
+          })
+        });
+
+        const data = await res.json();
+        if (data.success) {
+          showResult(true, '🎉 Harika! Televizyonunuzda oturum açıldı. Şimdi TV ekranınızdan keyifle izleyebilirsiniz.');
+          btn.classList.add('hidden');
+          codeInput.disabled = true;
+        } else {
+          showResult(false, data.error || 'Kod geçersiz veya süresi dolmuş.');
+          btn.disabled = false;
+          btn.innerHTML = '<span>Tekrar Dene</span>';
+        }
+      } catch (err) {
+        showResult(false, 'Bağlantı hatası: ' + err.message);
+        btn.disabled = false;
+        btn.innerHTML = '<span>Tekrar Dene</span>';
+      }
+    }
+
+    function showResult(success, msg) {
+      const box = document.getElementById('result-box');
+      box.classList.remove('hidden', 'bg-emerald-950/80', 'border-emerald-500/50', 'text-emerald-300', 'bg-red-950/80', 'border-red-500/50', 'text-red-300');
+      if (success) {
+        box.classList.add('bg-emerald-950/80', 'border-emerald-500/50', 'text-emerald-300');
+      } else {
+        box.classList.add('bg-red-950/80', 'border-red-500/50', 'text-red-300');
+      }
+      box.textContent = msg;
+    }
+  </script>
+</body>
+</html>
