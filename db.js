@@ -1,4 +1,5 @@
 import mysql from 'mysql2/promise';
+import './config.js';
 
 const DB_CONFIG = {
   host: process.env.DB_HOST || 'localhost',
@@ -14,18 +15,15 @@ let pool = null;
 
 export async function initDatabase() {
   try {
-    // 1. Veritabanı yoksa oluşturmak için başlangıç bağlantısı
-    const rootConn = await mysql.createConnection(DB_CONFIG);
-    await rootConn.query("CREATE DATABASE IF NOT EXISTS `tvplus_db` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;");
-    await rootConn.end();
-
-    // 2. Havuz oluştur
+    // Forge'da önceden oluşturulan veritabanına bağlan.
+    const database = process.env.DB_DATABASE || 'tvplus_db';
     pool = mysql.createPool({
       ...DB_CONFIG,
-      database: 'tvplus_db'
+      database
     });
 
-    console.log('[MySQL] ✅ tvplus_db veritabanına başarıyla bağlanıldı.');
+    await pool.query('SELECT 1');
+    console.log(`[MySQL] ${database} veritabanına bağlanıldı.`);
 
     // 3. Tabloları oluştur
     await pool.query(`

@@ -4,18 +4,19 @@ cd "$FORGE_RELEASE_DIRECTORY"
 npm install --omit=dev --no-audit --no-fund
 
 (
-    set -eu
+    set -euo pipefail
     : "${DB_USER:?Set DB_USER in Forge Environment}"
     : "${DB_PASSWORD:?Set DB_PASSWORD in Forge Environment}"
+    : "${DB_DATABASE:?Set DB_DATABASE in Forge Environment}"
     export MYSQL_PWD="$DB_PASSWORD"
     MYSQL_ARGS=(--host="${DB_HOST:-127.0.0.1}" --port="${DB_PORT:-3306}" --user="$DB_USER")
     DUMP_FILE="$FORGE_RELEASE_DIRECTORY/iptv_catalog.sql"
     test -f "$DUMP_FILE"
     DUMP_HASH=$(sha256sum "$DUMP_FILE" | cut -d ' ' -f 1)
-    DONE_FILE="$FORGE_SITE_ROOT/.iptv-catalog-$DUMP_HASH.imported"
+    DONE_FILE="$FORGE_SITE_ROOT/.iptv-catalog-$DB_DATABASE-$DUMP_HASH.imported"
     if [ ! -f "$DONE_FILE" ]; then
-        mysql "${MYSQL_ARGS[@]}" tvplus -e 'CREATE TABLE IF NOT EXISTS iptv_catalog_snapshot (action_key VARCHAR(64) PRIMARY KEY, payload LONGTEXT NOT NULL, fetched_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;'
-        { printf 'START TRANSACTION;\n'; cat "$DUMP_FILE"; printf '\nCOMMIT;\n'; } | mysql "${MYSQL_ARGS[@]}" tvplus
+        mysql "${MYSQL_ARGS[@]}" "$DB_DATABASE" -e 'CREATE TABLE IF NOT EXISTS iptv_catalog_snapshot (action_key VARCHAR(64) PRIMARY KEY, payload LONGTEXT NOT NULL, fetched_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;'
+        { printf 'START TRANSACTION;\n'; cat "$DUMP_FILE"; printf '\nCOMMIT;\n'; } | mysql "${MYSQL_ARGS[@]}" "$DB_DATABASE"
         touch "$DONE_FILE"
         echo "IPTV catalog imported."
     fi
