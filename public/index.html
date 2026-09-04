@@ -37,7 +37,7 @@
   <script src="https://unpkg.com/lucide@latest"></script>
 
   <!-- Custom Stylesheet -->
-  <link rel="stylesheet" href="/styles.css?v=4.4">
+  <link rel="stylesheet" href="/styles.css?v=4.5">
 </head>
 <body class="bg-black text-gray-100 min-h-screen selection:bg-tv-yellow selection:text-black">
 
@@ -572,7 +572,7 @@
           <div class="text-gray-300 font-mono text-xs" id="player-time-range">
             20:00 - 00:20
           </div>
-          <div class="flex items-center space-x-2.5">
+          <div id="player-live-badge-group" class="flex items-center space-x-2.5">
             <button onclick="returnToLive()" class="btn-live-return flex items-center space-x-1">
               <span>Canlıya dön</span>
             </button>
@@ -591,7 +591,7 @@
           </div>
         </div>
 
-        <!-- Bottom Action Row: Volume | Yayın Akışı & Kanal Listesi | Fullscreen -->
+        <!-- Bottom Action Row: Volume | Yayın Akışı & Kanal Listesi & Bölümler | Fullscreen -->
         <div class="flex items-center justify-between pt-1">
           <!-- Volume Control -->
           <div class="flex items-center space-x-2">
@@ -610,8 +610,8 @@
             >
           </div>
 
-          <!-- Center Buttons: Yayın Akışı & Kanal Listesi (Görsel 1 & 2 Butonları) -->
-          <div class="flex items-center space-x-6">
+          <!-- Center Buttons: Yayın Akışı & Kanal Listesi (Canlı TV) VEYA Bölümler (Diziler) -->
+          <div class="flex items-center space-x-4 sm:space-x-6">
             <button id="btn-toggle-epg" onclick="toggleEpgTray()" class="flex items-center space-x-1.5 text-xs text-gray-300 hover:text-white transition font-semibold">
               <i data-lucide="tv" class="w-4 h-4"></i>
               <span>Yayın akışı</span>
@@ -619,6 +619,10 @@
             <button id="btn-toggle-switcher" onclick="toggleChannelSwitcher()" class="flex items-center space-x-1.5 text-xs text-gray-300 hover:text-white transition font-semibold">
               <i data-lucide="layout-list" class="w-4 h-4"></i>
               <span>Kanal Listesi</span>
+            </button>
+            <button id="btn-toggle-episodes" onclick="toggleEpisodesTray()" class="hidden flex items-center space-x-1.5 text-xs text-tv-yellow hover:text-white transition font-bold bg-white/10 hover:bg-white/20 px-3 py-1 rounded-lg border border-tv-yellow/30">
+              <i data-lucide="layers" class="w-4 h-4 text-tv-yellow"></i>
+              <span>Bölümler</span>
             </button>
           </div>
 
@@ -707,6 +711,67 @@
       <button onclick="toggleChannelSwitcher()" class="absolute top-2.5 right-2.5 text-gray-400 hover:text-white z-50 p-1">
         <i data-lucide="x" class="w-4 h-4"></i>
       </button>
+    </div>
+
+    <!-- ======================================================== -->
+    <!-- 3. EKRAN İÇİ DİZİ BÖLÜMLERİ TEPSİSİ (BÖLÜMLER LİSTESİ)    -->
+    <!-- ======================================================== -->
+    <div id="player-episodes-tray" class="hidden player-episodes-tray">
+      <!-- Tray Header: Dizi Adı, Sezon Sekmeleri, Kapat Butonu -->
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-white/10 flex-shrink-0">
+        <div class="flex items-center space-x-3">
+          <div class="w-8 h-8 rounded-lg bg-tv-yellow/10 border border-tv-yellow/30 flex items-center justify-center text-tv-yellow">
+            <i data-lucide="layers" class="w-4 h-4"></i>
+          </div>
+          <div>
+            <h3 id="episodes-tray-series-title" class="text-sm font-bold text-white leading-tight">Dizi Bölümleri</h3>
+            <span id="episodes-tray-count" class="text-[11px] text-gray-400">0 Bölüm</span>
+          </div>
+        </div>
+
+        <!-- Sezon Seçici Sekmeler -->
+        <div id="episodes-tray-season-tabs" class="flex items-center space-x-2 overflow-x-auto scrollbar-none py-1">
+          <!-- Populated by JS -->
+        </div>
+
+        <button onclick="toggleEpisodesTray()" class="text-gray-400 hover:text-white p-1 ml-auto">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+      <!-- Horizontal Scrollable Episodes Cards -->
+      <div id="episodes-tray-list" class="flex items-stretch space-x-3.5 overflow-x-auto pt-3 pb-2 scrollbar-none">
+        <!-- Populated by JS -->
+      </div>
+    </div>
+
+    <!-- ======================================================== -->
+    <!-- 4. OTOMATİK SONRAKİ BÖLÜM KARTI & GERİ SAYIM             -->
+    <!-- ======================================================== -->
+    <div id="next-episode-overlay" class="hidden absolute bottom-24 right-8 z-40 bg-[#0E121B]/95 border border-tv-yellow/50 rounded-2xl p-4 shadow-2xl backdrop-blur-xl max-w-sm w-full">
+      <div class="flex items-start space-x-3.5">
+        <div class="relative w-20 aspect-video rounded-lg overflow-hidden bg-black flex-shrink-0 border border-white/10">
+          <img id="next-ep-thumb" src="" alt="" class="w-full h-full object-cover">
+          <div class="absolute inset-0 bg-black/30"></div>
+        </div>
+        <div class="flex-1 min-w-0 space-y-1">
+          <div class="flex items-center justify-between">
+            <span class="text-[10px] font-bold text-tv-yellow tracking-wider uppercase">Sonraki Bölüm</span>
+            <span id="next-ep-timer" class="text-xs font-mono font-bold text-white bg-black/60 px-1.5 py-0.5 rounded">5s</span>
+          </div>
+          <h4 id="next-ep-title" class="text-xs font-bold text-white truncate">Bölüm Adı</h4>
+          <p id="next-ep-sub" class="text-[10px] text-gray-400 truncate">Dizi Adı</p>
+        </div>
+      </div>
+      <div class="flex items-center space-x-2 mt-3 pt-3 border-t border-white/10">
+        <button onclick="cancelNextEpisodeAutoplay()" class="flex-1 py-1.5 px-3 rounded-lg bg-white/10 hover:bg-white/20 text-gray-300 text-xs font-semibold transition">
+          İptal
+        </button>
+        <button onclick="playNextEpisodeNow()" class="flex-1 py-1.5 px-3 rounded-lg bg-tv-yellow hover:bg-tv-yellow-hover text-black text-xs font-bold transition flex items-center justify-center space-x-1 shadow-lg">
+          <i data-lucide="play" class="w-3.5 h-3.5 fill-current"></i>
+          <span>Şimdi Oynat</span>
+        </button>
+      </div>
     </div>
   </div>
 
@@ -965,6 +1030,6 @@
   </div>
 
   <!-- Main Application Logic -->
-  <script src="/app.js?v=4.4"></script>
+  <script src="/app.js?v=4.5"></script>
 </body>
 </html>

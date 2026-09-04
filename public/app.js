@@ -732,6 +732,15 @@ function openPlayer(channel, push = true) {
   document.getElementById('player-program-title').textContent = `${cleanedName} Canlı Yayını`;
   document.getElementById('player-time-range').textContent = '20:00 - 22:30';
 
+  // Live UI Controls (CANLI badge, clock, return to live)
+  const liveGroup = document.getElementById('player-live-badge-group');
+  if (liveGroup) liveGroup.classList.remove('hidden');
+  document.getElementById('btn-toggle-epg')?.classList.remove('hidden');
+  document.getElementById('btn-toggle-switcher')?.classList.remove('hidden');
+  document.getElementById('btn-toggle-episodes')?.classList.add('hidden');
+  document.getElementById('player-episodes-tray')?.classList.add('hidden');
+  cancelNextEpisodeAutoplay();
+
   // Real-time live clock in player
   updateLiveClock();
   clearInterval(STATE.clockInterval);
@@ -795,19 +804,49 @@ function openMediaItem(item, type = 'movie') {
   video.volume = STATE.volume;
   updateVolumeUI();
 
-  // Clean title & metadata
-  const title = cleanName(item.name || item.title);
-  document.getElementById('player-channel-title').textContent = title;
-  document.getElementById('player-program-title').textContent = (type === 'movie') 
-    ? 'Film (VOD)' 
-    : (item.seriesTitle ? `${item.seriesTitle} • ${title}` : title);
-  document.getElementById('player-time-range').textContent = '00:00 / --:--';
+  // 1. CANLI ile ilgili TÜM unsurları KESİNLİKLE GİZLE
+  const liveGroup = document.getElementById('player-live-badge-group');
+  if (liveGroup) liveGroup.classList.add('hidden');
+  clearInterval(STATE.clockInterval);
 
-  // Hide EPG & Switcher buttons in VOD mode
+  // 2. Canlı EPG & Kanal Listesi butonlarını gizle
   const btnEpg = document.getElementById('btn-toggle-epg');
   const btnSw = document.getElementById('btn-toggle-switcher');
-  if (btnEpg) btnEpg.style.display = 'none';
-  if (btnSw) btnSw.style.display = 'none';
+  const btnEpisodes = document.getElementById('btn-toggle-episodes');
+  if (btnEpg) btnEpg.classList.add('hidden');
+  if (btnSw) btnSw.classList.add('hidden');
+
+  // Canlı panelleri kapat
+  document.getElementById('player-epg-tray')?.classList.add('hidden');
+  document.getElementById('player-channel-switcher')?.classList.add('hidden');
+  cancelNextEpisodeAutoplay();
+
+  // 3. Başlıklar ve Dizi / Film Ayrımı
+  const title = cleanName(item.name || item.title);
+  if (type === 'episode') {
+    // Dizi Bölümü
+    if (btnEpisodes) btnEpisodes.classList.remove('hidden');
+    document.getElementById('player-channel-title').textContent = cleanName(item.seriesTitle || 'Dizi');
+    const epSubtitle = (item.seasonNum && item.episodeNum) 
+      ? `${item.seasonNum}. Sezon ${item.episodeNum}. Bölüm • ${title}`
+      : title;
+    document.getElementById('player-program-title').textContent = epSubtitle;
+
+    // Dizi detayları hafızada yoksa arkada yükle
+    if (!STATE.currentSeries && item.seriesId) {
+      fetch(`/api/series-info/${item.seriesId}`).then(r => r.json()).then(data => {
+        STATE.currentSeries = data;
+      }).catch(() => {});
+    }
+  } else {
+    // Film
+    if (btnEpisodes) btnEpisodes.classList.add('hidden');
+    document.getElementById('player-episodes-tray')?.classList.add('hidden');
+    document.getElementById('player-channel-title').textContent = title;
+    document.getElementById('player-program-title').textContent = 'Film (VOD)';
+  }
+
+  document.getElementById('player-time-range').textContent = '00:00 / 00:00';
 
   showLoading(true, `${title} yükleniyor...`);
   hideError();
@@ -852,18 +891,22 @@ function closePlayer(push = true) {
   STATE.currentChannel = null;
   STATE.currentMedia = null;
   STATE.playbackSession = null;
+  cancelNextEpisodeAutoplay();
 
   playerModal.classList.add('hidden');
   document.body.style.overflow = '';
-  channelDrawer.classList.remove('open');
+  if (channelDrawer) channelDrawer.classList.remove('open');
 
-  // Close EPG tray & Channel switcher
+  // Close EPG tray, Channel switcher & Episodes tray
   const tray = document.getElementById('player-epg-tray');
   const switcher = document.getElementById('player-channel-switcher');
+  const epTray = document.getElementById('player-episodes-tray');
   tray?.classList.add('hidden');
   switcher?.classList.add('hidden');
+  epTray?.classList.add('hidden');
   document.getElementById('btn-toggle-epg')?.classList.remove('text-tv-yellow', 'text-white', 'font-bold');
   document.getElementById('btn-toggle-switcher')?.classList.remove('text-tv-yellow', 'text-white', 'font-bold');
+  document.getElementById('btn-toggle-episodes')?.classList.remove('bg-white/20');
 
   clearInterval(STATE.clockInterval);
   clearTimeout(STATE.inactivityTimer);
@@ -1078,6 +1121,13 @@ function initPlayerEvents() {
         const timeRange = document.getElementById('player-time-range');
         if (timeRange) timeRange.textContent = `${cur} / ${dur}`;
       }
+    }
+  });
+
+  // Otomatik Sonraki Bölüm Geçişi (Bölüm bittiğinde)
+  video.addEventListener('ended', () => {
+    if (STATE.currentMedia?.type === 'episode') {
+      prepareAndShowNextEpisode();
     }
   });
 
@@ -2344,7 +2394,11 @@ function renderSeriesEpisodes(seasonNum) {
       id: ep.id,
       title: epTitle,
       seriesTitle: seriesTitle,
-      streamUrl: ep.streamUrl
+      streamUrl: ep.streamUrl,
+      seasonNum: parseInt(seasonNum) || 1,
+      episodeNum: ep.episode_num || 1,
+      cover: epThumb,
+      seriesId: STATE.currentSeries?.info?.series_id
     };
 
     html += `
@@ -2379,6 +2433,260 @@ function playSeriesEpisode(epPayload) {
   closeSeriesModal();
   openMediaItem(epPayload, 'episode');
 }
+
+// =============================================================
+// EKRAN İÇİ DİZİ BÖLÜMLERİ LİSTESİ & OTOMATİK BÖLÜM GEÇİŞİ
+// =============================================================
+let nextEpisodeTimerInterval = null;
+let nextEpisodeCountdown = 5;
+
+function toggleEpisodesTray() {
+  const tray = document.getElementById('player-episodes-tray');
+  const btn = document.getElementById('btn-toggle-episodes');
+  if (!tray) return;
+
+  const willOpen = tray.classList.contains('hidden');
+  if (willOpen) {
+    // Diğer panelleri kapat
+    document.getElementById('player-epg-tray')?.classList.add('hidden');
+    document.getElementById('player-channel-switcher')?.classList.add('hidden');
+    document.getElementById('btn-toggle-epg')?.classList.remove('text-tv-yellow', 'text-white', 'font-bold');
+    document.getElementById('btn-toggle-switcher')?.classList.remove('text-tv-yellow', 'text-white', 'font-bold');
+
+    tray.classList.remove('hidden');
+    btn?.classList.add('text-tv-yellow', 'bg-white/20');
+    renderInPlayerEpisodes();
+  } else {
+    tray.classList.add('hidden');
+    btn?.classList.remove('bg-white/20');
+  }
+  resetInactivity();
+}
+
+async function renderInPlayerEpisodes() {
+  const seriesTitleElem = document.getElementById('episodes-tray-series-title');
+  const countElem = document.getElementById('episodes-tray-count');
+  const tabsElem = document.getElementById('episodes-tray-season-tabs');
+  const listElem = document.getElementById('episodes-tray-list');
+
+  if (!listElem) return;
+
+  // Dizi detayları STATE'de yoksa yükle
+  if (!STATE.currentSeries && STATE.currentMedia?.seriesId) {
+    listElem.innerHTML = `
+      <div class="py-6 px-4 flex items-center space-x-2 text-xs text-gray-400">
+        <div class="w-4 h-4 border-2 border-tv-yellow border-t-transparent rounded-full animate-spin"></div>
+        <span>Bölümler yükleniyor...</span>
+      </div>
+    `;
+    try {
+      const res = await fetch(`/api/series-info/${STATE.currentMedia.seriesId}`);
+      if (res.ok) {
+        STATE.currentSeries = await res.json();
+      }
+    } catch (_) {}
+  }
+
+  if (!STATE.currentSeries) {
+    listElem.innerHTML = `<div class="text-xs text-gray-400 py-4 px-2">Bölüm listesi bulunamadı.</div>`;
+    return;
+  }
+
+  const series = STATE.currentSeries;
+  const seriesName = cleanName(series.info?.name || STATE.currentMedia?.seriesTitle || 'Dizi');
+  if (seriesTitleElem) seriesTitleElem.textContent = seriesName;
+
+  const activeSeason = String(STATE.activeSeriesSeason || STATE.currentMedia?.seasonNum || 1);
+  const seasons = series.seasons || [];
+  const episodes = (series.episodes && series.episodes[activeSeason]) || [];
+
+  if (countElem) countElem.textContent = `${episodes.length} Bölüm`;
+
+  // Sezon Sekmeleri
+  if (tabsElem) {
+    let tabsHtml = '';
+    const availableSeasons = Object.keys(series.episodes || {});
+    const seasonList = seasons.length > 0 
+      ? seasons.map(s => ({ num: s.season_number, name: s.name || `Sezon ${s.season_number}` }))
+      : availableSeasons.map(num => ({ num: parseInt(num), name: `Sezon ${num}` }));
+
+    for (const s of seasonList) {
+      const isActive = String(s.num) === activeSeason;
+      tabsHtml += `
+        <button onclick="changeInPlayerSeason(${s.num})" class="vod-cat-pill ${isActive ? 'active' : ''}">
+          ${s.name}
+        </button>
+      `;
+    }
+    tabsElem.innerHTML = tabsHtml;
+  }
+
+  // Bölüm Kartları
+  let cardsHtml = '';
+  const currentEpId = String(STATE.currentMedia?.id || '');
+
+  for (const ep of episodes) {
+    const isPlaying = String(ep.id) === currentEpId;
+    const epTitle = cleanName(ep.title || `${ep.episode_num}. Bölüm`);
+    const epThumb = ep.info?.movie_image || series.info?.cover || '';
+    const duration = ep.info?.duration || (ep.info?.duration_secs ? `${Math.round(ep.info.duration_secs / 60)} dk` : '');
+
+    cardsHtml += `
+      <div class="episode-tray-card group ${isPlaying ? 'active' : ''}" onclick="playSeriesEpisodeDirect(${JSON.stringify(ep).replace(/'/g, '&#39;')}, ${activeSeason})">
+        <div class="relative w-full aspect-video rounded-lg overflow-hidden bg-black flex-shrink-0">
+          <img src="${epThumb}" alt="${escapeHtml(epTitle)}" class="w-full h-full object-cover group-hover:scale-105 transition duration-300" onerror="this.src='https://images.unsplash.com/photo-1522869635100-9f4c5e86aa37?auto=format&fit=crop&w=400&q=80'">
+          <div class="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition">
+            <div class="w-8 h-8 rounded-full bg-tv-yellow text-black flex items-center justify-center shadow">
+              <i data-lucide="play" class="w-4 h-4 fill-current ml-0.5"></i>
+            </div>
+          </div>
+          ${isPlaying ? `
+            <div class="absolute top-1.5 left-1.5 bg-tv-yellow text-black text-[9px] font-black px-1.5 py-0.5 rounded shadow flex items-center space-x-1">
+              <span class="w-1.5 h-1.5 rounded-full bg-black animate-ping"></span>
+              <span>ŞU AN İZLENİYOR</span>
+            </div>
+          ` : ''}
+          ${duration ? `<span class="absolute bottom-1 right-1 px-1.5 py-0.5 rounded bg-black/80 text-[9px] font-mono text-gray-300">${duration}</span>` : ''}
+        </div>
+        <div class="pt-2 flex-1 min-w-0">
+          <div class="text-[10px] text-tv-yellow font-bold">${ep.episode_num || '1'}. Bölüm</div>
+          <h4 class="text-xs font-bold text-white group-hover:text-tv-yellow transition truncate">${escapeHtml(epTitle)}</h4>
+        </div>
+      </div>
+    `;
+  }
+  listElem.innerHTML = cardsHtml;
+  initIcons();
+
+  // Aktif bölümü görünür alana kaydır
+  setTimeout(() => {
+    const activeElem = listElem.querySelector('.episode-tray-card.active');
+    if (activeElem) {
+      activeElem.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+    }
+  }, 100);
+}
+
+function changeInPlayerSeason(seasonNum) {
+  STATE.activeSeriesSeason = seasonNum;
+  renderInPlayerEpisodes();
+}
+
+function playSeriesEpisodeDirect(ep, seasonNum) {
+  const epTitle = cleanName(ep.title || `${ep.episode_num}. Bölüm`);
+  const seriesTitle = STATE.currentSeries?.info?.name || ep.seriesTitle || 'Dizi';
+  const epThumb = ep.info?.movie_image || STATE.currentSeries?.info?.cover || '';
+
+  STATE.activeSeriesSeason = seasonNum || ep.season || 1;
+
+  const epPayload = {
+    id: ep.id,
+    title: epTitle,
+    seriesTitle: seriesTitle,
+    streamUrl: ep.streamUrl,
+    seasonNum: STATE.activeSeriesSeason,
+    episodeNum: ep.episode_num || 1,
+    cover: epThumb,
+    seriesId: STATE.currentSeries?.info?.series_id || ep.seriesId
+  };
+
+  openMediaItem(epPayload, 'episode');
+
+  const tray = document.getElementById('player-episodes-tray');
+  if (tray && !tray.classList.contains('hidden')) {
+    renderInPlayerEpisodes();
+  }
+}
+
+function getNextEpisode() {
+  if (!STATE.currentSeries || !STATE.currentMedia) return null;
+  const currentSeason = String(STATE.currentMedia.seasonNum || STATE.activeSeriesSeason || 1);
+  const episodes = STATE.currentSeries.episodes?.[currentSeason] || [];
+  const currentId = String(STATE.currentMedia.id);
+  const idx = episodes.findIndex(e => String(e.id) === currentId);
+
+  // 1. Mevcut sezon içindeki sonraki bölüm
+  if (idx !== -1 && idx + 1 < episodes.length) {
+    const nextEp = episodes[idx + 1];
+    return {
+      ...nextEp,
+      seriesTitle: STATE.currentSeries.info?.name,
+      seriesId: STATE.currentSeries.info?.series_id,
+      seasonNum: parseInt(currentSeason)
+    };
+  }
+
+  // 2. Bir sonraki sezonun ilk bölümü
+  const nextSeasonNum = parseInt(currentSeason) + 1;
+  const nextSeasonEpisodes = STATE.currentSeries.episodes?.[String(nextSeasonNum)] || [];
+  if (nextSeasonEpisodes.length > 0) {
+    const nextEp = nextSeasonEpisodes[0];
+    return {
+      ...nextEp,
+      seriesTitle: STATE.currentSeries.info?.name,
+      seriesId: STATE.currentSeries.info?.series_id,
+      seasonNum: nextSeasonNum
+    };
+  }
+
+  return null;
+}
+
+function prepareAndShowNextEpisode() {
+  const nextEp = getNextEpisode();
+  if (!nextEp) return;
+
+  STATE.nextEpisode = nextEp;
+  const overlay = document.getElementById('next-episode-overlay');
+  if (!overlay) return;
+
+  const thumbElem = document.getElementById('next-ep-thumb');
+  if (thumbElem) {
+    thumbElem.src = nextEp.info?.movie_image || nextEp.cover || STATE.currentSeries?.info?.cover || '';
+  }
+  document.getElementById('next-ep-title').textContent = cleanName(nextEp.title || `${nextEp.episode_num}. Bölüm`);
+  document.getElementById('next-ep-sub').textContent = `${STATE.currentSeries?.info?.name || 'Dizi'} • ${nextEp.seasonNum || STATE.activeSeriesSeason}. Sezon ${nextEp.episode_num}. Bölüm`;
+
+  overlay.classList.remove('hidden');
+  nextEpisodeCountdown = 5;
+  document.getElementById('next-ep-timer').textContent = `${nextEpisodeCountdown}s`;
+
+  clearInterval(nextEpisodeTimerInterval);
+  nextEpisodeTimerInterval = setInterval(() => {
+    nextEpisodeCountdown--;
+    const timerElem = document.getElementById('next-ep-timer');
+    if (timerElem) timerElem.textContent = `${nextEpisodeCountdown}s`;
+    if (nextEpisodeCountdown <= 0) {
+      clearInterval(nextEpisodeTimerInterval);
+      playNextEpisodeNow();
+    }
+  }, 1000);
+}
+
+function cancelNextEpisodeAutoplay() {
+  clearInterval(nextEpisodeTimerInterval);
+  const overlay = document.getElementById('next-episode-overlay');
+  if (overlay) overlay.classList.add('hidden');
+  STATE.nextEpisode = null;
+}
+
+function playNextEpisodeNow() {
+  clearInterval(nextEpisodeTimerInterval);
+  const overlay = document.getElementById('next-episode-overlay');
+  if (overlay) overlay.classList.add('hidden');
+
+  if (STATE.nextEpisode) {
+    const ep = STATE.nextEpisode;
+    STATE.nextEpisode = null;
+    playSeriesEpisodeDirect(ep, ep.seasonNum || STATE.activeSeriesSeason);
+  }
+}
+
+window.toggleEpisodesTray = toggleEpisodesTray;
+window.changeInPlayerSeason = changeInPlayerSeason;
+window.playSeriesEpisodeDirect = playSeriesEpisodeDirect;
+window.cancelNextEpisodeAutoplay = cancelNextEpisodeAutoplay;
+window.playNextEpisodeNow = playNextEpisodeNow;
 
 // =============================================================
 // 13. AYARLAR & .ENV IPTV YAPILANDIRMASI
