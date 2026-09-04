@@ -1095,10 +1095,17 @@ function startPlayback(channel) {
   if (Hls.isSupported()) {
     const hls = new Hls({
       enableWorker: true,
-      lowLatencyMode: true,
-      manifestLoadingTimeOut: 8000,
-      fragLoadingTimeOut: 8000,
-      backBufferLength: 30
+      lowLatencyMode: false,
+      manifestLoadingTimeOut: 20000,
+      manifestLoadingMaxRetry: 6,
+      fragLoadingTimeOut: 45000,
+      fragLoadingMaxRetry: 6,
+      levelLoadingTimeOut: 20000,
+      maxBufferLength: 45,
+      maxMaxBufferLength: 90,
+      backBufferLength: 30,
+      liveSyncDurationCount: 3,
+      liveMaxLatencyDurationCount: 10
     });
 
     hls.loadSource(streamUrl);
@@ -1139,12 +1146,18 @@ function startPlayback(channel) {
     hls.on(Hls.Events.ERROR, (event, data) => {
       if (STATE.playbackSession !== sessionId || playerModal.classList.contains('hidden')) return;
       console.warn('HLS Event Error:', data.type, data.details);
+      if (data.details === 'bufferStalledError') {
+        hls.startLoad();
+        return;
+      }
       if (data.fatal) {
         switch (data.type) {
           case Hls.ErrorTypes.NETWORK_ERROR:
+            console.warn('Network hatası, yeniden bağlanılıyor...');
             hls.startLoad();
             break;
           case Hls.ErrorTypes.MEDIA_ERROR:
+            console.warn('Medya hatası, kurtarılıyor...');
             hls.recoverMediaError();
             break;
           default:

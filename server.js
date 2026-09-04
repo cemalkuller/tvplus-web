@@ -251,7 +251,7 @@ app.get(['/stream/:id.m3u8', '/stream/variant'], async (req, res) => {
     }
 
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 6000); // 6 sn zaman aşımı
+    const timeout = setTimeout(() => controller.abort(), 20000); // 20 sn zaman aşımı
 
     const upstreamRes = await fetch(targetUrl, {
       redirect: 'follow',
@@ -311,7 +311,7 @@ app.get(['/stream/:id.m3u8', '/stream/variant'], async (req, res) => {
     res.send(rewrittenLines.join('\n'));
   } catch (err) {
     if (err.name === 'AbortError') {
-      console.warn('[Stream Proxy] İstek zaman aşımına uğradı (6s).');
+      console.warn('[Stream Proxy] İstek zaman aşımına uğradı (20s).');
       return res.status(504).send('Yayın sunucusu yanıt vermedi (Zaman aşımı).');
     }
     console.error('[Stream Proxy Hatası]', err.message);
@@ -327,7 +327,7 @@ app.get('/stream/seg', async (req, res) => {
 
     const targetUrl = decodeTargetUrl(u);
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 12000);
+    const timeout = setTimeout(() => controller.abort(), 45000); // 45 sn zaman aşımı (32MB parçalar için)
     req.on('close', () => controller.abort());
 
     const segRes = await fetch(targetUrl, {
