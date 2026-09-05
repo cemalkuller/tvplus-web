@@ -1049,7 +1049,7 @@ function openPlayer(channel, push = true) {
   }
 }
 
-function openMediaItem(item, type = 'movie') {
+async function openMediaItem(item, type = 'movie') {
   if (!item) return;
   if (isAdultItem(item) && !STATE.adultUnlocked) {
     requestAdultPin(() => openMediaItem(item, type), item.name || item.title);
@@ -1145,15 +1145,23 @@ function openMediaItem(item, type = 'movie') {
   STATE.mediaTrackBase = `${mediaKind}/${mediaId}.${mediaExt}`;
   STATE.selectedAudioTrack = '';
   STATE.selectedQuality = 'original';
-  loadMediaTrackOptions();
-  fetch(`/api/vod/duration/${mediaKind}/${mediaId}.${mediaExt}`)
-    .then(response => response.ok ? response.json() : Promise.reject(new Error('Süre alınamadı')))
-    .then(data => {
-      if (STATE.playbackSession !== sessionId) return;
-      STATE.sourceDuration = Number(data.duration) || 0;
-      updateVodTimeDisplay();
-    })
-    .catch(err => console.warn('VOD duration error:', err.message));
+  if (STATE.hls) {
+    try {
+      STATE.hls.stopLoad();
+      STATE.hls.detachMedia();
+      STATE.hls.destroy();
+    } catch (_) {}
+    STATE.hls = null;
+  }
+
+  video.pause();
+  video.removeAttribute('src');
+  video.load();
+
+  // Önce tek istekte medya bilgilerini al; oynatma sırasında ek kaynak bağlantısı açma.
+  showLoading(true, `${title} yükleniyor...`);
+  await loadMediaTrackOptions();
+  if (STATE.playbackSession !== sessionId || playerModal.classList.contains('hidden')) return;
   const cacheKey = `tvplus_resume_${type}_${mediaId}`;
   let targetResumeSec = parseFloat(localStorage.getItem(cacheKey) || '0');
 
@@ -1163,6 +1171,7 @@ function openMediaItem(item, type = 'movie') {
     : `/api/progress/movie/${mediaId}?profile=${encodeURIComponent(STATE.profileName)}`;
 
   fetch(progressQueryUrl).then(r => r.json()).then(data => {
+    if (STATE.playbackSession !== sessionId) return;
     if (data.item && data.item.progress_seconds > 5 && data.item.percentage < 95) {
       const serverSec = parseFloat(data.item.progress_seconds);
       targetResumeSec = serverSec;
@@ -1175,15 +1184,6 @@ function openMediaItem(item, type = 'movie') {
 
   showLoading(true, `${title} yükleniyor...`);
   hideError();
-
-  if (STATE.hls) {
-    try {
-      STATE.hls.stopLoad();
-      STATE.hls.detachMedia();
-      STATE.hls.destroy();
-    } catch (_) {}
-    STATE.hls = null;
-  }
 
   video.src = buildMediaSrc();
   video.load();
@@ -1253,11 +1253,15 @@ function openMediaItem(item, type = 'movie') {
 }
 
 async function loadMediaTrackOptions() {
+  const sessionId = STATE.playbackSession;
   const button = document.getElementById('btn-media-options');
   try {
     const response = await fetch(`/api/vod/tracks/${STATE.mediaTrackBase}`);
     if (!response.ok) throw new Error('Parça bilgileri alınamadı');
     const data = await response.json();
+    if (STATE.playbackSession !== sessionId) return;
+    STATE.sourceDuration = Number(data.duration) || 0;
+    updateVodTimeDisplay();
     const audio = document.getElementById('media-audio-select');
     const subtitles = document.getElementById('media-subtitle-select');
     audio.innerHTML = (data.audio || []).map((track, i) => `<option value="${track.index}">${track.title || track.language.toUpperCase() || `Ses ${i + 1}`}</option>`).join('') || '<option>Varsayılan</option>';

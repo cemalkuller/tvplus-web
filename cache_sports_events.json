@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-09-05T02:13:14.787Z",
+  "updatedAt": "2026-09-05T04:31:06.558Z",
   "total": 92,
   "superLigCount": 2,
   "tff1LigCount": 4,
@@ -215,179 +215,6 @@
       "stadium": "Pendik İlçe Stadyumu"
     },
     {
-      "id": "event-3",
-      "title": "N.Nguyen - E.El Jamari",
-      "homeTeam": {
-        "name": "N.Nguyen",
-        "logo": "https://img.sporekrani.com/teams/82168b70-81fb-4756-a52c-a929d4c3c6b3.png"
-      },
-      "awayTeam": {
-        "name": "E.El Jamari",
-        "logo": "https://img.sporekrani.com/teams/f9a14c8f-16b8-4281-9e93-36d006dac932.png"
-      },
-      "startDate": "2026-09-05T04:00:00+03:00",
-      "endDate": "2026-09-05T07:00:00+03:00",
-      "time": "04:00",
-      "date": "05.09.2026",
-      "status": "LIVE",
-      "leagueName": "ONE Championship Dövüş",
-      "category": "other_sports",
-      "isSuperLig": false,
-      "isTff1Lig": false,
-      "channels": [
-        "S Sport Plus"
-      ],
-      "primaryChannel": "S SPORT 1",
-      "tvplusChannel": {
-        "id": 2025,
-        "name": "S SPORT 1",
-        "originalName": "S Sport Plus"
-      },
-      "hasStream": true,
-      "streamId": 2025,
-      "banner": "https://img.sporekrani.com/event/487367.jpg?v=1788481641",
-      "stadium": "Lumpinee Stadyumu"
-    },
-    {
-      "id": "event-4",
-      "title": "Williams/Williams - Chan/Joint",
-      "homeTeam": {
-        "name": "Williams/Williams",
-        "logo": "https://img.sporekrani.com/teams/4fe0a078-aae2-4f65-b5e5-59292228d4e8.png"
-      },
-      "awayTeam": {
-        "name": "Chan/Joint",
-        "logo": "https://img.sporekrani.com/teams/5057c10d-ac50-4c70-b217-7c197c31d521.png"
-      },
-      "startDate": "2026-09-05T04:00:00+03:00",
-      "endDate": "2026-09-05T07:00:00+03:00",
-      "time": "04:00",
-      "date": "05.09.2026",
-      "status": "LIVE",
-      "leagueName": "Amerika Açık Tenis (US Open)",
-      "category": "other_sports",
-      "isSuperLig": false,
-      "isTff1Lig": false,
-      "channels": [
-        "Eurosport",
-        "Eurosport 2"
-      ],
-      "primaryChannel": "EUROSPORT 1",
-      "tvplusChannel": {
-        "id": 2036,
-        "name": "EUROSPORT 1",
-        "originalName": "Eurosport"
-      },
-      "hasStream": true,
-      "streamId": 2036,
-      "banner": "https://img.sporekrani.com/event/487421.jpg?v=1788519706",
-      "stadium": "Arthur Ashe Stadyumu"
-    },
-    {
-      "id": "event-5",
-      "title": "B.Shelton - D.Shapovalov",
-      "homeTeam": {
-        "name": "B.Shelton",
-        "logo": "https://img.sporekrani.com/teams/KijNroWqlHfrQJzLUEekxvqkVlGTxtnLh1otAKoR.png"
-      },
-      "awayTeam": {
-        "name": "D.Shapovalov",
-        "logo": "https://img.sporekrani.com/teams/pis4brDoF1dFAqtbApge2m7aXA82WsR7FLfvoswm.png"
-      },
-      "startDate": "2026-09-05T04:00:00+03:00",
-      "endDate": "2026-09-05T07:00:00+03:00",
-      "time": "04:00",
-      "date": "05.09.2026",
-      "status": "LIVE",
-      "leagueName": "Amerika Açık Tenis (US Open)",
-      "category": "other_sports",
-      "isSuperLig": false,
-      "isTff1Lig": false,
-      "channels": [
-        "Eurosport",
-        "Eurosport 2"
-      ],
-      "primaryChannel": "EUROSPORT 1",
-      "tvplusChannel": {
-        "id": 2036,
-        "name": "EUROSPORT 1",
-        "originalName": "Eurosport"
-      },
-      "hasStream": true,
-      "streamId": 2036,
-      "banner": "https://img.sporekrani.com/event/487422.jpg?v=1788519707",
-      "stadium": "Arthur Ashe Stadyumu"
-    },
-    {
-      "id": "event-6",
-      "title": "E.Svitolina - A.Kalinskaya",
-      "homeTeam": {
-        "name": "E.Svitolina",
-        "logo": "https://img.sporekrani.com/teams/HIo2wN3vnoPGrG05GweUPDVbbiC1FpzC2uh1Anh9.png"
-      },
-      "awayTeam": {
-        "name": "A.Kalinskaya",
-        "logo": "https://img.sporekrani.com/teams/WUKwyzHpiWrzSQcmhRFVwHzeekEQbECsofuukOvv.png"
-      },
-      "startDate": "2026-09-05T04:00:00+03:00",
-      "endDate": "2026-09-05T07:00:00+03:00",
-      "time": "04:00",
-      "date": "05.09.2026",
-      "status": "LIVE",
-      "leagueName": "Amerika Açık Tenis (US Open)",
-      "category": "other_sports",
-      "isSuperLig": false,
-      "isTff1Lig": false,
-      "channels": [
-        "Eurosport",
-        "Eurosport 2"
-      ],
-      "primaryChannel": "EUROSPORT 1",
-      "tvplusChannel": {
-        "id": 2036,
-        "name": "EUROSPORT 1",
-        "originalName": "Eurosport"
-      },
-      "hasStream": true,
-      "streamId": 2036,
-      "banner": "https://img.sporekrani.com/event/487426.jpg?v=1788519708",
-      "stadium": "Louis Armstrong Stadyumu"
-    },
-    {
-      "id": "event-7",
-      "title": "G.Fujimoto - M.Aragon",
-      "homeTeam": {
-        "name": "G.Fujimoto",
-        "logo": "https://img.sporekrani.com/teams/0e255081-9c05-490c-98f1-d2affb8e7e6b.png"
-      },
-      "awayTeam": {
-        "name": "M.Aragon",
-        "logo": "https://img.sporekrani.com/teams/704b8bc0-7ec9-4224-a278-add48da8d145.png"
-      },
-      "startDate": "2026-09-05T04:30:00+03:00",
-      "endDate": "2026-09-05T07:30:00+03:00",
-      "time": "04:30",
-      "date": "05.09.2026",
-      "status": "LIVE",
-      "leagueName": "ONE Championship Dövüş",
-      "category": "other_sports",
-      "isSuperLig": false,
-      "isTff1Lig": false,
-      "channels": [
-        "S Sport Plus"
-      ],
-      "primaryChannel": "S SPORT 1",
-      "tvplusChannel": {
-        "id": 2025,
-        "name": "S SPORT 1",
-        "originalName": "S Sport Plus"
-      },
-      "hasStream": true,
-      "streamId": 2025,
-      "banner": "https://img.sporekrani.com/event/487368.jpg?v=1788481641",
-      "stadium": "Lumpinee Stadyumu"
-    },
-    {
       "id": "event-8",
       "title": "H.Almonacid - P.Dantas",
       "homeTeam": {
@@ -419,6 +246,176 @@
       "hasStream": true,
       "streamId": 2025,
       "banner": "https://img.sporekrani.com/event/487369.jpg?v=1788481641",
+      "stadium": "Lumpinee Stadyumu"
+    },
+    {
+      "id": "event-9",
+      "title": "R.Lovato Jr. - P.Jaworski",
+      "homeTeam": {
+        "name": "R.Lovato Jr.",
+        "logo": "https://img.sporekrani.com/teams/cea8623a-2afc-4679-a194-3620123f60a2.png"
+      },
+      "awayTeam": {
+        "name": "P.Jaworski",
+        "logo": null
+      },
+      "startDate": "2026-09-05T05:30:00+03:00",
+      "endDate": "2026-09-05T08:30:00+03:00",
+      "time": "05:30",
+      "date": "05.09.2026",
+      "status": "LIVE",
+      "leagueName": "ONE Championship Dövüş",
+      "category": "other_sports",
+      "isSuperLig": false,
+      "isTff1Lig": false,
+      "channels": [
+        "S Sport Plus"
+      ],
+      "primaryChannel": "S SPORT 1",
+      "tvplusChannel": {
+        "id": 2025,
+        "name": "S SPORT 1",
+        "originalName": "S Sport Plus"
+      },
+      "hasStream": true,
+      "streamId": 2025,
+      "banner": "https://img.sporekrani.com/event/487370.jpg?v=1788481641",
+      "stadium": "Lumpinee Stadyumu"
+    },
+    {
+      "id": "event-10",
+      "title": "J.Mor Krungthepthonburi - J.Estupinan",
+      "homeTeam": {
+        "name": "J.Mor Krungthepthonburi",
+        "logo": "https://img.sporekrani.com/teams/97cc5f01-0f30-485f-9b8a-c88fa39cd9ff.png"
+      },
+      "awayTeam": {
+        "name": "J.Estupinan",
+        "logo": "https://img.sporekrani.com/teams/4b8d445b-90e2-4ab1-811d-ee36518ed03c.png"
+      },
+      "startDate": "2026-09-05T06:00:00+03:00",
+      "endDate": "2026-09-05T09:00:00+03:00",
+      "time": "06:00",
+      "date": "05.09.2026",
+      "status": "LIVE",
+      "leagueName": "ONE Championship Dövüş",
+      "category": "other_sports",
+      "isSuperLig": false,
+      "isTff1Lig": false,
+      "channels": [
+        "S Sport Plus"
+      ],
+      "primaryChannel": "S SPORT 1",
+      "tvplusChannel": {
+        "id": 2025,
+        "name": "S SPORT 1",
+        "originalName": "S Sport Plus"
+      },
+      "hasStream": true,
+      "streamId": 2025,
+      "banner": "https://img.sporekrani.com/event/487371.jpg?v=1788481642",
+      "stadium": "Lumpinee Stadyumu"
+    },
+    {
+      "id": "event-11",
+      "title": "R.Kurosawa - F.Henrique",
+      "homeTeam": {
+        "name": "R.Kurosawa",
+        "logo": "https://img.sporekrani.com/teams/4e49ad2d-cc08-4e84-9be8-f05d5b008e65.png"
+      },
+      "awayTeam": {
+        "name": "F.Henrique",
+        "logo": null
+      },
+      "startDate": "2026-09-05T06:30:00+03:00",
+      "endDate": "2026-09-05T09:30:00+03:00",
+      "time": "06:30",
+      "date": "05.09.2026",
+      "status": "LIVE",
+      "leagueName": "ONE Championship Dövüş",
+      "category": "other_sports",
+      "isSuperLig": false,
+      "isTff1Lig": false,
+      "channels": [
+        "S Sport Plus"
+      ],
+      "primaryChannel": "S SPORT 1",
+      "tvplusChannel": {
+        "id": 2025,
+        "name": "S SPORT 1",
+        "originalName": "S Sport Plus"
+      },
+      "hasStream": true,
+      "streamId": 2025,
+      "banner": "https://img.sporekrani.com/event/487372.jpg?v=1788481642",
+      "stadium": "Lumpinee Stadyumu"
+    },
+    {
+      "id": "event-12",
+      "title": "M.Younes Rabah - R.Bravo",
+      "homeTeam": {
+        "name": "M.Younes Rabah",
+        "logo": "https://img.sporekrani.com/teams/0935adad-9497-4ebe-b120-cea77497d670.png"
+      },
+      "awayTeam": {
+        "name": "R.Bravo",
+        "logo": "https://img.sporekrani.com/teams/dca1edf5-81e4-40e5-b2c2-1a235260ae3c.png"
+      },
+      "startDate": "2026-09-05T07:00:00+03:00",
+      "endDate": "2026-09-05T10:00:00+03:00",
+      "time": "07:00",
+      "date": "05.09.2026",
+      "status": "LIVE",
+      "leagueName": "ONE Championship Dövüş",
+      "category": "other_sports",
+      "isSuperLig": false,
+      "isTff1Lig": false,
+      "channels": [
+        "S Sport Plus"
+      ],
+      "primaryChannel": "S SPORT 1",
+      "tvplusChannel": {
+        "id": 2025,
+        "name": "S SPORT 1",
+        "originalName": "S Sport Plus"
+      },
+      "hasStream": true,
+      "streamId": 2025,
+      "banner": "https://img.sporekrani.com/event/487373.jpg?v=1788481642",
+      "stadium": "Lumpinee Stadyumu"
+    },
+    {
+      "id": "event-13",
+      "title": "G.Nakatani - N.Lalthazuala",
+      "homeTeam": {
+        "name": "G.Nakatani",
+        "logo": "https://img.sporekrani.com/teams/363b9859-d441-4ba6-a011-f73f35d5b527.png"
+      },
+      "awayTeam": {
+        "name": "N.Lalthazuala",
+        "logo": "https://img.sporekrani.com/teams/b3c2c576-5a6f-4f8e-97ec-fd50c6637066.png"
+      },
+      "startDate": "2026-09-05T07:30:00+03:00",
+      "endDate": "2026-09-05T10:30:00+03:00",
+      "time": "07:30",
+      "date": "05.09.2026",
+      "status": "LIVE",
+      "leagueName": "ONE Championship Dövüş",
+      "category": "other_sports",
+      "isSuperLig": false,
+      "isTff1Lig": false,
+      "channels": [
+        "S Sport Plus"
+      ],
+      "primaryChannel": "S SPORT 1",
+      "tvplusChannel": {
+        "id": 2025,
+        "name": "S SPORT 1",
+        "originalName": "S Sport Plus"
+      },
+      "hasStream": true,
+      "streamId": 2025,
+      "banner": "https://img.sporekrani.com/event/487374.jpg?v=1788481642",
       "stadium": "Lumpinee Stadyumu"
     },
     {
@@ -492,21 +489,21 @@
       "stadium": "Louis Armstrong Stadyumu"
     },
     {
-      "id": "event-9",
-      "title": "R.Lovato Jr. - P.Jaworski",
+      "id": "event-3",
+      "title": "N.Nguyen - E.El Jamari",
       "homeTeam": {
-        "name": "R.Lovato Jr.",
-        "logo": "https://img.sporekrani.com/teams/cea8623a-2afc-4679-a194-3620123f60a2.png"
+        "name": "N.Nguyen",
+        "logo": "https://img.sporekrani.com/teams/82168b70-81fb-4756-a52c-a929d4c3c6b3.png"
       },
       "awayTeam": {
-        "name": "P.Jaworski",
-        "logo": null
+        "name": "E.El Jamari",
+        "logo": "https://img.sporekrani.com/teams/f9a14c8f-16b8-4281-9e93-36d006dac932.png"
       },
-      "startDate": "2026-09-05T05:30:00+03:00",
-      "endDate": "2026-09-05T08:30:00+03:00",
-      "time": "05:30",
+      "startDate": "2026-09-05T04:00:00+03:00",
+      "endDate": "2026-09-05T07:00:00+03:00",
+      "time": "04:00",
       "date": "05.09.2026",
-      "status": "UPCOMING",
+      "status": "FINISHED",
       "leagueName": "ONE Championship Dövüş",
       "category": "other_sports",
       "isSuperLig": false,
@@ -522,127 +519,130 @@
       },
       "hasStream": true,
       "streamId": 2025,
-      "banner": "https://img.sporekrani.com/event/487370.jpg?v=1788481641",
+      "banner": "https://img.sporekrani.com/event/487367.jpg?v=1788481641",
       "stadium": "Lumpinee Stadyumu"
     },
     {
-      "id": "event-10",
-      "title": "J.Mor Krungthepthonburi - J.Estupinan",
+      "id": "event-4",
+      "title": "Williams/Williams - Chan/Joint",
       "homeTeam": {
-        "name": "J.Mor Krungthepthonburi",
-        "logo": "https://img.sporekrani.com/teams/97cc5f01-0f30-485f-9b8a-c88fa39cd9ff.png"
+        "name": "Williams/Williams",
+        "logo": "https://img.sporekrani.com/teams/4fe0a078-aae2-4f65-b5e5-59292228d4e8.png"
       },
       "awayTeam": {
-        "name": "J.Estupinan",
-        "logo": "https://img.sporekrani.com/teams/4b8d445b-90e2-4ab1-811d-ee36518ed03c.png"
+        "name": "Chan/Joint",
+        "logo": "https://img.sporekrani.com/teams/5057c10d-ac50-4c70-b217-7c197c31d521.png"
       },
-      "startDate": "2026-09-05T06:00:00+03:00",
-      "endDate": "2026-09-05T09:00:00+03:00",
-      "time": "06:00",
+      "startDate": "2026-09-05T04:00:00+03:00",
+      "endDate": "2026-09-05T07:00:00+03:00",
+      "time": "04:00",
       "date": "05.09.2026",
-      "status": "UPCOMING",
-      "leagueName": "ONE Championship Dövüş",
+      "status": "FINISHED",
+      "leagueName": "Amerika Açık Tenis (US Open)",
       "category": "other_sports",
       "isSuperLig": false,
       "isTff1Lig": false,
       "channels": [
-        "S Sport Plus"
+        "Eurosport",
+        "Eurosport 2"
       ],
-      "primaryChannel": "S SPORT 1",
+      "primaryChannel": "EUROSPORT 1",
       "tvplusChannel": {
-        "id": 2025,
-        "name": "S SPORT 1",
-        "originalName": "S Sport Plus"
+        "id": 2036,
+        "name": "EUROSPORT 1",
+        "originalName": "Eurosport"
       },
       "hasStream": true,
-      "streamId": 2025,
-      "banner": "https://img.sporekrani.com/event/487371.jpg?v=1788481642",
-      "stadium": "Lumpinee Stadyumu"
+      "streamId": 2036,
+      "banner": "https://img.sporekrani.com/event/487421.jpg?v=1788519706",
+      "stadium": "Arthur Ashe Stadyumu"
     },
     {
-      "id": "event-11",
-      "title": "R.Kurosawa - F.Henrique",
+      "id": "event-5",
+      "title": "B.Shelton - D.Shapovalov",
       "homeTeam": {
-        "name": "R.Kurosawa",
-        "logo": "https://img.sporekrani.com/teams/4e49ad2d-cc08-4e84-9be8-f05d5b008e65.png"
+        "name": "B.Shelton",
+        "logo": "https://img.sporekrani.com/teams/KijNroWqlHfrQJzLUEekxvqkVlGTxtnLh1otAKoR.png"
       },
       "awayTeam": {
-        "name": "F.Henrique",
-        "logo": null
+        "name": "D.Shapovalov",
+        "logo": "https://img.sporekrani.com/teams/pis4brDoF1dFAqtbApge2m7aXA82WsR7FLfvoswm.png"
       },
-      "startDate": "2026-09-05T06:30:00+03:00",
-      "endDate": "2026-09-05T09:30:00+03:00",
-      "time": "06:30",
+      "startDate": "2026-09-05T04:00:00+03:00",
+      "endDate": "2026-09-05T07:00:00+03:00",
+      "time": "04:00",
       "date": "05.09.2026",
-      "status": "UPCOMING",
-      "leagueName": "ONE Championship Dövüş",
+      "status": "FINISHED",
+      "leagueName": "Amerika Açık Tenis (US Open)",
       "category": "other_sports",
       "isSuperLig": false,
       "isTff1Lig": false,
       "channels": [
-        "S Sport Plus"
+        "Eurosport",
+        "Eurosport 2"
       ],
-      "primaryChannel": "S SPORT 1",
+      "primaryChannel": "EUROSPORT 1",
       "tvplusChannel": {
-        "id": 2025,
-        "name": "S SPORT 1",
-        "originalName": "S Sport Plus"
+        "id": 2036,
+        "name": "EUROSPORT 1",
+        "originalName": "Eurosport"
       },
       "hasStream": true,
-      "streamId": 2025,
-      "banner": "https://img.sporekrani.com/event/487372.jpg?v=1788481642",
-      "stadium": "Lumpinee Stadyumu"
+      "streamId": 2036,
+      "banner": "https://img.sporekrani.com/event/487422.jpg?v=1788519707",
+      "stadium": "Arthur Ashe Stadyumu"
     },
     {
-      "id": "event-12",
-      "title": "M.Younes Rabah - R.Bravo",
+      "id": "event-6",
+      "title": "E.Svitolina - A.Kalinskaya",
       "homeTeam": {
-        "name": "M.Younes Rabah",
-        "logo": "https://img.sporekrani.com/teams/0935adad-9497-4ebe-b120-cea77497d670.png"
+        "name": "E.Svitolina",
+        "logo": "https://img.sporekrani.com/teams/HIo2wN3vnoPGrG05GweUPDVbbiC1FpzC2uh1Anh9.png"
       },
       "awayTeam": {
-        "name": "R.Bravo",
-        "logo": "https://img.sporekrani.com/teams/dca1edf5-81e4-40e5-b2c2-1a235260ae3c.png"
+        "name": "A.Kalinskaya",
+        "logo": "https://img.sporekrani.com/teams/WUKwyzHpiWrzSQcmhRFVwHzeekEQbECsofuukOvv.png"
       },
-      "startDate": "2026-09-05T07:00:00+03:00",
-      "endDate": "2026-09-05T10:00:00+03:00",
-      "time": "07:00",
+      "startDate": "2026-09-05T04:00:00+03:00",
+      "endDate": "2026-09-05T07:00:00+03:00",
+      "time": "04:00",
       "date": "05.09.2026",
-      "status": "UPCOMING",
-      "leagueName": "ONE Championship Dövüş",
+      "status": "FINISHED",
+      "leagueName": "Amerika Açık Tenis (US Open)",
       "category": "other_sports",
       "isSuperLig": false,
       "isTff1Lig": false,
       "channels": [
-        "S Sport Plus"
+        "Eurosport",
+        "Eurosport 2"
       ],
-      "primaryChannel": "S SPORT 1",
+      "primaryChannel": "EUROSPORT 1",
       "tvplusChannel": {
-        "id": 2025,
-        "name": "S SPORT 1",
-        "originalName": "S Sport Plus"
+        "id": 2036,
+        "name": "EUROSPORT 1",
+        "originalName": "Eurosport"
       },
       "hasStream": true,
-      "streamId": 2025,
-      "banner": "https://img.sporekrani.com/event/487373.jpg?v=1788481642",
-      "stadium": "Lumpinee Stadyumu"
+      "streamId": 2036,
+      "banner": "https://img.sporekrani.com/event/487426.jpg?v=1788519708",
+      "stadium": "Louis Armstrong Stadyumu"
     },
     {
-      "id": "event-13",
-      "title": "G.Nakatani - N.Lalthazuala",
+      "id": "event-7",
+      "title": "G.Fujimoto - M.Aragon",
       "homeTeam": {
-        "name": "G.Nakatani",
-        "logo": "https://img.sporekrani.com/teams/363b9859-d441-4ba6-a011-f73f35d5b527.png"
+        "name": "G.Fujimoto",
+        "logo": "https://img.sporekrani.com/teams/0e255081-9c05-490c-98f1-d2affb8e7e6b.png"
       },
       "awayTeam": {
-        "name": "N.Lalthazuala",
-        "logo": "https://img.sporekrani.com/teams/b3c2c576-5a6f-4f8e-97ec-fd50c6637066.png"
+        "name": "M.Aragon",
+        "logo": "https://img.sporekrani.com/teams/704b8bc0-7ec9-4224-a278-add48da8d145.png"
       },
-      "startDate": "2026-09-05T07:30:00+03:00",
-      "endDate": "2026-09-05T10:30:00+03:00",
-      "time": "07:30",
+      "startDate": "2026-09-05T04:30:00+03:00",
+      "endDate": "2026-09-05T07:30:00+03:00",
+      "time": "04:30",
       "date": "05.09.2026",
-      "status": "UPCOMING",
+      "status": "FINISHED",
       "leagueName": "ONE Championship Dövüş",
       "category": "other_sports",
       "isSuperLig": false,
@@ -658,7 +658,7 @@
       },
       "hasStream": true,
       "streamId": 2025,
-      "banner": "https://img.sporekrani.com/event/487374.jpg?v=1788481642",
+      "banner": "https://img.sporekrani.com/event/487368.jpg?v=1788481641",
       "stadium": "Lumpinee Stadyumu"
     },
     {

@@ -716,6 +716,8 @@ app.get('/vod/browser/:mediaType/:idWithExt', async (req, res) => {
     '-i', targetUrl,
     '-map', '0:v:0', '-map', audioIndex ? `0:${audioIndex}` : '0:a:0?',
     ...videoArgs,
+    '-pix_fmt', 'yuv420p',
+    '-force_key_frames', 'expr:gte(t,n_forced*2)',
     '-c:a', 'aac', '-ac', '2', '-b:a', '192k',
     '-af', 'aresample=async=1:min_hard_comp=0.100000:first_pts=0',
     '-avoid_negative_ts', 'make_zero',
@@ -727,7 +729,7 @@ app.get('/vod/browser/:mediaType/:idWithExt', async (req, res) => {
   await killVodSession(sid);
   // Sağlayıcının bağlantı yuvasını serbest bırakması için kısa bekleme
   await new Promise(resolve => setTimeout(resolve, 400));
-  if (req.destroyed || res.writableEnded) return;
+  if (res.destroyed || res.writableEnded) return;
 
   const MAX_TRIES = 3;
   let current = null;
@@ -750,7 +752,7 @@ app.get('/vod/browser/:mediaType/:idWithExt', async (req, res) => {
 
     ffmpeg.on('close', () => {
       if (vodSessions.get(sid) === ffmpeg) vodSessions.delete(sid);
-      if (current !== ffmpeg || res.writableEnded || req.destroyed) return;
+      if (current !== ffmpeg || res.writableEnded || res.destroyed) return;
 
       // Tek bağlantı limiti yüzünden hiç veri gelmediyse yuva boşalınca yeniden dene
       if (bytes === 0 && attempt < MAX_TRIES) {
@@ -758,7 +760,7 @@ app.get('/vod/browser/:mediaType/:idWithExt', async (req, res) => {
         setTimeout(() => {
           const taken = vodSessions.get(sid);
           if (taken && taken !== ffmpeg) return; // başka bir istek devraldı
-          if (!res.writableEnded && !req.destroyed) startTranscode(attempt + 1);
+          if (!res.writableEnded && !res.destroyed) startTranscode(attempt + 1);
         }, 800);
         return;
       }
@@ -781,16 +783,25 @@ app.get('/api/vod/tracks/:mediaType/:idWithExt', (req, res) => {
   if (!['movie', 'series'].includes(mediaType) || !/^\d+\.[a-z0-9]+$/i.test(idWithExt)) return res.status(400).json({ error: 'Geçersiz medya yolu.' });
   const { host, username, password } = CONFIG.iptv;
   const targetUrl = `${host}/${mediaType}/${username}/${password}/${idWithExt}`;
-  const probe = spawn('ffprobe', [...proxyInputArgs(), '-v', 'error', '-show_streams', '-of', 'json', targetUrl], { windowsHide: true });
+  const probe = spawn('ffprobe', [...proxyInputArgs(), '-v', 'error', '-show_streams', '-show_format', '-of', 'json', targetUrl], { windowsHide: true });
+  const probeTimeout = setTimeout(() => killProcessTree(probe), 15000);
+  probe.on('error', () => {
+    clearTimeout(probeTimeout);
+    if (!res.headersSent) res.status(502).json({ error: 'Medya bilgisi okunamadı.' });
+  });
   let output = '';
   probe.stdout.on('data', chunk => { output += chunk; });
   probe.on('close', code => {
+    clearTimeout(probeTimeout);
+    if (res.headersSent || res.destroyed) return;
     if (code !== 0) return res.status(502).json({ error: 'Medya bilgisi okunamadı.' });
     try {
-      const streams = JSON.parse(output).streams || [];
+      const metadata = JSON.parse(output);
+      const streams = metadata.streams || [];
       const normalize = stream => ({ index: stream.index, codec: stream.codec_name, language: stream.tags?.language || 'und', title: stream.tags?.title || '' });
       const video = streams.find(s => s.codec_type === 'video');
       res.json({
+        duration: Number(metadata.format?.duration) || 0,
         audio: streams.filter(s => s.codec_type === 'audio').map(normalize),
         subtitles: streams.filter(s => s.codec_type === 'subtitle').map(normalize),
         source: video ? { width: video.width, height: video.height, codec: video.codec_name } : null
