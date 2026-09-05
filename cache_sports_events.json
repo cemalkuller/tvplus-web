@@ -1,0 +1,3069 @@
+{
+  "updatedAt": "2026-09-05T02:13:14.787Z",
+  "total": 92,
+  "superLigCount": 2,
+  "tff1LigCount": 4,
+  "europeCount": 38,
+  "basketballCount": 10,
+  "otherSportsCount": 38,
+  "matches": [
+    {
+      "id": "event-53",
+      "title": "Erzurumspor - Konyaspor",
+      "homeTeam": {
+        "name": "Erzurumspor",
+        "logo": "https://img.sporekrani.com/teams/nl7AiwO2FssDa5jVO0394Bo1w4GIbsuHiArFtWoc.png"
+      },
+      "awayTeam": {
+        "name": "Konyaspor",
+        "logo": "https://img.sporekrani.com/teams/rrtsbcfkWv3ZkcOrUqjBySbDKkOgnZ4ntn0PfJeh.png"
+      },
+      "startDate": "2026-09-05T17:00:00+03:00",
+      "endDate": "2026-09-05T20:00:00+03:00",
+      "time": "17:00",
+      "date": "05.09.2026",
+      "status": "UPCOMING",
+      "leagueName": "Trendyol Süper Lig",
+      "category": "super_lig",
+      "isSuperLig": true,
+      "isTff1Lig": false,
+      "channels": [
+        "Bein Sports 2"
+      ],
+      "primaryChannel": "beIN SPORTS 2",
+      "tvplusChannel": {
+        "id": 2205,
+        "name": "beIN SPORTS 2",
+        "originalName": "Bein Sports 2"
+      },
+      "hasStream": true,
+      "streamId": 2205,
+      "banner": "https://img.sporekrani.com/event/486892.jpg?v=1788443792",
+      "stadium": "Erzurum Kazım Karabekir Stadyumu"
+    },
+    {
+      "id": "event-72",
+      "title": "Fenerbahçe - Beşiktaş",
+      "homeTeam": {
+        "name": "Fenerbahçe",
+        "logo": "https://img.sporekrani.com/teams/v5HDBvsjiEUsYChq03Jk2EbrNXDHiHvLOdMI6fHR.png"
+      },
+      "awayTeam": {
+        "name": "Beşiktaş",
+        "logo": "https://img.sporekrani.com/teams/CFvwmLuUD6H974wec5ga09WZXmTeWdI3RneaRBkc.png"
+      },
+      "startDate": "2026-09-05T20:00:00+03:00",
+      "endDate": "2026-09-05T23:00:00+03:00",
+      "time": "20:00",
+      "date": "05.09.2026",
+      "status": "UPCOMING",
+      "leagueName": "Trendyol Süper Lig",
+      "category": "super_lig",
+      "isSuperLig": true,
+      "isTff1Lig": false,
+      "channels": [
+        "Bein Sports 1"
+      ],
+      "primaryChannel": "beIN SPORTS 1",
+      "tvplusChannel": {
+        "id": 2199,
+        "name": "beIN SPORTS 1",
+        "originalName": "Bein Sports 1"
+      },
+      "hasStream": true,
+      "streamId": 2199,
+      "banner": "https://img.sporekrani.com/event/486893.jpg?v=1788311655",
+      "stadium": "Chobani  FB Şükrü Saraçoğlu Spor Kompleksi Stadyumu"
+    },
+    {
+      "id": "event-35",
+      "title": "Bandırmaspor - Boluspor",
+      "homeTeam": {
+        "name": "Bandırmaspor",
+        "logo": "https://img.sporekrani.com/teams/eCMSnOYhdkN1g2KIVMtcLZYKjyzxUghS4LzkHirS.png"
+      },
+      "awayTeam": {
+        "name": "Boluspor",
+        "logo": "https://img.sporekrani.com/teams/gUJSQTZh6I6iaLOcbmbEYogudh7C1muJaY8psxOh.png"
+      },
+      "startDate": "2026-09-05T16:00:00+03:00",
+      "endDate": "2026-09-05T19:00:00+03:00",
+      "time": "16:00",
+      "date": "05.09.2026",
+      "status": "UPCOMING",
+      "leagueName": "Trendyol 1. Lig",
+      "category": "tff_1lig",
+      "isSuperLig": false,
+      "isTff1Lig": true,
+      "channels": [
+        "TRT Spor",
+        "beIN Sports Haber"
+      ],
+      "primaryChannel": "TRT SPOR",
+      "tvplusChannel": {
+        "id": 2015,
+        "name": "TRT SPOR",
+        "originalName": "TRT Spor"
+      },
+      "hasStream": true,
+      "streamId": 2015,
+      "banner": "https://img.sporekrani.com/event/487161.jpg?v=1788443907",
+      "stadium": "Bandırma 17 Eylül Stadyumu"
+    },
+    {
+      "id": "event-52",
+      "title": "Yıldırımspor - Sökespor",
+      "homeTeam": {
+        "name": "Yıldırımspor",
+        "logo": "https://img.sporekrani.com/teams/JudWdhFZhOU6UEhkXaU7mMHowei2NNQBiB41E1FX.png"
+      },
+      "awayTeam": {
+        "name": "Sökespor",
+        "logo": null
+      },
+      "startDate": "2026-09-05T17:00:00+03:00",
+      "endDate": "2026-09-05T20:00:00+03:00",
+      "time": "17:00",
+      "date": "05.09.2026",
+      "status": "UPCOMING",
+      "leagueName": "TFF 3.-LIG",
+      "category": "tff_1lig",
+      "isSuperLig": false,
+      "isTff1Lig": true,
+      "channels": [
+        "Tivibu Spor 1"
+      ],
+      "primaryChannel": "TiViBU SPOR 1",
+      "tvplusChannel": {
+        "id": 635439,
+        "name": "TiViBU SPOR 1",
+        "originalName": "Tivibu Spor 1"
+      },
+      "hasStream": true,
+      "streamId": 635439,
+      "banner": "https://img.sporekrani.com/event/486527.jpg?v=1788174151",
+      "stadium": "Minareli Çavuş Spor Tesisleri Stadyumu"
+    },
+    {
+      "id": "event-74",
+      "title": "Keçiörengücü - Sarıyer",
+      "homeTeam": {
+        "name": "Keçiörengücü",
+        "logo": "https://img.sporekrani.com/teams/PTiUdmdArMpiiPZbFZcICciKqz0bJkJFnnfK5TuR.png"
+      },
+      "awayTeam": {
+        "name": "Sarıyer",
+        "logo": "https://img.sporekrani.com/teams/DMMkzvfUGppo6KDRrBSADy1AiDxBAjc9TehQY0zE.png"
+      },
+      "startDate": "2026-09-05T20:00:00+03:00",
+      "endDate": "2026-09-05T23:00:00+03:00",
+      "time": "20:00",
+      "date": "05.09.2026",
+      "status": "UPCOMING",
+      "leagueName": "Trendyol 1. Lig",
+      "category": "tff_1lig",
+      "isSuperLig": false,
+      "isTff1Lig": true,
+      "channels": [
+        "TRT Spor",
+        "Bein Sports 2"
+      ],
+      "primaryChannel": "TRT SPOR",
+      "tvplusChannel": {
+        "id": 2015,
+        "name": "TRT SPOR",
+        "originalName": "TRT Spor"
+      },
+      "hasStream": true,
+      "streamId": 2015,
+      "banner": "https://img.sporekrani.com/event/487162.jpg?v=1788443924",
+      "stadium": "Aktepe Stadyumu"
+    },
+    {
+      "id": "event-75",
+      "title": "Pendikspor - Ümraniyespor",
+      "homeTeam": {
+        "name": "Pendikspor",
+        "logo": "https://img.sporekrani.com/teams/OX5uFgYNhnDuSJNajSSIymW0ydzYfITpueo5BAwa.png"
+      },
+      "awayTeam": {
+        "name": "Ümraniyespor",
+        "logo": "https://img.sporekrani.com/teams/JfAl81ZTfdntqyJ9AhKJOynyQKpfbu5iK2fw962V.png"
+      },
+      "startDate": "2026-09-05T20:00:00+03:00",
+      "endDate": "2026-09-05T23:00:00+03:00",
+      "time": "20:00",
+      "date": "05.09.2026",
+      "status": "UPCOMING",
+      "leagueName": "Trendyol 1. Lig",
+      "category": "tff_1lig",
+      "isSuperLig": false,
+      "isTff1Lig": true,
+      "channels": [
+        "TRT Türk",
+        "Bein Sports Max 1"
+      ],
+      "primaryChannel": "beIN SPORTS MAX 1",
+      "tvplusChannel": {
+        "id": 2215,
+        "name": "beIN SPORTS MAX 1",
+        "originalName": "Bein Sports Max 1"
+      },
+      "hasStream": true,
+      "streamId": 2215,
+      "banner": "https://img.sporekrani.com/event/487163.jpg?v=1788443940",
+      "stadium": "Pendik İlçe Stadyumu"
+    },
+    {
+      "id": "event-3",
+      "title": "N.Nguyen - E.El Jamari",
+      "homeTeam": {
+        "name": "N.Nguyen",
+        "logo": "https://img.sporekrani.com/teams/82168b70-81fb-4756-a52c-a929d4c3c6b3.png"
+      },
+      "awayTeam": {
+        "name": "E.El Jamari",
+        "logo": "https://img.sporekrani.com/teams/f9a14c8f-16b8-4281-9e93-36d006dac932.png"
+      },
+      "startDate": "2026-09-05T04:00:00+03:00",
+      "endDate": "2026-09-05T07:00:00+03:00",
+      "time": "04:00",
+      "date": "05.09.2026",
+      "status": "LIVE",
+      "leagueName": "ONE Championship Dövüş",
+      "category": "other_sports",
+      "isSuperLig": false,
+      "isTff1Lig": false,
+      "channels": [
+        "S Sport Plus"
+      ],
+      "primaryChannel": "S SPORT 1",
+      "tvplusChannel": {
+        "id": 2025,
+        "name": "S SPORT 1",
+        "originalName": "S Sport Plus"
+      },
+      "hasStream": true,
+      "streamId": 2025,
+      "banner": "https://img.sporekrani.com/event/487367.jpg?v=1788481641",
+      "stadium": "Lumpinee Stadyumu"
+    },
+    {
+      "id": "event-4",
+      "title": "Williams/Williams - Chan/Joint",
+      "homeTeam": {
+        "name": "Williams/Williams",
+        "logo": "https://img.sporekrani.com/teams/4fe0a078-aae2-4f65-b5e5-59292228d4e8.png"
+      },
+      "awayTeam": {
+        "name": "Chan/Joint",
+        "logo": "https://img.sporekrani.com/teams/5057c10d-ac50-4c70-b217-7c197c31d521.png"
+      },
+      "startDate": "2026-09-05T04:00:00+03:00",
+      "endDate": "2026-09-05T07:00:00+03:00",
+      "time": "04:00",
+      "date": "05.09.2026",
+      "status": "LIVE",
+      "leagueName": "Amerika Açık Tenis (US Open)",
+      "category": "other_sports",
+      "isSuperLig": false,
+      "isTff1Lig": false,
+      "channels": [
+        "Eurosport",
+        "Eurosport 2"
+      ],
+      "primaryChannel": "EUROSPORT 1",
+      "tvplusChannel": {
+        "id": 2036,
+        "name": "EUROSPORT 1",
+        "originalName": "Eurosport"
+      },
+      "hasStream": true,
+      "streamId": 2036,
+      "banner": "https://img.sporekrani.com/event/487421.jpg?v=1788519706",
+      "stadium": "Arthur Ashe Stadyumu"
+    },
+    {
+      "id": "event-5",
+      "title": "B.Shelton - D.Shapovalov",
+      "homeTeam": {
+        "name": "B.Shelton",
+        "logo": "https://img.sporekrani.com/teams/KijNroWqlHfrQJzLUEekxvqkVlGTxtnLh1otAKoR.png"
+      },
+      "awayTeam": {
+        "name": "D.Shapovalov",
+        "logo": "https://img.sporekrani.com/teams/pis4brDoF1dFAqtbApge2m7aXA82WsR7FLfvoswm.png"
+      },
+      "startDate": "2026-09-05T04:00:00+03:00",
+      "endDate": "2026-09-05T07:00:00+03:00",
+      "time": "04:00",
+      "date": "05.09.2026",
+      "status": "LIVE",
+      "leagueName": "Amerika Açık Tenis (US Open)",
+      "category": "other_sports",
+      "isSuperLig": false,
+      "isTff1Lig": false,
+      "channels": [
+        "Eurosport",
+        "Eurosport 2"
+      ],
+      "primaryChannel": "EUROSPORT 1",
+      "tvplusChannel": {
+        "id": 2036,
+        "name": "EUROSPORT 1",
+        "originalName": "Eurosport"
+      },
+      "hasStream": true,
+      "streamId": 2036,
+      "banner": "https://img.sporekrani.com/event/487422.jpg?v=1788519707",
+      "stadium": "Arthur Ashe Stadyumu"
+    },
+    {
+      "id": "event-6",
+      "title": "E.Svitolina - A.Kalinskaya",
+      "homeTeam": {
+        "name": "E.Svitolina",
+        "logo": "https://img.sporekrani.com/teams/HIo2wN3vnoPGrG05GweUPDVbbiC1FpzC2uh1Anh9.png"
+      },
+      "awayTeam": {
+        "name": "A.Kalinskaya",
+        "logo": "https://img.sporekrani.com/teams/WUKwyzHpiWrzSQcmhRFVwHzeekEQbECsofuukOvv.png"
+      },
+      "startDate": "2026-09-05T04:00:00+03:00",
+      "endDate": "2026-09-05T07:00:00+03:00",
+      "time": "04:00",
+      "date": "05.09.2026",
+      "status": "LIVE",
+      "leagueName": "Amerika Açık Tenis (US Open)",
+      "category": "other_sports",
+      "isSuperLig": false,
+      "isTff1Lig": false,
+      "channels": [
+        "Eurosport",
+        "Eurosport 2"
+      ],
+      "primaryChannel": "EUROSPORT 1",
+      "tvplusChannel": {
+        "id": 2036,
+        "name": "EUROSPORT 1",
+        "originalName": "Eurosport"
+      },
+      "hasStream": true,
+      "streamId": 2036,
+      "banner": "https://img.sporekrani.com/event/487426.jpg?v=1788519708",
+      "stadium": "Louis Armstrong Stadyumu"
+    },
+    {
+      "id": "event-7",
+      "title": "G.Fujimoto - M.Aragon",
+      "homeTeam": {
+        "name": "G.Fujimoto",
+        "logo": "https://img.sporekrani.com/teams/0e255081-9c05-490c-98f1-d2affb8e7e6b.png"
+      },
+      "awayTeam": {
+        "name": "M.Aragon",
+        "logo": "https://img.sporekrani.com/teams/704b8bc0-7ec9-4224-a278-add48da8d145.png"
+      },
+      "startDate": "2026-09-05T04:30:00+03:00",
+      "endDate": "2026-09-05T07:30:00+03:00",
+      "time": "04:30",
+      "date": "05.09.2026",
+      "status": "LIVE",
+      "leagueName": "ONE Championship Dövüş",
+      "category": "other_sports",
+      "isSuperLig": false,
+      "isTff1Lig": false,
+      "channels": [
+        "S Sport Plus"
+      ],
+      "primaryChannel": "S SPORT 1",
+      "tvplusChannel": {
+        "id": 2025,
+        "name": "S SPORT 1",
+        "originalName": "S Sport Plus"
+      },
+      "hasStream": true,
+      "streamId": 2025,
+      "banner": "https://img.sporekrani.com/event/487368.jpg?v=1788481641",
+      "stadium": "Lumpinee Stadyumu"
+    },
+    {
+      "id": "event-8",
+      "title": "H.Almonacid - P.Dantas",
+      "homeTeam": {
+        "name": "H.Almonacid",
+        "logo": "https://img.sporekrani.com/teams/4f095cba-a52a-4e44-9646-c92d1672aea7.png"
+      },
+      "awayTeam": {
+        "name": "P.Dantas",
+        "logo": "https://img.sporekrani.com/teams/c55cc298-9fcf-4cae-95d9-5395124afd04.png"
+      },
+      "startDate": "2026-09-05T05:00:00+03:00",
+      "endDate": "2026-09-05T08:00:00+03:00",
+      "time": "05:00",
+      "date": "05.09.2026",
+      "status": "LIVE",
+      "leagueName": "ONE Championship Dövüş",
+      "category": "other_sports",
+      "isSuperLig": false,
+      "isTff1Lig": false,
+      "channels": [
+        "S Sport Plus"
+      ],
+      "primaryChannel": "S SPORT 1",
+      "tvplusChannel": {
+        "id": 2025,
+        "name": "S SPORT 1",
+        "originalName": "S Sport Plus"
+      },
+      "hasStream": true,
+      "streamId": 2025,
+      "banner": "https://img.sporekrani.com/event/487369.jpg?v=1788481641",
+      "stadium": "Lumpinee Stadyumu"
+    },
+    {
+      "id": "event-1",
+      "title": "J.Lehecka - S.Tsitsipas",
+      "homeTeam": {
+        "name": "J.Lehecka",
+        "logo": "https://img.sporekrani.com/teams/CmuIivR0VqC2NDCZTnYdgiB2mv7J86KfVKpyFwSo.png"
+      },
+      "awayTeam": {
+        "name": "S.Tsitsipas",
+        "logo": "https://img.sporekrani.com/teams/q432HiNWjBrN7wT6ADtpfFzpmYMKroRWBZYNClqf.png"
+      },
+      "startDate": "2026-09-05T00:00:00+03:00",
+      "endDate": "2026-09-05T03:00:00+03:00",
+      "time": "00:00",
+      "date": "05.09.2026",
+      "status": "FINISHED",
+      "leagueName": "Amerika Açık Tenis (US Open)",
+      "category": "other_sports",
+      "isSuperLig": false,
+      "isTff1Lig": false,
+      "channels": [
+        "Eurosport",
+        "Eurosport 2"
+      ],
+      "primaryChannel": "EUROSPORT 1",
+      "tvplusChannel": {
+        "id": 2036,
+        "name": "EUROSPORT 1",
+        "originalName": "Eurosport"
+      },
+      "hasStream": true,
+      "streamId": 2036,
+      "banner": "https://img.sporekrani.com/event/487430.jpg?v=1788519709",
+      "stadium": "Grandstand Stadyumu"
+    },
+    {
+      "id": "event-2",
+      "title": "V.Vacherot - F.Tiafoe",
+      "homeTeam": {
+        "name": "V.Vacherot",
+        "logo": "https://img.sporekrani.com/teams/0de6755b-4729-4769-b162-a3512c6164bf.png"
+      },
+      "awayTeam": {
+        "name": "F.Tiafoe",
+        "logo": "https://img.sporekrani.com/teams/yYFl2j395woJYfoeSzMw9mzoumXPakX1AABzJjfb.png"
+      },
+      "startDate": "2026-09-05T02:00:00+03:00",
+      "endDate": "2026-09-05T05:00:00+03:00",
+      "time": "02:00",
+      "date": "05.09.2026",
+      "status": "FINISHED",
+      "leagueName": "Amerika Açık Tenis (US Open)",
+      "category": "other_sports",
+      "isSuperLig": false,
+      "isTff1Lig": false,
+      "channels": [
+        "Eurosport",
+        "Eurosport 2"
+      ],
+      "primaryChannel": "EUROSPORT 1",
+      "tvplusChannel": {
+        "id": 2036,
+        "name": "EUROSPORT 1",
+        "originalName": "Eurosport"
+      },
+      "hasStream": true,
+      "streamId": 2036,
+      "banner": "https://img.sporekrani.com/event/487425.jpg?v=1788519708",
+      "stadium": "Louis Armstrong Stadyumu"
+    },
+    {
+      "id": "event-9",
+      "title": "R.Lovato Jr. - P.Jaworski",
+      "homeTeam": {
+        "name": "R.Lovato Jr.",
+        "logo": "https://img.sporekrani.com/teams/cea8623a-2afc-4679-a194-3620123f60a2.png"
+      },
+      "awayTeam": {
+        "name": "P.Jaworski",
+        "logo": null
+      },
+      "startDate": "2026-09-05T05:30:00+03:00",
+      "endDate": "2026-09-05T08:30:00+03:00",
+      "time": "05:30",
+      "date": "05.09.2026",
+      "status": "UPCOMING",
+      "leagueName": "ONE Championship Dövüş",
+      "category": "other_sports",
+      "isSuperLig": false,
+      "isTff1Lig": false,
+      "channels": [
+        "S Sport Plus"
+      ],
+      "primaryChannel": "S SPORT 1",
+      "tvplusChannel": {
+        "id": 2025,
+        "name": "S SPORT 1",
+        "originalName": "S Sport Plus"
+      },
+      "hasStream": true,
+      "streamId": 2025,
+      "banner": "https://img.sporekrani.com/event/487370.jpg?v=1788481641",
+      "stadium": "Lumpinee Stadyumu"
+    },
+    {
+      "id": "event-10",
+      "title": "J.Mor Krungthepthonburi - J.Estupinan",
+      "homeTeam": {
+        "name": "J.Mor Krungthepthonburi",
+        "logo": "https://img.sporekrani.com/teams/97cc5f01-0f30-485f-9b8a-c88fa39cd9ff.png"
+      },
+      "awayTeam": {
+        "name": "J.Estupinan",
+        "logo": "https://img.sporekrani.com/teams/4b8d445b-90e2-4ab1-811d-ee36518ed03c.png"
+      },
+      "startDate": "2026-09-05T06:00:00+03:00",
+      "endDate": "2026-09-05T09:00:00+03:00",
+      "time": "06:00",
+      "date": "05.09.2026",
+      "status": "UPCOMING",
+      "leagueName": "ONE Championship Dövüş",
+      "category": "other_sports",
+      "isSuperLig": false,
+      "isTff1Lig": false,
+      "channels": [
+        "S Sport Plus"
+      ],
+      "primaryChannel": "S SPORT 1",
+      "tvplusChannel": {
+        "id": 2025,
+        "name": "S SPORT 1",
+        "originalName": "S Sport Plus"
+      },
+      "hasStream": true,
+      "streamId": 2025,
+      "banner": "https://img.sporekrani.com/event/487371.jpg?v=1788481642",
+      "stadium": "Lumpinee Stadyumu"
+    },
+    {
+      "id": "event-11",
+      "title": "R.Kurosawa - F.Henrique",
+      "homeTeam": {
+        "name": "R.Kurosawa",
+        "logo": "https://img.sporekrani.com/teams/4e49ad2d-cc08-4e84-9be8-f05d5b008e65.png"
+      },
+      "awayTeam": {
+        "name": "F.Henrique",
+        "logo": null
+      },
+      "startDate": "2026-09-05T06:30:00+03:00",
+      "endDate": "2026-09-05T09:30:00+03:00",
+      "time": "06:30",
+      "date": "05.09.2026",
+      "status": "UPCOMING",
+      "leagueName": "ONE Championship Dövüş",
+      "category": "other_sports",
+      "isSuperLig": false,
+      "isTff1Lig": false,
+      "channels": [
+        "S Sport Plus"
+      ],
+      "primaryChannel": "S SPORT 1",
+      "tvplusChannel": {
+        "id": 2025,
+        "name": "S SPORT 1",
+        "originalName": "S Sport Plus"
+      },
+      "hasStream": true,
+      "streamId": 2025,
+      "banner": "https://img.sporekrani.com/event/487372.jpg?v=1788481642",
+      "stadium": "Lumpinee Stadyumu"
+    },
+    {
+      "id": "event-12",
+      "title": "M.Younes Rabah - R.Bravo",
+      "homeTeam": {
+        "name": "M.Younes Rabah",
+        "logo": "https://img.sporekrani.com/teams/0935adad-9497-4ebe-b120-cea77497d670.png"
+      },
+      "awayTeam": {
+        "name": "R.Bravo",
+        "logo": "https://img.sporekrani.com/teams/dca1edf5-81e4-40e5-b2c2-1a235260ae3c.png"
+      },
+      "startDate": "2026-09-05T07:00:00+03:00",
+      "endDate": "2026-09-05T10:00:00+03:00",
+      "time": "07:00",
+      "date": "05.09.2026",
+      "status": "UPCOMING",
+      "leagueName": "ONE Championship Dövüş",
+      "category": "other_sports",
+      "isSuperLig": false,
+      "isTff1Lig": false,
+      "channels": [
+        "S Sport Plus"
+      ],
+      "primaryChannel": "S SPORT 1",
+      "tvplusChannel": {
+        "id": 2025,
+        "name": "S SPORT 1",
+        "originalName": "S Sport Plus"
+      },
+      "hasStream": true,
+      "streamId": 2025,
+      "banner": "https://img.sporekrani.com/event/487373.jpg?v=1788481642",
+      "stadium": "Lumpinee Stadyumu"
+    },
+    {
+      "id": "event-13",
+      "title": "G.Nakatani - N.Lalthazuala",
+      "homeTeam": {
+        "name": "G.Nakatani",
+        "logo": "https://img.sporekrani.com/teams/363b9859-d441-4ba6-a011-f73f35d5b527.png"
+      },
+      "awayTeam": {
+        "name": "N.Lalthazuala",
+        "logo": "https://img.sporekrani.com/teams/b3c2c576-5a6f-4f8e-97ec-fd50c6637066.png"
+      },
+      "startDate": "2026-09-05T07:30:00+03:00",
+      "endDate": "2026-09-05T10:30:00+03:00",
+      "time": "07:30",
+      "date": "05.09.2026",
+      "status": "UPCOMING",
+      "leagueName": "ONE Championship Dövüş",
+      "category": "other_sports",
+      "isSuperLig": false,
+      "isTff1Lig": false,
+      "channels": [
+        "S Sport Plus"
+      ],
+      "primaryChannel": "S SPORT 1",
+      "tvplusChannel": {
+        "id": 2025,
+        "name": "S SPORT 1",
+        "originalName": "S Sport Plus"
+      },
+      "hasStream": true,
+      "streamId": 2025,
+      "banner": "https://img.sporekrani.com/event/487374.jpg?v=1788481642",
+      "stadium": "Lumpinee Stadyumu"
+    },
+    {
+      "id": "event-14",
+      "title": "S.Fairtex - S.Flores",
+      "homeTeam": {
+        "name": "S.Fairtex",
+        "logo": "https://img.sporekrani.com/teams/UoHXlXNtuhgfmk59IybnfvE45HzNk8s16xHkmCFc.png"
+      },
+      "awayTeam": {
+        "name": "S.Flores",
+        "logo": "https://img.sporekrani.com/teams/5c1ac7a6-b763-4ca9-b77f-c8ab1c2cf447.png"
+      },
+      "startDate": "2026-09-05T08:00:00+03:00",
+      "endDate": "2026-09-05T11:00:00+03:00",
+      "time": "08:00",
+      "date": "05.09.2026",
+      "status": "UPCOMING",
+      "leagueName": "ONE Championship Dövüş",
+      "category": "other_sports",
+      "isSuperLig": false,
+      "isTff1Lig": false,
+      "channels": [
+        "S Sport Plus"
+      ],
+      "primaryChannel": "S SPORT 1",
+      "tvplusChannel": {
+        "id": 2025,
+        "name": "S SPORT 1",
+        "originalName": "S Sport Plus"
+      },
+      "hasStream": true,
+      "streamId": 2025,
+      "banner": "https://img.sporekrani.com/event/487375.jpg?v=1788481642",
+      "stadium": "Lumpinee Stadyumu"
+    },
+    {
+      "id": "event-15",
+      "title": "Senesi/Pons - Prieto/Fallada",
+      "homeTeam": {
+        "name": "Senesi/Pons",
+        "logo": "https://img.sporekrani.com/teams/15f74f43-5b93-4355-b0c8-f6d04781b200.png"
+      },
+      "awayTeam": {
+        "name": "Prieto/Fallada",
+        "logo": "https://img.sporekrani.com/teams/1c4ffa9d-65a0-482f-bc20-72d1a0ad6fd2.png"
+      },
+      "startDate": "2026-09-05T13:00:00+03:00",
+      "endDate": "2026-09-05T16:00:00+03:00",
+      "time": "13:00",
+      "date": "05.09.2026",
+      "status": "UPCOMING",
+      "leagueName": "Premier Padel",
+      "category": "other_sports",
+      "isSuperLig": false,
+      "isTff1Lig": false,
+      "channels": [
+        "Bein Sports beIN Connect"
+      ],
+      "primaryChannel": "Bein Sports beIN Connect",
+      "tvplusChannel": null,
+      "hasStream": false,
+      "streamId": null,
+      "banner": "https://img.sporekrani.com/event/487610.jpg?v=1788568595",
+      "stadium": "Merkez Kort Stadyumu"
+    },
+    {
+      "id": "event-16",
+      "title": "Afyonkarahisar - MX2 Antrenman",
+      "homeTeam": {
+        "name": "Afyonkarahisar",
+        "logo": null
+      },
+      "awayTeam": {
+        "name": "MX2 Antrenman",
+        "logo": null
+      },
+      "startDate": "2026-09-05T13:35:00+03:00",
+      "endDate": "2026-09-05T16:35:00+03:00",
+      "time": "13:35",
+      "date": "05.09.2026",
+      "status": "UPCOMING",
+      "leagueName": "Spor Karşılaşması",
+      "category": "other_sports",
+      "isSuperLig": false,
+      "isTff1Lig": false,
+      "channels": [
+        "Spor Smart",
+        "Smart Spor HD"
+      ],
+      "primaryChannel": "SPOR SMART 1",
+      "tvplusChannel": {
+        "id": 635443,
+        "name": "SPOR SMART 1",
+        "originalName": "Spor Smart"
+      },
+      "hasStream": true,
+      "streamId": 635443,
+      "banner": "https://img.sporekrani.com/event/487151.jpg?v=1788569404",
+      "stadium": ""
+    },
+    {
+      "id": "event-17",
+      "title": "Kaiserslautern - Darmstadt 98",
+      "homeTeam": {
+        "name": "Kaiserslautern",
+        "logo": "https://img.sporekrani.com/teams/T9uito0RrdtfHLfXuWVRFGGu5h8GFGSeBl0I4ZHn.png"
+      },
+      "awayTeam": {
+        "name": "Darmstadt 98",
+        "logo": "https://img.sporekrani.com/teams/04v8qvGBxMfda2Xy8U8cFNWFtd347AyXIsqKKn8B.png"
+      },
+      "startDate": "2026-09-05T14:00:00+03:00",
+      "endDate": "2026-09-05T17:00:00+03:00",
+      "time": "14:00",
+      "date": "05.09.2026",
+      "status": "UPCOMING",
+      "leagueName": "Almanya 2. Bundesliga",
+      "category": "europe",
+      "isSuperLig": false,
+      "isTff1Lig": false,
+      "channels": [
+        "Yayın Yok"
+      ],
+      "primaryChannel": "Yayın Yok",
+      "tvplusChannel": null,
+      "hasStream": false,
+      "streamId": null,
+      "banner": "https://img.sporekrani.com/event/483414.jpg?v=1787845650",
+      "stadium": "Fritz Walter Stadion Stadyumu"
+    },
+    {
+      "id": "event-18",
+      "title": "Holstein Kiel - Nürnberg",
+      "homeTeam": {
+        "name": "Holstein Kiel",
+        "logo": "https://img.sporekrani.com/teams/E1xWEgiB2IkjrqLSe45QC4Dev3w4F9t24dKQbOKI.png"
+      },
+      "awayTeam": {
+        "name": "Nürnberg",
+        "logo": "https://img.sporekrani.com/teams/0zMtsgeELJoSjTI98KLnrtE52kwQ1az38lq4NngF.png"
+      },
+      "startDate": "2026-09-05T14:00:00+03:00",
+      "endDate": "2026-09-05T17:00:00+03:00",
+      "time": "14:00",
+      "date": "05.09.2026",
+      "status": "UPCOMING",
+      "leagueName": "Almanya 2. Bundesliga",
+      "category": "europe",
+      "isSuperLig": false,
+      "isTff1Lig": false,
+      "channels": [
+        "Yayın Yok"
+      ],
+      "primaryChannel": "Yayın Yok",
+      "tvplusChannel": null,
+      "hasStream": false,
+      "streamId": null,
+      "banner": "https://img.sporekrani.com/event/483415.jpg?v=1787845642",
+      "stadium": "Holstein Stadyumu"
+    },
+    {
+      "id": "event-19",
+      "title": "Wolfsburg - Energie Cottbus",
+      "homeTeam": {
+        "name": "Wolfsburg",
+        "logo": "https://img.sporekrani.com/teams/VR4TjsN2lWoj1dYD4py3jq8ARUoHV0njmzBKpIFm.png"
+      },
+      "awayTeam": {
+        "name": "Energie Cottbus",
+        "logo": "https://img.sporekrani.com/teams/ebb167ea-ee7b-4df5-8f32-956f37d8f405.png"
+      },
+      "startDate": "2026-09-05T14:00:00+03:00",
+      "endDate": "2026-09-05T17:00:00+03:00",
+      "time": "14:00",
+      "date": "05.09.2026",
+      "status": "UPCOMING",
+      "leagueName": "Almanya 2. Bundesliga",
+      "category": "europe",
+      "isSuperLig": false,
+      "isTff1Lig": false,
+      "channels": [
+        "S Sport Plus"
+      ],
+      "primaryChannel": "S SPORT 1",
+      "tvplusChannel": {
+        "id": 2025,
+        "name": "S SPORT 1",
+        "originalName": "S Sport Plus"
+      },
+      "hasStream": true,
+      "streamId": 2025,
+      "banner": "https://img.sporekrani.com/event/483416.jpg?v=1785791705",
+      "stadium": "Volkswagen Arena Stadyumu"
+    },
+    {
+      "id": "event-20",
+      "title": "Konyaspor - OGM Orman",
+      "homeTeam": {
+        "name": "Konyaspor",
+        "logo": "https://img.sporekrani.com/teams/fXoxUfgp1F9iUL3lFyVq9qMUnJz6d2DpGTp06EqO.png"
+      },
+      "awayTeam": {
+        "name": "OGM Orman",
+        "logo": "https://img.sporekrani.com/teams/OCgk1s7UZRMICkLIXFKcuS52fYPUl7ypbCcMlu5o.png"
+      },
+      "startDate": "2026-09-05T14:00:00+03:00",
+      "endDate": "2026-09-05T17:00:00+03:00",
+      "time": "14:00",
+      "date": "05.09.2026",
+      "status": "UPCOMING",
+      "leagueName": "Orman Cup Basketbol",
+      "category": "basketball",
+      "isSuperLig": false,
+      "isTff1Lig": false,
+      "channels": [
+        "Yayın Yok"
+      ],
+      "primaryChannel": "Yayın Yok",
+      "tvplusChannel": null,
+      "hasStream": false,
+      "streamId": null,
+      "banner": "https://img.sporekrani.com/event/487463.jpg?v=1788567855",
+      "stadium": "M. Sait Zarifoğlu Spor Salonu Stadyumu"
+    },
+    {
+      "id": "event-21",
+      "title": "Afyonkarahisar - MXGP Antrenman",
+      "homeTeam": {
+        "name": "Afyonkarahisar",
+        "logo": null
+      },
+      "awayTeam": {
+        "name": "MXGP Antrenman",
+        "logo": null
+      },
+      "startDate": "2026-09-05T14:10:00+03:00",
+      "endDate": "2026-09-05T17:10:00+03:00",
+      "time": "14:10",
+      "date": "05.09.2026",
+      "status": "UPCOMING",
+      "leagueName": "Spor Karşılaşması",
+      "category": "other_sports",
+      "isSuperLig": false,
+      "isTff1Lig": false,
+      "channels": [
+        "Spor Smart",
+        "Smart Spor HD"
+      ],
+      "primaryChannel": "SPOR SMART 1",
+      "tvplusChannel": {
+        "id": 635443,
+        "name": "SPOR SMART 1",
+        "originalName": "Spor Smart"
+      },
+      "hasStream": true,
+      "streamId": 635443,
+      "banner": "https://img.sporekrani.com/event/487152.jpg?v=1788569426",
+      "stadium": ""
+    },
+    {
+      "id": "event-22",
+      "title": "Newcastle - Bournemouth",
+      "homeTeam": {
+        "name": "Newcastle",
+        "logo": "https://img.sporekrani.com/teams/nKnZT5e3Ht6AuKHtcOPfrzo865qNLr7r5gRZ6kCs.png"
+      },
+      "awayTeam": {
+        "name": "Bournemouth",
+        "logo": "https://img.sporekrani.com/teams/d9yjGvnYyT8UdVOb95YTlFYiOSHraxBhEwil3eox.png"
+      },
+      "startDate": "2026-09-05T14:30:00+03:00",
+      "endDate": "2026-09-05T17:30:00+03:00",
+      "time": "14:30",
+      "date": "05.09.2026",
+      "status": "UPCOMING",
+      "leagueName": "İngiltere Premier Lig",
+      "category": "europe",
+      "isSuperLig": false,
+      "isTff1Lig": false,
+      "channels": [
+        "Bein Sports 3",
+        "Idman TV"
+      ],
+      "primaryChannel": "beIN SPORTS 3",
+      "tvplusChannel": {
+        "id": 491883,
+        "name": "beIN SPORTS 3",
+        "originalName": "Bein Sports 3"
+      },
+      "hasStream": true,
+      "streamId": 491883,
+      "banner": "https://img.sporekrani.com/event/483594.jpg?v=1788479385",
+      "stadium": "St.James Park Stadyumu"
+    },
+    {
+      "id": "event-23",
+      "title": "Petkimspor - Çayırova Bld.",
+      "homeTeam": {
+        "name": "Petkimspor",
+        "logo": "https://img.sporekrani.com/teams/4uoHj7Ah0wGohJgJYoNImBcLFao3mOgbIjtLV9Lw.png"
+      },
+      "awayTeam": {
+        "name": "Çayırova Bld.",
+        "logo": "https://img.sporekrani.com/teams/uQ4IhZQy8OjyYFq72WrRxHDCeRtmekLZscY8OWqP.png"
+      },
+      "startDate": "2026-09-05T14:45:00+03:00",
+      "endDate": "2026-09-05T17:45:00+03:00",
+      "time": "14:45",
+      "date": "05.09.2026",
+      "status": "UPCOMING",
+      "leagueName": "Gloria Cup Basketbol",
+      "category": "basketball",
+      "isSuperLig": false,
+      "isTff1Lig": false,
+      "channels": [
+        "HT Spor"
+      ],
+      "primaryChannel": "HT SPOR",
+      "tvplusChannel": {
+        "id": 551321,
+        "name": "HT SPOR",
+        "originalName": "HT Spor"
+      },
+      "hasStream": true,
+      "streamId": 551321,
+      "banner": "https://img.sporekrani.com/event/486201.jpg?v=1788217570",
+      "stadium": "Gloria Sports Arena Stadyumu"
+    },
+    {
+      "id": "event-24",
+      "title": "Afyonkarahisar - EMX 123 Yarış 1",
+      "homeTeam": {
+        "name": "Afyonkarahisar",
+        "logo": null
+      },
+      "awayTeam": {
+        "name": "EMX 123 Yarış 1",
+        "logo": null
+      },
+      "startDate": "2026-09-05T14:55:00+03:00",
+      "endDate": "2026-09-05T17:55:00+03:00",
+      "time": "14:55",
+      "date": "05.09.2026",
+      "status": "UPCOMING",
+      "leagueName": "Spor Karşılaşması",
+      "category": "other_sports",
+      "isSuperLig": false,
+      "isTff1Lig": false,
+      "channels": [
+        "Spor Smart",
+        "Smart Spor HD"
+      ],
+      "primaryChannel": "SPOR SMART 1",
+      "tvplusChannel": {
+        "id": 635443,
+        "name": "SPOR SMART 1",
+        "originalName": "Spor Smart"
+      },
+      "hasStream": true,
+      "streamId": 635443,
+      "banner": "https://img.sporekrani.com/event/487153.jpg?v=1788569509",
+      "stadium": ""
+    },
+    {
+      "id": "event-25",
+      "title": "Göztepe - İstanbul Gençlik",
+      "homeTeam": {
+        "name": "Göztepe",
+        "logo": "https://img.sporekrani.com/teams/cBTs4VzN3qattGNgJbB1ZYaq0wR0fOZsOsA5veVO.png"
+      },
+      "awayTeam": {
+        "name": "İstanbul Gençlik",
+        "logo": "https://img.sporekrani.com/teams/58693ec0-de20-402a-aaf3-e9ec6eb69f08.png"
+      },
+      "startDate": "2026-09-05T15:00:00+03:00",
+      "endDate": "2026-09-05T18:00:00+03:00",
+      "time": "15:00",
+      "date": "05.09.2026",
+      "status": "UPCOMING",
+      "leagueName": "Hentbol Erkekler Süper Ligi",
+      "category": "other_sports",
+      "isSuperLig": false,
+      "isTff1Lig": false,
+      "channels": [
+        "THF TV Youtube"
+      ],
+      "primaryChannel": "THF TV Youtube",
+      "tvplusChannel": null,
+      "hasStream": false,
+      "streamId": null,
+      "banner": "https://img.sporekrani.com/event/486950.jpg?v=1788279230",
+      "stadium": "İzmir Stadyumu"
+    },
+    {
+      "id": "event-26",
+      "title": "Giresunspor - Beykoz Bld.",
+      "homeTeam": {
+        "name": "Giresunspor",
+        "logo": "https://img.sporekrani.com/teams/22c716c4-0058-4654-8bb6-6f997d62f64c.png"
+      },
+      "awayTeam": {
+        "name": "Beykoz Bld.",
+        "logo": "https://img.sporekrani.com/teams/ofyVnAJ8br681gQOuv7ps2JKdTTycXVRdAEqRN3s.png"
+      },
+      "startDate": "2026-09-05T15:00:00+03:00",
+      "endDate": "2026-09-05T18:00:00+03:00",
+      "time": "15:00",
+      "date": "05.09.2026",
+      "status": "UPCOMING",
+      "leagueName": "Hentbol Erkekler Süper Ligi",
+      "category": "other_sports",
+      "isSuperLig": false,
+      "isTff1Lig": false,
+      "channels": [
+        "THF TV Youtube"
+      ],
+      "primaryChannel": "THF TV Youtube",
+      "tvplusChannel": null,
+      "hasStream": false,
+      "streamId": null,
+      "banner": "https://img.sporekrani.com/event/486951.jpg?v=1788279231",
+      "stadium": "İstanbul Stadyumu"
+    },
+    {
+      "id": "event-27",
+      "title": "iLab Basketbol - Final Spor",
+      "homeTeam": {
+        "name": "iLab Basketbol",
+        "logo": null
+      },
+      "awayTeam": {
+        "name": "Final Spor",
+        "logo": "https://img.sporekrani.com/teams/CfiNADUsnYTybUUnyPKzy4DFH7aARO9QSeKV5yKx.png"
+      },
+      "startDate": "2026-09-05T15:00:00+03:00",
+      "endDate": "2026-09-05T18:00:00+03:00",
+      "time": "15:00",
+      "date": "05.09.2026",
+      "status": "UPCOMING",
+      "leagueName": "Basketbol",
+      "category": "basketball",
+      "isSuperLig": false,
+      "isTff1Lig": false,
+      "channels": [
+        "Final Gençlik ve Spor Kulübü Youtube"
+      ],
+      "primaryChannel": "FI",
+      "tvplusChannel": {
+        "id": 582800,
+        "name": "FI",
+        "originalName": "Final Gençlik ve Spor Kulübü Youtube"
+      },
+      "hasStream": true,
+      "streamId": 582800,
+      "banner": "https://img.sporekrani.com/event/487195.jpg?v=1788438049",
+      "stadium": "Dikkaldırım Spor Salonu Stadyumu"
+    },
+    {
+      "id": "event-28",
+      "title": "Hansa Rostock - Wehen Wiesbaden",
+      "homeTeam": {
+        "name": "Hansa Rostock",
+        "logo": "https://img.sporekrani.com/teams/P32Hsuqv3surRoOW5CRh8H1z4tHtstm76g2XYaxx.png"
+      },
+      "awayTeam": {
+        "name": "Wehen Wiesbaden",
+        "logo": "https://img.sporekrani.com/teams/Ik2IrZQ2Xu62lYK4LqVLG0Da0CCVyzMSOnY82yg4.png"
+      },
+      "startDate": "2026-09-05T15:00:00+03:00",
+      "endDate": "2026-09-05T18:00:00+03:00",
+      "time": "15:00",
+      "date": "05.09.2026",
+      "status": "UPCOMING",
+      "leagueName": "Almanya 3. Liga",
+      "category": "europe",
+      "isSuperLig": false,
+      "isTff1Lig": false,
+      "channels": [
+        "Sıfır TV"
+      ],
+      "primaryChannel": "Sıfır TV",
+      "tvplusChannel": null,
+      "hasStream": false,
+      "streamId": null,
+      "banner": "https://img.sporekrani.com/event/487200.jpg?v=1788443556",
+      "stadium": "Ostseestadion Stadyumu"
+    },
+    {
+      "id": "event-29",
+      "title": "Jofre/Bautista - Chingotto/Galan",
+      "homeTeam": {
+        "name": "Jofre/Bautista",
+        "logo": "https://img.sporekrani.com/teams/91c91adb-3ea5-47c8-be4c-d8858059b6f6.png"
+      },
+      "awayTeam": {
+        "name": "Chingotto/Galan",
+        "logo": "https://img.sporekrani.com/teams/4d966fa1-4560-4a64-b5f4-2712d9cb27cc.png"
+      },
+      "startDate": "2026-09-05T15:00:00+03:00",
+      "endDate": "2026-09-05T18:00:00+03:00",
+      "time": "15:00",
+      "date": "05.09.2026",
+      "status": "UPCOMING",
+      "leagueName": "Premier Padel",
+      "category": "other_sports",
+      "isSuperLig": false,
+      "isTff1Lig": false,
+      "channels": [
+        "Bein Sports beIN Connect"
+      ],
+      "primaryChannel": "Bein Sports beIN Connect",
+      "tvplusChannel": null,
+      "hasStream": false,
+      "streamId": null,
+      "banner": "https://img.sporekrani.com/event/487611.jpg?v=1788568595",
+      "stadium": "Merkez Kort Stadyumu"
+    },
+    {
+      "id": "event-30",
+      "title": "Nijerya - Macaristan",
+      "homeTeam": {
+        "name": "Nijerya",
+        "logo": "https://img.sporekrani.com/teams/RGPnIxzXOWKOaD2doYD5q46smgi9AbkaqHe378BV.png"
+      },
+      "awayTeam": {
+        "name": "Macaristan",
+        "logo": "https://img.sporekrani.com/teams/2cwycELHvhfWGlgjaq4UQprZWPGmtTOgzYSYVoWt.png"
+      },
+      "startDate": "2026-09-05T15:15:00+03:00",
+      "endDate": "2026-09-05T18:15:00+03:00",
+      "time": "15:15",
+      "date": "05.09.2026",
+      "status": "UPCOMING",
+      "leagueName": "FIBA Kadınlar Dünya Kupası",
+      "category": "basketball",
+      "isSuperLig": false,
+      "isTff1Lig": false,
+      "channels": [
+        "FIBA TV"
+      ],
+      "primaryChannel": "ATV",
+      "tvplusChannel": {
+        "id": 1849,
+        "name": "ATV",
+        "originalName": "FIBA TV"
+      },
+      "hasStream": true,
+      "streamId": 1849,
+      "banner": "https://img.sporekrani.com/event/485176.jpg?v=1787222479",
+      "stadium": "Berlin Stadyumu"
+    },
+    {
+      "id": "event-31",
+      "title": "Afyonkarahisar - EMX 250 Yarış 1",
+      "homeTeam": {
+        "name": "Afyonkarahisar",
+        "logo": null
+      },
+      "awayTeam": {
+        "name": "EMX 250 Yarış 1",
+        "logo": null
+      },
+      "startDate": "2026-09-05T15:40:00+03:00",
+      "endDate": "2026-09-05T18:40:00+03:00",
+      "time": "15:40",
+      "date": "05.09.2026",
+      "status": "UPCOMING",
+      "leagueName": "Spor Karşılaşması",
+      "category": "other_sports",
+      "isSuperLig": false,
+      "isTff1Lig": false,
+      "channels": [
+        "Spor Smart",
+        "Smart Spor HD"
+      ],
+      "primaryChannel": "SPOR SMART 1",
+      "tvplusChannel": {
+        "id": 635443,
+        "name": "SPOR SMART 1",
+        "originalName": "Spor Smart"
+      },
+      "hasStream": true,
+      "streamId": 635443,
+      "banner": "https://img.sporekrani.com/event/487154.jpg?v=1788569523",
+      "stadium": ""
+    },
+    {
+      "id": "event-32",
+      "title": "Fiorentina - Torino",
+      "homeTeam": {
+        "name": "Fiorentina",
+        "logo": "https://img.sporekrani.com/teams/4YnawjObsS3ds0V0O46Xr8a5A5h1nXLelqyKgqOe.png"
+      },
+      "awayTeam": {
+        "name": "Torino",
+        "logo": "https://img.sporekrani.com/teams/WdK7UxzEd8bWfDStVcTk7PTgrQ8xT5qhmyAmSo1t.png"
+      },
+      "startDate": "2026-09-05T16:00:00+03:00",
+      "endDate": "2026-09-05T19:00:00+03:00",
+      "time": "16:00",
+      "date": "05.09.2026",
+      "status": "UPCOMING",
+      "leagueName": "İtalya Serie A",
+      "category": "europe",
+      "isSuperLig": false,
+      "isTff1Lig": false,
+      "channels": [
+        "S Sport 2",
+        "S Sport Plus"
+      ],
+      "primaryChannel": "S SPORT 2",
+      "tvplusChannel": {
+        "id": 2028,
+        "name": "S SPORT 2",
+        "originalName": "S Sport 2"
+      },
+      "hasStream": true,
+      "streamId": 2028,
+      "banner": "https://img.sporekrani.com/event/483554.jpg?v=1788179991",
+      "stadium": "Artemio Franchi Stadyumu"
+    },
+    {
+      "id": "event-33",
+      "title": "Fenerbahçe - Beşiktaş",
+      "homeTeam": {
+        "name": "Fenerbahçe",
+        "logo": "https://img.sporekrani.com/teams/zzpVsnZrNaFlSQFTooGrDx19wnxoL9HLFdr2FfCm.png"
+      },
+      "awayTeam": {
+        "name": "Beşiktaş",
+        "logo": "https://img.sporekrani.com/teams/uh9OcGVo452UId7xGaGOeQecw97lpQIFhfJhz3bu.png"
+      },
+      "startDate": "2026-09-05T16:00:00+03:00",
+      "endDate": "2026-09-05T19:00:00+03:00",
+      "time": "16:00",
+      "date": "05.09.2026",
+      "status": "UPCOMING",
+      "leagueName": "Tff Elit U19 Ligi",
+      "category": "other_sports",
+      "isSuperLig": false,
+      "isTff1Lig": false,
+      "channels": [
+        "FB TV"
+      ],
+      "primaryChannel": "FB TV",
+      "tvplusChannel": {
+        "id": 541402,
+        "name": "FB TV",
+        "originalName": "FB TV"
+      },
+      "hasStream": true,
+      "streamId": 541402,
+      "banner": "https://img.sporekrani.com/event/486949.jpg?v=1788278494",
+      "stadium": "Dereağzı Lefter Küçükandonyadis Tesisleri Stadyumu"
+    },
+    {
+      "id": "event-34",
+      "title": "Spor Toto sk - Beşiktaş",
+      "homeTeam": {
+        "name": "Spor Toto SK",
+        "logo": "https://img.sporekrani.com/teams/MnhyHIJbBgR7ntfSSWvdG8dcTdUJB2HCIi56nmbw.png"
+      },
+      "awayTeam": {
+        "name": "Beşiktaş",
+        "logo": "https://img.sporekrani.com/teams/xSj7KIaeh7VCwSR0wInfYkBJGddIrJ5DOBaxWCiQ.png"
+      },
+      "startDate": "2026-09-05T16:00:00+03:00",
+      "endDate": "2026-09-05T19:00:00+03:00",
+      "time": "16:00",
+      "date": "05.09.2026",
+      "status": "UPCOMING",
+      "leagueName": "Hentbol Erkekler Süper Ligi",
+      "category": "other_sports",
+      "isSuperLig": false,
+      "isTff1Lig": false,
+      "channels": [
+        "THF TV Youtube"
+      ],
+      "primaryChannel": "THF TV Youtube",
+      "tvplusChannel": null,
+      "hasStream": false,
+      "streamId": null,
+      "banner": "https://img.sporekrani.com/event/486952.jpg?v=1788279231",
+      "stadium": "Üsküdar Çamlıca Spor Salonu Stadyumu"
+    },
+    {
+      "id": "event-36",
+      "title": "Yalova Haremspor - Fenerbahçe Gelişim",
+      "homeTeam": {
+        "name": "Yalova Haremspor",
+        "logo": null
+      },
+      "awayTeam": {
+        "name": "Fenerbahçe Gelişim",
+        "logo": "https://img.sporekrani.com/teams/dae1adc0-58d6-4a16-8a1e-821ad5ee4957.png"
+      },
+      "startDate": "2026-09-05T16:00:00+03:00",
+      "endDate": "2026-09-05T19:00:00+03:00",
+      "time": "16:00",
+      "date": "05.09.2026",
+      "status": "UPCOMING",
+      "leagueName": "Basketbol",
+      "category": "basketball",
+      "isSuperLig": false,
+      "isTff1Lig": false,
+      "channels": [
+        "Yayın Yok"
+      ],
+      "primaryChannel": "Yayın Yok",
+      "tvplusChannel": null,
+      "hasStream": false,
+      "streamId": null,
+      "banner": "https://img.sporekrani.com/event/487198.jpg?v=1788438378",
+      "stadium": "90. Yıl Spor Salonu Stadyumu"
+    },
+    {
+      "id": "event-37",
+      "title": "Türkiye - Sırbistan",
+      "homeTeam": {
+        "name": "Türkiye",
+        "logo": "https://img.sporekrani.com/teams/qMoYbPRcGX7GBkht1uSrafddF2ZV1rodvYJ4xVLl.png"
+      },
+      "awayTeam": {
+        "name": "Sırbistan",
+        "logo": "https://img.sporekrani.com/teams/cuVQR2ewz7tnd1sGYxcTqvknt82Mbd5U2riP4pLJ.png"
+      },
+      "startDate": "2026-09-05T16:00:00+03:00",
+      "endDate": "2026-09-05T19:00:00+03:00",
+      "time": "16:00",
+      "date": "05.09.2026",
+      "status": "UPCOMING",
+      "leagueName": "CEV Kadınlar Avrupa Şampiyonası",
+      "category": "other_sports",
+      "isSuperLig": false,
+      "isTff1Lig": false,
+      "channels": [
+        "TRT 1"
+      ],
+      "primaryChannel": "TRT 1",
+      "tvplusChannel": {
+        "id": 1843,
+        "name": "TRT 1",
+        "originalName": "TRT 1"
+      },
+      "hasStream": true,
+      "streamId": 1843,
+      "banner": "https://img.sporekrani.com/event/487347.jpg?v=1788478302",
+      "stadium": "Sinan Erdem Spor Salonu Stadyumu"
+    },
+    {
+      "id": "event-38",
+      "title": "Afyonkarahisar - MX2 RAM Sıralama Turları",
+      "homeTeam": {
+        "name": "Afyonkarahisar",
+        "logo": null
+      },
+      "awayTeam": {
+        "name": "MX2 RAM Sıralama Turları",
+        "logo": null
+      },
+      "startDate": "2026-09-05T16:25:00+03:00",
+      "endDate": "2026-09-05T19:25:00+03:00",
+      "time": "16:25",
+      "date": "05.09.2026",
+      "status": "UPCOMING",
+      "leagueName": "Spor Karşılaşması",
+      "category": "other_sports",
+      "isSuperLig": false,
+      "isTff1Lig": false,
+      "channels": [
+        "Spor Smart",
+        "Smart Spor HD"
+      ],
+      "primaryChannel": "SPOR SMART 1",
+      "tvplusChannel": {
+        "id": 635443,
+        "name": "SPOR SMART 1",
+        "originalName": "Spor Smart"
+      },
+      "hasStream": true,
+      "streamId": 635443,
+      "banner": "https://img.sporekrani.com/event/487155.jpg?v=1788569538",
+      "stadium": ""
+    },
+    {
+      "id": "event-39",
+      "title": "Werder Bremen - Leipzig",
+      "homeTeam": {
+        "name": "Werder Bremen",
+        "logo": "https://img.sporekrani.com/teams/LkklyTPULiOBAPNX0EhhIf8pU81CQspT2R81zPr8.png"
+      },
+      "awayTeam": {
+        "name": "Leipzig",
+        "logo": "https://img.sporekrani.com/teams/ofQEgT7GqvaYdJU387POw4uEciRW0rxWdUTVoCIV.png"
+      },
+      "startDate": "2026-09-05T16:30:00+03:00",
+      "endDate": "2026-09-05T19:30:00+03:00",
+      "time": "16:30",
+      "date": "05.09.2026",
+      "status": "UPCOMING",
+      "leagueName": "Almanya Bundesliga",
+      "category": "europe",
+      "isSuperLig": false,
+      "isTff1Lig": false,
+      "channels": [
+        "S Sport Plus"
+      ],
+      "primaryChannel": "S SPORT 1",
+      "tvplusChannel": {
+        "id": 2025,
+        "name": "S SPORT 1",
+        "originalName": "S Sport Plus"
+      },
+      "hasStream": true,
+      "streamId": 2025,
+      "banner": "https://img.sporekrani.com/event/483376.jpg?v=1785783215",
+      "stadium": "Weser Stadyumu"
+    },
+    {
+      "id": "event-40",
+      "title": "Hoffenheim - Borussia Dortmund",
+      "homeTeam": {
+        "name": "Hoffenheim",
+        "logo": "https://img.sporekrani.com/teams/Cb8tXJXl2tpCjfRN19GU5LRruRpzstfRehuxUmWV.png"
+      },
+      "awayTeam": {
+        "name": "Borussia Dortmund",
+        "logo": "https://img.sporekrani.com/teams/8QdgiFrMfihKZtgFy5bwimRmQE2jfZV3x6LRhdrd.png"
+      },
+      "startDate": "2026-09-05T16:30:00+03:00",
+      "endDate": "2026-09-05T19:30:00+03:00",
+      "time": "16:30",
+      "date": "05.09.2026",
+      "status": "UPCOMING",
+      "leagueName": "Almanya Bundesliga",
+      "category": "europe",
+      "isSuperLig": false,
+      "isTff1Lig": false,
+      "channels": [
+        "S Sport Plus"
+      ],
+      "primaryChannel": "S SPORT 1",
+      "tvplusChannel": {
+        "id": 2025,
+        "name": "S SPORT 1",
+        "originalName": "S Sport Plus"
+      },
+      "hasStream": true,
+      "streamId": 2025,
+      "banner": "https://img.sporekrani.com/event/483377.jpg?v=1785783215",
+      "stadium": "PreZero Arena Stadyumu"
+    },
+    {
+      "id": "event-41",
+      "title": "Bayer Leverkusen - Union Berlin",
+      "homeTeam": {
+        "name": "Bayer Leverkusen",
+        "logo": "https://img.sporekrani.com/teams/e7lH5z5gC7S1ZX0wPf0LOGdu28mHudDY8DXkwDkk.png"
+      },
+      "awayTeam": {
+        "name": "Union Berlin",
+        "logo": "https://img.sporekrani.com/teams/w2CtO4B49BGmdxRQXfhU2i1KbR2yV0mKasXoXlS4.png"
+      },
+      "startDate": "2026-09-05T16:30:00+03:00",
+      "endDate": "2026-09-05T19:30:00+03:00",
+      "time": "16:30",
+      "date": "05.09.2026",
+      "status": "UPCOMING",
+      "leagueName": "Almanya Bundesliga",
+      "category": "europe",
+      "isSuperLig": false,
+      "isTff1Lig": false,
+      "channels": [
+        "S Sport Plus"
+      ],
+      "primaryChannel": "S SPORT 1",
+      "tvplusChannel": {
+        "id": 2025,
+        "name": "S SPORT 1",
+        "originalName": "S Sport Plus"
+      },
+      "hasStream": true,
+      "streamId": 2025,
+      "banner": "https://img.sporekrani.com/event/483378.jpg?v=1785783215",
+      "stadium": "BayArena Stadyumu"
+    },
+    {
+      "id": "event-42",
+      "title": "Monchengladbach - Elversberg",
+      "homeTeam": {
+        "name": "Monchengladbach",
+        "logo": "https://img.sporekrani.com/teams/UvOzmQtcPJj07qaNbbJCqR14S7TyDoDJ52UBLFA0.png"
+      },
+      "awayTeam": {
+        "name": "Elversberg",
+        "logo": "https://img.sporekrani.com/teams/0tmuHQlAI5AoxRLPOI6XH5tr1jY5USE4apmxf83I.png"
+      },
+      "startDate": "2026-09-05T16:30:00+03:00",
+      "endDate": "2026-09-05T19:30:00+03:00",
+      "time": "16:30",
+      "date": "05.09.2026",
+      "status": "UPCOMING",
+      "leagueName": "Almanya Bundesliga",
+      "category": "europe",
+      "isSuperLig": false,
+      "isTff1Lig": false,
+      "channels": [
+        "S Sport Plus"
+      ],
+      "primaryChannel": "S SPORT 1",
+      "tvplusChannel": {
+        "id": 2025,
+        "name": "S SPORT 1",
+        "originalName": "S Sport Plus"
+      },
+      "hasStream": true,
+      "streamId": 2025,
+      "banner": "https://img.sporekrani.com/event/483379.jpg?v=1785783215",
+      "stadium": "Borussia Park Stadyumu"
+    },
+    {
+      "id": "event-43",
+      "title": "Paderborn - Freiburg",
+      "homeTeam": {
+        "name": "Paderborn",
+        "logo": "https://img.sporekrani.com/teams/nK1NxWZcwUgo7Pmb5WROuUz3hTKceEBqjZlpNJUF.png"
+      },
+      "awayTeam": {
+        "name": "Freiburg",
+        "logo": "https://img.sporekrani.com/teams/RsKEiV2yH4hlpQO4Ty72Y68qzH9wCJd7RIGAJU25.png"
+      },
+      "startDate": "2026-09-05T16:30:00+03:00",
+      "endDate": "2026-09-05T19:30:00+03:00",
+      "time": "16:30",
+      "date": "05.09.2026",
+      "status": "UPCOMING",
+      "leagueName": "Almanya Bundesliga",
+      "category": "europe",
+      "isSuperLig": false,
+      "isTff1Lig": false,
+      "channels": [
+        "S Sport Plus"
+      ],
+      "primaryChannel": "S SPORT 1",
+      "tvplusChannel": {
+        "id": 2025,
+        "name": "S SPORT 1",
+        "originalName": "S Sport Plus"
+      },
+      "hasStream": true,
+      "streamId": 2025,
+      "banner": "https://img.sporekrani.com/event/483380.jpg?v=1785783216",
+      "stadium": "Home Deluxe Arena Stadyumu"
+    },
+    {
+      "id": "event-44",
+      "title": "Anadolu Efes - AEK",
+      "homeTeam": {
+        "name": "Anadolu Efes",
+        "logo": "https://img.sporekrani.com/teams/7NXfuFWZCNXytgMhlDQAXuZmXYmlv3kt5Vb3Ol5M.png"
+      },
+      "awayTeam": {
+        "name": "AEK",
+        "logo": "https://img.sporekrani.com/teams/As7Eoi5hmTduBYGGHJqmC2A4DCqIlPzmH9tFyZXo.png"
+      },
+      "startDate": "2026-09-05T16:30:00+03:00",
+      "endDate": "2026-09-05T19:30:00+03:00",
+      "time": "16:30",
+      "date": "05.09.2026",
+      "status": "UPCOMING",
+      "leagueName": "TÜBAD Basketbol Turnuvası",
+      "category": "basketball",
+      "isSuperLig": false,
+      "isTff1Lig": false,
+      "channels": [
+        "Yayın Yok"
+      ],
+      "primaryChannel": "Yayın Yok",
+      "tvplusChannel": null,
+      "hasStream": false,
+      "streamId": null,
+      "banner": "https://img.sporekrani.com/event/485246.jpg?v=1788567951",
+      "stadium": "Turkcell Basketbol Gelişim Merkezi Stadyumu"
+    },
+    {
+      "id": "event-45",
+      "title": "Gaziantep Basket - Mersin Basketbol",
+      "homeTeam": {
+        "name": "Gaziantep Basket",
+        "logo": "https://img.sporekrani.com/teams/BeRu7jNn7nWlxSaJO7DKQnaDifiv99nKTjLrgmX0.png"
+      },
+      "awayTeam": {
+        "name": "Mersin Basketbol",
+        "logo": "https://img.sporekrani.com/teams/OJctU3yt64HdBLLwlEErWxj49V97ANV1DrTtGOn4.png"
+      },
+      "startDate": "2026-09-05T16:30:00+03:00",
+      "endDate": "2026-09-05T19:30:00+03:00",
+      "time": "16:30",
+      "date": "05.09.2026",
+      "status": "UPCOMING",
+      "leagueName": "Orman Cup Basketbol",
+      "category": "basketball",
+      "isSuperLig": false,
+      "isTff1Lig": false,
+      "channels": [
+        "Yayın Yok"
+      ],
+      "primaryChannel": "Yayın Yok",
+      "tvplusChannel": null,
+      "hasStream": false,
+      "streamId": null,
+      "banner": "https://img.sporekrani.com/event/487464.jpg?v=1788567897",
+      "stadium": "M. Sait Zarifoğlu Spor Salonu Stadyumu"
+    },
+    {
+      "id": "event-46",
+      "title": "Brentford - Sunderland",
+      "homeTeam": {
+        "name": "Brentford",
+        "logo": "https://img.sporekrani.com/teams/Mf2S5KCKG1PMFpXDHFV63vVBevWNntNXDUPohW00.png"
+      },
+      "awayTeam": {
+        "name": "Sunderland",
+        "logo": "https://img.sporekrani.com/teams/HAb82VLSGidwx1Hh09bB6BUmnZeVMT59jjHfY1ka.png"
+      },
+      "startDate": "2026-09-05T17:00:00+03:00",
+      "endDate": "2026-09-05T20:00:00+03:00",
+      "time": "17:00",
+      "date": "05.09.2026",
+      "status": "UPCOMING",
+      "leagueName": "İngiltere Premier Lig",
+      "category": "europe",
+      "isSuperLig": false,
+      "isTff1Lig": false,
+      "channels": [
+        "Bein Sports beIN Connect"
+      ],
+      "primaryChannel": "Bein Sports beIN Connect",
+      "tvplusChannel": null,
+      "hasStream": false,
+      "streamId": null,
+      "banner": "https://img.sporekrani.com/event/483595.jpg?v=1785856939",
+      "stadium": "Brentford Community Stadyumu"
+    },
+    {
+      "id": "event-47",
+      "title": "Brighton - Leeds United",
+      "homeTeam": {
+        "name": "Brighton",
+        "logo": "https://img.sporekrani.com/teams/vm8CKrsnZLmW7mQHyYjhm5zwthTo94LH7paKamuv.png"
+      },
+      "awayTeam": {
+        "name": "Leeds United",
+        "logo": "https://img.sporekrani.com/teams/rNuI9YXtAltzauAEWG5ed9YNRn0gG9TGvwgmJTCq.png"
+      },
+      "startDate": "2026-09-05T17:00:00+03:00",
+      "endDate": "2026-09-05T20:00:00+03:00",
+      "time": "17:00",
+      "date": "05.09.2026",
+      "status": "UPCOMING",
+      "leagueName": "İngiltere Premier Lig",
+      "category": "europe",
+      "isSuperLig": false,
+      "isTff1Lig": false,
+      "channels": [
+        "Bein Sports Max 1"
+      ],
+      "primaryChannel": "beIN SPORTS MAX 1",
+      "tvplusChannel": {
+        "id": 2215,
+        "name": "beIN SPORTS MAX 1",
+        "originalName": "Bein Sports Max 1"
+      },
+      "hasStream": true,
+      "streamId": 2215,
+      "banner": "https://img.sporekrani.com/event/483596.jpg?v=1788311680",
+      "stadium": "Amex Stadyumu"
+    },
+    {
+      "id": "event-48",
+      "title": "Fulham - Crystal Palace",
+      "homeTeam": {
+        "name": "Fulham",
+        "logo": "https://img.sporekrani.com/teams/TvcF6CoHKkiSZ91pmfM5Xb1HgncvrBHEVWku3WFw.png"
+      },
+      "awayTeam": {
+        "name": "Crystal Palace",
+        "logo": "https://img.sporekrani.com/teams/hs3JxodxlrAGFufonoXjSbvjbtr3GcLibZxxcax7.png"
+      },
+      "startDate": "2026-09-05T17:00:00+03:00",
+      "endDate": "2026-09-05T20:00:00+03:00",
+      "time": "17:00",
+      "date": "05.09.2026",
+      "status": "UPCOMING",
+      "leagueName": "İngiltere Premier Lig",
+      "category": "europe",
+      "isSuperLig": false,
+      "isTff1Lig": false,
+      "channels": [
+        "Bein Sports Max 2"
+      ],
+      "primaryChannel": "beIN SPORTS MAX 2",
+      "tvplusChannel": {
+        "id": 638237,
+        "name": "beIN SPORTS MAX 2",
+        "originalName": "Bein Sports Max 2"
+      },
+      "hasStream": true,
+      "streamId": 638237,
+      "banner": "https://img.sporekrani.com/event/483597.jpg?v=1788269323",
+      "stadium": "Craven Cottage Stadyumu"
+    },
+    {
+      "id": "event-49",
+      "title": "Manchester City - Coventry",
+      "homeTeam": {
+        "name": "Manchester City",
+        "logo": "https://img.sporekrani.com/teams/n3uuqjXHIoLIVKbPeILQ1vH7Q4Gv1altDVjBN12B.png"
+      },
+      "awayTeam": {
+        "name": "Coventry",
+        "logo": "https://img.sporekrani.com/teams/tQahH8BebFMN502T4KMohVFS7Wirx0OBSdFeWARj.png"
+      },
+      "startDate": "2026-09-05T17:00:00+03:00",
+      "endDate": "2026-09-05T20:00:00+03:00",
+      "time": "17:00",
+      "date": "05.09.2026",
+      "status": "UPCOMING",
+      "leagueName": "İngiltere Premier Lig",
+      "category": "europe",
+      "isSuperLig": false,
+      "isTff1Lig": false,
+      "channels": [
+        "Bein Sports 3",
+        "Idman TV"
+      ],
+      "primaryChannel": "beIN SPORTS 3",
+      "tvplusChannel": {
+        "id": 491883,
+        "name": "beIN SPORTS 3",
+        "originalName": "Bein Sports 3"
+      },
+      "hasStream": true,
+      "streamId": 491883,
+      "banner": "https://img.sporekrani.com/event/483598.jpg?v=1788567520",
+      "stadium": "Etihad Stadyumu"
+    },
+    {
+      "id": "event-50",
+      "title": "Nottingham Forest - Tottenham",
+      "homeTeam": {
+        "name": "Nottingham Forest",
+        "logo": "https://img.sporekrani.com/teams/ybjzxeaJNfHzdAhYym9SXren3z9Q1Uh3UKy1ZOLw.png"
+      },
+      "awayTeam": {
+        "name": "Tottenham",
+        "logo": "https://img.sporekrani.com/teams/CQdFOpa49q9PtGf6Zj0o2qeEN4TNDYawkiyOlaz0.png"
+      },
+      "startDate": "2026-09-05T17:00:00+03:00",
+      "endDate": "2026-09-05T20:00:00+03:00",
+      "time": "17:00",
+      "date": "05.09.2026",
+      "status": "UPCOMING",
+      "leagueName": "İngiltere Premier Lig",
+      "category": "europe",
+      "isSuperLig": false,
+      "isTff1Lig": false,
+      "channels": [
+        "Bein Sports 5"
+      ],
+      "primaryChannel": "beIN SPORTS 5",
+      "tvplusChannel": {
+        "id": 491885,
+        "name": "beIN SPORTS 5",
+        "originalName": "Bein Sports 5"
+      },
+      "hasStream": true,
+      "streamId": 491885,
+      "banner": "https://img.sporekrani.com/event/483599.jpg?v=1788269365",
+      "stadium": "City Ground Stadyumu"
+    },
+    {
+      "id": "event-51",
+      "title": "Tofaş - Galatasaray MCT Technic",
+      "homeTeam": {
+        "name": "Tofaş",
+        "logo": "https://img.sporekrani.com/teams/pCtMPLg0mXVUr1tHolPTc1HLW71lhcKpHoJg0tGs.png"
+      },
+      "awayTeam": {
+        "name": "Galatasaray MCT Technic",
+        "logo": "https://img.sporekrani.com/teams/5ff29f55-2680-496b-962e-18de5c4ab3fd.png"
+      },
+      "startDate": "2026-09-05T17:00:00+03:00",
+      "endDate": "2026-09-05T20:00:00+03:00",
+      "time": "17:00",
+      "date": "05.09.2026",
+      "status": "UPCOMING",
+      "leagueName": "Gloria Cup Basketbol",
+      "category": "basketball",
+      "isSuperLig": false,
+      "isTff1Lig": false,
+      "channels": [
+        "HT Spor"
+      ],
+      "primaryChannel": "HT SPOR",
+      "tvplusChannel": {
+        "id": 551321,
+        "name": "HT SPOR",
+        "originalName": "HT Spor"
+      },
+      "hasStream": true,
+      "streamId": 551321,
+      "banner": "https://img.sporekrani.com/event/486202.jpg?v=1788311688",
+      "stadium": "Gloria Sports Arena Stadyumu"
+    },
+    {
+      "id": "event-54",
+      "title": "Güneysuspor - Trabzon BB",
+      "homeTeam": {
+        "name": "Güneysuspor",
+        "logo": null
+      },
+      "awayTeam": {
+        "name": "Trabzon BB",
+        "logo": "https://img.sporekrani.com/teams/pgpXq2Z8fPPhVBZ6TKXo5NxJFz6iZjUlgkXLJouA.png"
+      },
+      "startDate": "2026-09-05T17:00:00+03:00",
+      "endDate": "2026-09-05T20:00:00+03:00",
+      "time": "17:00",
+      "date": "05.09.2026",
+      "status": "UPCOMING",
+      "leagueName": "Hentbol Erkekler Süper Ligi",
+      "category": "other_sports",
+      "isSuperLig": false,
+      "isTff1Lig": false,
+      "channels": [
+        "THF TV Youtube"
+      ],
+      "primaryChannel": "THF TV Youtube",
+      "tvplusChannel": null,
+      "hasStream": false,
+      "streamId": null,
+      "banner": "https://img.sporekrani.com/event/486953.jpg?v=1788279231",
+      "stadium": "Güneysu Stadyumu"
+    },
+    {
+      "id": "event-55",
+      "title": "Eskişehir Mihalıççık - Nilüfer Bld.",
+      "homeTeam": {
+        "name": "Eskişehir Mihalıççık",
+        "logo": null
+      },
+      "awayTeam": {
+        "name": "Nilüfer Bld.",
+        "logo": "https://img.sporekrani.com/teams/UdHAApcSEPZvIMWsjb3rmDraQ38NXHgsOHJJeuBN.png"
+      },
+      "startDate": "2026-09-05T17:00:00+03:00",
+      "endDate": "2026-09-05T20:00:00+03:00",
+      "time": "17:00",
+      "date": "05.09.2026",
+      "status": "UPCOMING",
+      "leagueName": "Hentbol Erkekler Süper Ligi",
+      "category": "other_sports",
+      "isSuperLig": false,
+      "isTff1Lig": false,
+      "channels": [
+        "THF TV Youtube"
+      ],
+      "primaryChannel": "THF TV Youtube",
+      "tvplusChannel": null,
+      "hasStream": false,
+      "streamId": null,
+      "banner": "https://img.sporekrani.com/event/486954.jpg?v=1788279232",
+      "stadium": "Eskişehir Stadyumu"
+    },
+    {
+      "id": "event-56",
+      "title": "Sanchez/Calvo - Martin/Fernandez",
+      "homeTeam": {
+        "name": "Sanchez/Calvo",
+        "logo": "https://img.sporekrani.com/teams/1ca0ab5c-0056-44d3-9733-d7a194415764.png"
+      },
+      "awayTeam": {
+        "name": "Martin/Fernandez",
+        "logo": "https://img.sporekrani.com/teams/87939297-b228-47cd-aa07-522736eaf154.png"
+      },
+      "startDate": "2026-09-05T17:00:00+03:00",
+      "endDate": "2026-09-05T20:00:00+03:00",
+      "time": "17:00",
+      "date": "05.09.2026",
+      "status": "UPCOMING",
+      "leagueName": "Premier Padel",
+      "category": "other_sports",
+      "isSuperLig": false,
+      "isTff1Lig": false,
+      "channels": [
+        "Bein Sports beIN Connect"
+      ],
+      "primaryChannel": "Bein Sports beIN Connect",
+      "tvplusChannel": null,
+      "hasStream": false,
+      "streamId": null,
+      "banner": "https://img.sporekrani.com/event/487612.jpg?v=1788568596",
+      "stadium": "Merkez Kort Stadyumu"
+    },
+    {
+      "id": "event-57",
+      "title": "Athletic Bilbao - Atletico Madrid",
+      "homeTeam": {
+        "name": "Athletic Bilbao",
+        "logo": "https://img.sporekrani.com/teams/4xjJNerOIlO9MSm7QHODeQGtTynHK2RJgF181HFV.png"
+      },
+      "awayTeam": {
+        "name": "Atletico Madrid",
+        "logo": "https://img.sporekrani.com/teams/H10jNhPECZT9nUGgVPEIrTvidVb9HyX9xEepUWuf.png"
+      },
+      "startDate": "2026-09-05T17:15:00+03:00",
+      "endDate": "2026-09-05T20:15:00+03:00",
+      "time": "17:15",
+      "date": "05.09.2026",
+      "status": "UPCOMING",
+      "leagueName": "İspanya La Liga",
+      "category": "europe",
+      "isSuperLig": false,
+      "isTff1Lig": false,
+      "channels": [
+        "S Sport",
+        "S Sport Plus"
+      ],
+      "primaryChannel": "S SPORT 1",
+      "tvplusChannel": {
+        "id": 2025,
+        "name": "S SPORT 1",
+        "originalName": "S Sport"
+      },
+      "hasStream": true,
+      "streamId": 2025,
+      "banner": "https://img.sporekrani.com/event/484377.jpg?v=1786540340",
+      "stadium": "San Mamés Stadyumu"
+    },
+    {
+      "id": "event-58",
+      "title": "Afyonkarahisar - MXGP RAM Sıralama Turları",
+      "homeTeam": {
+        "name": "Afyonkarahisar",
+        "logo": null
+      },
+      "awayTeam": {
+        "name": "MXGP RAM Sıralama Turları",
+        "logo": null
+      },
+      "startDate": "2026-09-05T17:15:00+03:00",
+      "endDate": "2026-09-05T20:15:00+03:00",
+      "time": "17:15",
+      "date": "05.09.2026",
+      "status": "UPCOMING",
+      "leagueName": "Spor Karşılaşması",
+      "category": "other_sports",
+      "isSuperLig": false,
+      "isTff1Lig": false,
+      "channels": [
+        "Spor Smart",
+        "Smart Spor HD"
+      ],
+      "primaryChannel": "SPOR SMART 1",
+      "tvplusChannel": {
+        "id": 635443,
+        "name": "SPOR SMART 1",
+        "originalName": "Spor Smart"
+      },
+      "hasStream": true,
+      "streamId": 635443,
+      "banner": "https://img.sporekrani.com/event/487156.jpg?v=1788569557",
+      "stadium": ""
+    },
+    {
+      "id": "event-59",
+      "title": "Sabah Bakü - Zira",
+      "homeTeam": {
+        "name": "Sabah Bakü",
+        "logo": "https://img.sporekrani.com/teams/bqIP36CP6xc9j1FWQXJNXWVnMkXn4hce4U0V6NBO.png"
+      },
+      "awayTeam": {
+        "name": "Zira",
+        "logo": "https://img.sporekrani.com/teams/5ynoG0PW4Itq40OgZGu47jJfv613CZxbtMB228iA.png"
+      },
+      "startDate": "2026-09-05T17:30:00+03:00",
+      "endDate": "2026-09-05T20:30:00+03:00",
+      "time": "17:30",
+      "date": "05.09.2026",
+      "status": "UPCOMING",
+      "leagueName": "Azerbaycan Premier Ligi",
+      "category": "europe",
+      "isSuperLig": false,
+      "isTff1Lig": false,
+      "channels": [
+        "CBC Sport"
+      ],
+      "primaryChannel": "CBC Sport",
+      "tvplusChannel": null,
+      "hasStream": false,
+      "streamId": null,
+      "banner": "https://img.sporekrani.com/event/486976.jpg?v=1788280778",
+      "stadium": "Bank Respublika Arena Stadyumu"
+    },
+    {
+      "id": "event-60",
+      "title": "Essen - Viktoria Köln",
+      "homeTeam": {
+        "name": "Essen",
+        "logo": "https://img.sporekrani.com/teams/Yw0tNYyONZeXCCYXIny4o7gO1l05Ef5JBnsQ7CVv.png"
+      },
+      "awayTeam": {
+        "name": "Viktoria Köln",
+        "logo": "https://img.sporekrani.com/teams/4gGsBrsPHb6zgAbQwFJEQE7EF2hMoFJlwbn7i606.png"
+      },
+      "startDate": "2026-09-05T17:30:00+03:00",
+      "endDate": "2026-09-05T20:30:00+03:00",
+      "time": "17:30",
+      "date": "05.09.2026",
+      "status": "UPCOMING",
+      "leagueName": "Almanya 3. Liga",
+      "category": "europe",
+      "isSuperLig": false,
+      "isTff1Lig": false,
+      "channels": [
+        "Sıfır TV"
+      ],
+      "primaryChannel": "Sıfır TV",
+      "tvplusChannel": null,
+      "hasStream": false,
+      "streamId": null,
+      "banner": "https://img.sporekrani.com/event/487201.jpg?v=1788443557",
+      "stadium": "Stadion an der Hafenstrasse Stadyumu"
+    },
+    {
+      "id": "event-61",
+      "title": "Karpaty Lviv - Shakhtar Donetsk",
+      "homeTeam": {
+        "name": "Karpaty Lviv",
+        "logo": null
+      },
+      "awayTeam": {
+        "name": "Shakhtar Donetsk",
+        "logo": "https://img.sporekrani.com/teams/O1zRrBUKcDWBD4tbNdWeSuEOE8QhSGyESHvOJhVO.png"
+      },
+      "startDate": "2026-09-05T18:00:00+03:00",
+      "endDate": "2026-09-05T21:00:00+03:00",
+      "time": "18:00",
+      "date": "05.09.2026",
+      "status": "UPCOMING",
+      "leagueName": "Ukrayna Premier Ligi",
+      "category": "europe",
+      "isSuperLig": false,
+      "isTff1Lig": false,
+      "channels": [
+        "Yayın Yok"
+      ],
+      "primaryChannel": "Yayın Yok",
+      "tvplusChannel": null,
+      "hasStream": false,
+      "streamId": null,
+      "banner": "https://img.sporekrani.com/event/487239.jpg?v=1788458394",
+      "stadium": "Ukraina Stadyumu"
+    },
+    {
+      "id": "event-62",
+      "title": "Lens - Lorient",
+      "homeTeam": {
+        "name": "Lens",
+        "logo": "https://img.sporekrani.com/teams/O7hGBlUn9iU9yrcJfHxLkJpalt1u52U1j6UQoOAS.png"
+      },
+      "awayTeam": {
+        "name": "Lorient",
+        "logo": "https://img.sporekrani.com/teams/hLoQPF9shpIWBiFkV87cvXSlrvOGpyqxupYkFZ1d.png"
+      },
+      "startDate": "2026-09-05T18:15:00+03:00",
+      "endDate": "2026-09-05T21:15:00+03:00",
+      "time": "18:15",
+      "date": "05.09.2026",
+      "status": "UPCOMING",
+      "leagueName": "Fransa Ligue 1",
+      "category": "europe",
+      "isSuperLig": false,
+      "isTff1Lig": false,
+      "channels": [
+        "Bein Sports beIN Connect"
+      ],
+      "primaryChannel": "Bein Sports beIN Connect",
+      "tvplusChannel": null,
+      "hasStream": false,
+      "streamId": null,
+      "banner": "https://img.sporekrani.com/event/483528.jpg?v=1785852955",
+      "stadium": "Stade Bollaert-Delelis Stadyumu"
+    },
+    {
+      "id": "event-63",
+      "title": "Inter - Napoli",
+      "homeTeam": {
+        "name": "Inter",
+        "logo": "https://img.sporekrani.com/teams/Jk9UQlFMIc8hH5fIxu2O8Y1O90kymjO6iIPHWnsY.png"
+      },
+      "awayTeam": {
+        "name": "Napoli",
+        "logo": "https://img.sporekrani.com/teams/HabaH51e4AEYIabuLgRB8Jmh6BMr3XqLhJmQxwYV.png"
+      },
+      "startDate": "2026-09-05T19:00:00+03:00",
+      "endDate": "2026-09-05T22:00:00+03:00",
+      "time": "19:00",
+      "date": "05.09.2026",
+      "status": "UPCOMING",
+      "leagueName": "İtalya Serie A",
+      "category": "europe",
+      "isSuperLig": false,
+      "isTff1Lig": false,
+      "channels": [
+        "S Sport 2",
+        "S Sport Plus"
+      ],
+      "primaryChannel": "S SPORT 2",
+      "tvplusChannel": {
+        "id": 2028,
+        "name": "S SPORT 2",
+        "originalName": "S Sport 2"
+      },
+      "hasStream": true,
+      "streamId": 2028,
+      "banner": "https://img.sporekrani.com/event/483555.jpg?v=1788311668",
+      "stadium": "Giuseppe Meazza Stadyumu"
+    },
+    {
+      "id": "event-64",
+      "title": "Almanya - Japonya",
+      "homeTeam": {
+        "name": "Almanya",
+        "logo": "https://img.sporekrani.com/teams/tn3hFIFI2FBv2LuTfSclxZJj28DLOaydtXtaL3WV.png"
+      },
+      "awayTeam": {
+        "name": "Japonya",
+        "logo": "https://img.sporekrani.com/teams/t9dwN70rArsp5AaBnsHKVoJsZy0uV2gAfifoSnEc.png"
+      },
+      "startDate": "2026-09-05T19:00:00+03:00",
+      "endDate": "2026-09-05T22:00:00+03:00",
+      "time": "19:00",
+      "date": "05.09.2026",
+      "status": "UPCOMING",
+      "leagueName": "FIBA Kadınlar Dünya Kupası",
+      "category": "basketball",
+      "isSuperLig": false,
+      "isTff1Lig": false,
+      "channels": [
+        "S Sport Plus"
+      ],
+      "primaryChannel": "S SPORT 1",
+      "tvplusChannel": {
+        "id": 2025,
+        "name": "S SPORT 1",
+        "originalName": "S Sport Plus"
+      },
+      "hasStream": true,
+      "streamId": 2025,
+      "banner": "https://img.sporekrani.com/event/485177.jpg?v=1787846021",
+      "stadium": "Berlin Stadyumu"
+    },
+    {
+      "id": "event-65",
+      "title": "Esenler Erokspor - Trabzonspor",
+      "homeTeam": {
+        "name": "Esenler Erokspor",
+        "logo": "https://img.sporekrani.com/teams/YF4fTSJKsH81mXJFq0CQAMziHIv5DhrfDQVgen68.png"
+      },
+      "awayTeam": {
+        "name": "Trabzonspor",
+        "logo": "https://img.sporekrani.com/teams/mVi2LdYAtdfb1F5aGsEvG8Ok3oJ8m2qKdSyM3D4S.png"
+      },
+      "startDate": "2026-09-05T19:00:00+03:00",
+      "endDate": "2026-09-05T22:00:00+03:00",
+      "time": "19:00",
+      "date": "05.09.2026",
+      "status": "UPCOMING",
+      "leagueName": "TÜBAD Basketbol Turnuvası",
+      "category": "basketball",
+      "isSuperLig": false,
+      "isTff1Lig": false,
+      "channels": [
+        "Yayın Yok"
+      ],
+      "primaryChannel": "Yayın Yok",
+      "tvplusChannel": null,
+      "hasStream": false,
+      "streamId": null,
+      "banner": "https://img.sporekrani.com/event/485247.jpg?v=1788567966",
+      "stadium": "Turkcell Basketbol Gelişim Merkezi Stadyumu"
+    },
+    {
+      "id": "event-66",
+      "title": "Polonya - İtalya",
+      "homeTeam": {
+        "name": "Polonya",
+        "logo": "https://img.sporekrani.com/teams/HGsxqov96RcSKu1397HjLmv2lYiiui8nejPNou30.png"
+      },
+      "awayTeam": {
+        "name": "İtalya",
+        "logo": "https://img.sporekrani.com/teams/h8r0nEcEkVoTN9HdzUexrl4pd71xVS2X2XYrvZyR.png"
+      },
+      "startDate": "2026-09-05T19:00:00+03:00",
+      "endDate": "2026-09-05T22:00:00+03:00",
+      "time": "19:00",
+      "date": "05.09.2026",
+      "status": "UPCOMING",
+      "leagueName": "CEV Kadınlar Avrupa Şampiyonası",
+      "category": "other_sports",
+      "isSuperLig": false,
+      "isTff1Lig": false,
+      "channels": [
+        "TRT Spor Yildiz"
+      ],
+      "primaryChannel": "TRT SPOR YILDIZ",
+      "tvplusChannel": {
+        "id": 2018,
+        "name": "TRT SPOR YILDIZ",
+        "originalName": "TRT Spor Yildiz"
+      },
+      "hasStream": true,
+      "streamId": 2018,
+      "banner": "https://img.sporekrani.com/event/487348.jpg?v=1788568109",
+      "stadium": "Sinan Erdem Spor Salonu Stadyumu"
+    },
+    {
+      "id": "event-67",
+      "title": "Vedat Hödük - N.Todorovic",
+      "homeTeam": {
+        "name": "Vedat Hödük",
+        "logo": "https://img.sporekrani.com/teams/e4b67024-b451-43c6-be5d-0965fcc61ce6.png"
+      },
+      "awayTeam": {
+        "name": "N.Todorovic",
+        "logo": "https://img.sporekrani.com/teams/728efdf8-399f-4845-9958-5350e3223f2c.png"
+      },
+      "startDate": "2026-09-05T19:00:00+03:00",
+      "endDate": "2026-09-05T22:00:00+03:00",
+      "time": "19:00",
+      "date": "05.09.2026",
+      "status": "UPCOMING",
+      "leagueName": "Glory Kickboks Serisi",
+      "category": "other_sports",
+      "isSuperLig": false,
+      "isTff1Lig": false,
+      "channels": [
+        "S Sport Plus"
+      ],
+      "primaryChannel": "S SPORT 1",
+      "tvplusChannel": {
+        "id": 2025,
+        "name": "S SPORT 1",
+        "originalName": "S Sport Plus"
+      },
+      "hasStream": true,
+      "streamId": 2025,
+      "banner": "https://img.sporekrani.com/event/487606.jpg?v=1788556994",
+      "stadium": "Rotterdam Ahoy Stadyumu"
+    },
+    {
+      "id": "event-68",
+      "title": "Schalke 04 - Bayern Münih",
+      "homeTeam": {
+        "name": "Schalke 04",
+        "logo": "https://img.sporekrani.com/teams/nntmKZZVEcpqLjrrS0NYrw7k6ykHOORuYn6MKVD1.png"
+      },
+      "awayTeam": {
+        "name": "Bayern Münih",
+        "logo": "https://img.sporekrani.com/teams/ChFzT4HIC7RNIALJSZU1Nf6N5rhhmbxxtCkmDe3h.png"
+      },
+      "startDate": "2026-09-05T19:30:00+03:00",
+      "endDate": "2026-09-05T22:30:00+03:00",
+      "time": "19:30",
+      "date": "05.09.2026",
+      "status": "UPCOMING",
+      "leagueName": "Almanya Bundesliga",
+      "category": "europe",
+      "isSuperLig": false,
+      "isTff1Lig": false,
+      "channels": [
+        "Idman TV",
+        "S Sport Plus"
+      ],
+      "primaryChannel": "NTV",
+      "tvplusChannel": {
+        "id": 594243,
+        "name": "NTV",
+        "originalName": "Idman TV"
+      },
+      "hasStream": true,
+      "streamId": 594243,
+      "banner": "https://img.sporekrani.com/event/483381.jpg?v=1788567544",
+      "stadium": "Veltins Arena Stadyumu"
+    },
+    {
+      "id": "event-69",
+      "title": "Hull City - Aston Villa",
+      "homeTeam": {
+        "name": "Hull City",
+        "logo": "https://img.sporekrani.com/teams/JFbZog0ycMR8QmTHtk5vkBUPHr4KKtCfUY2YytKY.png"
+      },
+      "awayTeam": {
+        "name": "Aston Villa",
+        "logo": "https://img.sporekrani.com/teams/g6sqS6ui4cRXpQeHFw58VBbrDWWHHKmMv0kSD5aY.png"
+      },
+      "startDate": "2026-09-05T19:30:00+03:00",
+      "endDate": "2026-09-05T22:30:00+03:00",
+      "time": "19:30",
+      "date": "05.09.2026",
+      "status": "UPCOMING",
+      "leagueName": "İngiltere Premier Lig",
+      "category": "europe",
+      "isSuperLig": false,
+      "isTff1Lig": false,
+      "channels": [
+        "Bein Sports 3"
+      ],
+      "primaryChannel": "beIN SPORTS 3",
+      "tvplusChannel": {
+        "id": 491883,
+        "name": "beIN SPORTS 3",
+        "originalName": "Bein Sports 3"
+      },
+      "hasStream": true,
+      "streamId": 491883,
+      "banner": "https://img.sporekrani.com/event/483600.jpg?v=1788311662",
+      "stadium": "MKM Stadyumu"
+    },
+    {
+      "id": "event-70",
+      "title": "Rayo Vallecano - Racing Santander",
+      "homeTeam": {
+        "name": "Rayo Vallecano",
+        "logo": "https://img.sporekrani.com/teams/g8Lz07qcq3NX7HYmZ94igiZCYon351d73L3f0NhB.png"
+      },
+      "awayTeam": {
+        "name": "Racing Santander",
+        "logo": "https://img.sporekrani.com/teams/zNpKuaZC8yofM3jNlfJ1utYUpA7xWIlZaCasreXJ.png"
+      },
+      "startDate": "2026-09-05T19:30:00+03:00",
+      "endDate": "2026-09-05T22:30:00+03:00",
+      "time": "19:30",
+      "date": "05.09.2026",
+      "status": "UPCOMING",
+      "leagueName": "İspanya La Liga",
+      "category": "europe",
+      "isSuperLig": false,
+      "isTff1Lig": false,
+      "channels": [
+        "S Sport",
+        "S Sport Plus"
+      ],
+      "primaryChannel": "S SPORT 1",
+      "tvplusChannel": {
+        "id": 2025,
+        "name": "S SPORT 1",
+        "originalName": "S Sport"
+      },
+      "hasStream": true,
+      "streamId": 2025,
+      "banner": "https://img.sporekrani.com/event/484378.jpg?v=1786540340",
+      "stadium": "Campo de Futbol de Vallecas Stadyumu"
+    },
+    {
+      "id": "event-71",
+      "title": "Neftçi Bakü - Safa Bakü",
+      "homeTeam": {
+        "name": "Neftçi Bakü",
+        "logo": "https://img.sporekrani.com/teams/jFep6IFpu23K1l3QovRdNTR77dOJiUJTi1UEEWau.png"
+      },
+      "awayTeam": {
+        "name": "Safa Bakü",
+        "logo": null
+      },
+      "startDate": "2026-09-05T19:30:00+03:00",
+      "endDate": "2026-09-05T22:30:00+03:00",
+      "time": "19:30",
+      "date": "05.09.2026",
+      "status": "UPCOMING",
+      "leagueName": "Azerbaycan Premier Ligi",
+      "category": "europe",
+      "isSuperLig": false,
+      "isTff1Lig": false,
+      "channels": [
+        "CBC Sport"
+      ],
+      "primaryChannel": "CBC Sport",
+      "tvplusChannel": null,
+      "hasStream": false,
+      "streamId": null,
+      "banner": "https://img.sporekrani.com/event/486977.jpg?v=1788280778",
+      "stadium": "Şähär Stadyumu"
+    },
+    {
+      "id": "event-73",
+      "title": "Maritimo - Benfica",
+      "homeTeam": {
+        "name": "Maritimo",
+        "logo": "https://img.sporekrani.com/teams/ivOyDsE04cQsy7P59zKDzCJcoNf2eOOpkB86UVzc.png"
+      },
+      "awayTeam": {
+        "name": "Benfica",
+        "logo": "https://img.sporekrani.com/teams/vbMUfXpHkIEJvLPbUz4UG5qwvnetsinIuUhbtiex.png"
+      },
+      "startDate": "2026-09-05T20:00:00+03:00",
+      "endDate": "2026-09-05T23:00:00+03:00",
+      "time": "20:00",
+      "date": "05.09.2026",
+      "status": "UPCOMING",
+      "leagueName": "Portekiz Liga Portugal",
+      "category": "europe",
+      "isSuperLig": false,
+      "isTff1Lig": false,
+      "channels": [
+        "Bein Sports 5"
+      ],
+      "primaryChannel": "beIN SPORTS 5",
+      "tvplusChannel": {
+        "id": 491885,
+        "name": "beIN SPORTS 5",
+        "originalName": "Bein Sports 5"
+      },
+      "hasStream": true,
+      "streamId": 491885,
+      "banner": "https://img.sporekrani.com/event/486901.jpg?v=1788269869",
+      "stadium": "Estádio do Marítimo Stadyumu"
+    },
+    {
+      "id": "event-76",
+      "title": "Tremblay - Nantes",
+      "homeTeam": {
+        "name": "Tremblay",
+        "logo": null
+      },
+      "awayTeam": {
+        "name": "Nantes",
+        "logo": "https://img.sporekrani.com/teams/lQ77MlkNBUX1CEOzxzC7hlk08qU5q01Ddju4uAhp.png"
+      },
+      "startDate": "2026-09-05T20:00:00+03:00",
+      "endDate": "2026-09-05T23:00:00+03:00",
+      "time": "20:00",
+      "date": "05.09.2026",
+      "status": "UPCOMING",
+      "leagueName": "Hentbol Karşılaşması",
+      "category": "other_sports",
+      "isSuperLig": false,
+      "isTff1Lig": false,
+      "channels": [
+        "Bein Sports beIN Connect"
+      ],
+      "primaryChannel": "Bein Sports beIN Connect",
+      "tvplusChannel": null,
+      "hasStream": false,
+      "streamId": null,
+      "banner": "https://img.sporekrani.com/event/487207.jpg?v=1788446025",
+      "stadium": "Tremblay Stadyumu"
+    },
+    {
+      "id": "event-77",
+      "title": "Al Ittihad - Al Nassr",
+      "homeTeam": {
+        "name": "Al Ittihad",
+        "logo": "https://img.sporekrani.com/teams/Z1ImsMIvUZbp3cP44Wyn9Gwm4NLSpV6uSRR5F37Q.png"
+      },
+      "awayTeam": {
+        "name": "Al Nassr",
+        "logo": "https://img.sporekrani.com/teams/TqB1GYHxGJdEGNPyzIfBE8ia3LTRJti7WcJJSGt6.png"
+      },
+      "startDate": "2026-09-05T21:00:00+03:00",
+      "endDate": "2026-09-06T00:00:00+03:00",
+      "time": "21:00",
+      "date": "05.09.2026",
+      "status": "UPCOMING",
+      "leagueName": "Suudi Arabistan Pro Lig",
+      "category": "europe",
+      "isSuperLig": false,
+      "isTff1Lig": false,
+      "channels": [
+        "HT Spor Youtube",
+        "S Sport Plus"
+      ],
+      "primaryChannel": "HT SPOR",
+      "tvplusChannel": {
+        "id": 551321,
+        "name": "HT SPOR",
+        "originalName": "HT Spor Youtube"
+      },
+      "hasStream": true,
+      "streamId": 551321,
+      "banner": "https://img.sporekrani.com/event/486078.jpg?v=1788433880",
+      "stadium": "Prince Abdullah al-Faisal Stadyumu"
+    },
+    {
+      "id": "event-78",
+      "title": "Ajax - PSV",
+      "homeTeam": {
+        "name": "Ajax",
+        "logo": "https://img.sporekrani.com/teams/7IEMuXnLTHo2ZssIHobiMRRWpNqR0gHyUVgA3zlh.png"
+      },
+      "awayTeam": {
+        "name": "PSV",
+        "logo": "https://img.sporekrani.com/teams/jNoQhPkJYeuE9P1PBc7WvU1PjskFa9podnXLxfMI.png"
+      },
+      "startDate": "2026-09-05T21:00:00+03:00",
+      "endDate": "2026-09-06T00:00:00+03:00",
+      "time": "21:00",
+      "date": "05.09.2026",
+      "status": "UPCOMING",
+      "leagueName": "Hollanda Eredivisie",
+      "category": "europe",
+      "isSuperLig": false,
+      "isTff1Lig": false,
+      "channels": [
+        "S Sport Plus"
+      ],
+      "primaryChannel": "S SPORT 1",
+      "tvplusChannel": {
+        "id": 2025,
+        "name": "S SPORT 1",
+        "originalName": "S Sport Plus"
+      },
+      "hasStream": true,
+      "streamId": 2025,
+      "banner": "https://img.sporekrani.com/event/486079.jpg?v=1787849881",
+      "stadium": "Kras Stadion Stadyumu"
+    },
+    {
+      "id": "event-79",
+      "title": "C.Kwasi - T.Hristov",
+      "homeTeam": {
+        "name": "C.Kwasi",
+        "logo": "https://img.sporekrani.com/teams/490fb284-42a9-4a7b-aa33-47761d87830a.png"
+      },
+      "awayTeam": {
+        "name": "T.Hristov",
+        "logo": "https://img.sporekrani.com/teams/3939ee67-c7c6-420f-b66a-7e307c9f009c.png"
+      },
+      "startDate": "2026-09-05T21:00:00+03:00",
+      "endDate": "2026-09-06T00:00:00+03:00",
+      "time": "21:00",
+      "date": "05.09.2026",
+      "status": "UPCOMING",
+      "leagueName": "Glory Kickboks Serisi",
+      "category": "other_sports",
+      "isSuperLig": false,
+      "isTff1Lig": false,
+      "channels": [
+        "S Sport Plus"
+      ],
+      "primaryChannel": "S SPORT 1",
+      "tvplusChannel": {
+        "id": 2025,
+        "name": "S SPORT 1",
+        "originalName": "S Sport Plus"
+      },
+      "hasStream": true,
+      "streamId": 2025,
+      "banner": "https://img.sporekrani.com/event/486081.jpg?v=1788556842",
+      "stadium": "Arnhem Stadyumu"
+    },
+    {
+      "id": "event-80",
+      "title": "St. Etienne - Montpellier",
+      "homeTeam": {
+        "name": "St. Etienne",
+        "logo": "https://img.sporekrani.com/teams/55haEc9MQm6iqvqaHr4DIJE8fIm51P9MInHBEArA.png"
+      },
+      "awayTeam": {
+        "name": "Montpellier",
+        "logo": "https://img.sporekrani.com/teams/XXU9xEVLMfyQfBkStMx2N9pGaxSux4BaXAl5XDmu.png"
+      },
+      "startDate": "2026-09-05T21:00:00+03:00",
+      "endDate": "2026-09-06T00:00:00+03:00",
+      "time": "21:00",
+      "date": "05.09.2026",
+      "status": "UPCOMING",
+      "leagueName": "Fransa Ligue 2",
+      "category": "europe",
+      "isSuperLig": false,
+      "isTff1Lig": false,
+      "channels": [
+        "Bein Sports 4"
+      ],
+      "primaryChannel": "beIN SPORTS 4",
+      "tvplusChannel": {
+        "id": 491884,
+        "name": "beIN SPORTS 4",
+        "originalName": "Bein Sports 4"
+      },
+      "hasStream": true,
+      "streamId": 491884,
+      "banner": "https://img.sporekrani.com/event/487204.jpg?v=1788444763",
+      "stadium": "Stade Geoffroy-Guichard Stadyumu"
+    },
+    {
+      "id": "event-81",
+      "title": "Dynamo Dresden - Bochum",
+      "homeTeam": {
+        "name": "Dynamo Dresden",
+        "logo": "https://img.sporekrani.com/teams/kptfyHjRIUwMsWCjBIa8wBohjjEmBLdkidNtnSBG.png"
+      },
+      "awayTeam": {
+        "name": "Bochum",
+        "logo": "https://img.sporekrani.com/teams/vOYTiIFy7wB0fSqc9Mv3Vs4imttmpc9h26kxdiPK.png"
+      },
+      "startDate": "2026-09-05T21:30:00+03:00",
+      "endDate": "2026-09-06T00:30:00+03:00",
+      "time": "21:30",
+      "date": "05.09.2026",
+      "status": "UPCOMING",
+      "leagueName": "Almanya 2. Bundesliga",
+      "category": "europe",
+      "isSuperLig": false,
+      "isTff1Lig": false,
+      "channels": [
+        "Yayın Yok"
+      ],
+      "primaryChannel": "Yayın Yok",
+      "tvplusChannel": null,
+      "hasStream": false,
+      "streamId": null,
+      "banner": "https://img.sporekrani.com/event/483417.jpg?v=1787845632",
+      "stadium": "Rudolf-Harbig Stadyumu"
+    },
+    {
+      "id": "event-82",
+      "title": "Le Havre - Brest",
+      "homeTeam": {
+        "name": "Le Havre",
+        "logo": "https://img.sporekrani.com/teams/03JR2t8FU2skPXhIWySx2txGYH2ZNA4xkT4OMvQg.png"
+      },
+      "awayTeam": {
+        "name": "Brest",
+        "logo": "https://img.sporekrani.com/teams/WiWuSzKy1u7OZiWFfUMpnFaEAOltqQW166xHjZwz.png"
+      },
+      "startDate": "2026-09-05T21:45:00+03:00",
+      "endDate": "2026-09-06T00:45:00+03:00",
+      "time": "21:45",
+      "date": "05.09.2026",
+      "status": "UPCOMING",
+      "leagueName": "Fransa Ligue 1",
+      "category": "europe",
+      "isSuperLig": false,
+      "isTff1Lig": false,
+      "channels": [
+        "Bein Sports Max 2"
+      ],
+      "primaryChannel": "beIN SPORTS MAX 2",
+      "tvplusChannel": {
+        "id": 638237,
+        "name": "beIN SPORTS MAX 2",
+        "originalName": "Bein Sports Max 2"
+      },
+      "hasStream": true,
+      "streamId": 638237,
+      "banner": "https://img.sporekrani.com/event/483529.jpg?v=1788444442",
+      "stadium": "Stade Océane Stadyumu"
+    },
+    {
+      "id": "event-83",
+      "title": "Nice - Le Mans",
+      "homeTeam": {
+        "name": "Nice",
+        "logo": "https://img.sporekrani.com/teams/FF8yUCndjK9qN5nIf4Dg9x66o15ncOAHUhDfqAtQ.png"
+      },
+      "awayTeam": {
+        "name": "Le Mans",
+        "logo": null
+      },
+      "startDate": "2026-09-05T21:45:00+03:00",
+      "endDate": "2026-09-06T00:45:00+03:00",
+      "time": "21:45",
+      "date": "05.09.2026",
+      "status": "UPCOMING",
+      "leagueName": "Fransa Ligue 1",
+      "category": "europe",
+      "isSuperLig": false,
+      "isTff1Lig": false,
+      "channels": [
+        "Bein Sports 3"
+      ],
+      "primaryChannel": "beIN SPORTS 3",
+      "tvplusChannel": {
+        "id": 491883,
+        "name": "beIN SPORTS 3",
+        "originalName": "Bein Sports 3"
+      },
+      "hasStream": true,
+      "streamId": 491883,
+      "banner": "https://img.sporekrani.com/event/483530.jpg?v=1788444414",
+      "stadium": "Allianz Riviera Stadyumu"
+    },
+    {
+      "id": "event-84",
+      "title": "Roma - Atalanta",
+      "homeTeam": {
+        "name": "Roma",
+        "logo": "https://img.sporekrani.com/teams/GdWSbgxIljtKBzK9WTNngAOgU6vEOW055esTgsvs.png"
+      },
+      "awayTeam": {
+        "name": "Atalanta",
+        "logo": "https://img.sporekrani.com/teams/eHXZq3LH2F6BZqFnQLKd1zChBR5J7XTGSU8p74zm.png"
+      },
+      "startDate": "2026-09-05T21:45:00+03:00",
+      "endDate": "2026-09-06T00:45:00+03:00",
+      "time": "21:45",
+      "date": "05.09.2026",
+      "status": "UPCOMING",
+      "leagueName": "İtalya Serie A",
+      "category": "europe",
+      "isSuperLig": false,
+      "isTff1Lig": false,
+      "channels": [
+        "S Sport 2",
+        "S Sport Plus"
+      ],
+      "primaryChannel": "S SPORT 2",
+      "tvplusChannel": {
+        "id": 2028,
+        "name": "S SPORT 2",
+        "originalName": "S Sport 2"
+      },
+      "hasStream": true,
+      "streamId": 2028,
+      "banner": "https://img.sporekrani.com/event/483556.jpg?v=1788180116",
+      "stadium": "Roma Olimpiyat Stadyumu"
+    },
+    {
+      "id": "event-85",
+      "title": "Villarreal - Deportivo",
+      "homeTeam": {
+        "name": "Villarreal",
+        "logo": "https://img.sporekrani.com/teams/72c8e6b4-1dd6-4dcf-9bc0-b88c01d3a624.png"
+      },
+      "awayTeam": {
+        "name": "Deportivo",
+        "logo": null
+      },
+      "startDate": "2026-09-05T22:00:00+03:00",
+      "endDate": "2026-09-06T01:00:00+03:00",
+      "time": "22:00",
+      "date": "05.09.2026",
+      "status": "UPCOMING",
+      "leagueName": "İspanya La Liga",
+      "category": "europe",
+      "isSuperLig": false,
+      "isTff1Lig": false,
+      "channels": [
+        "S Sport",
+        "Idman TV",
+        "S Sport Plus"
+      ],
+      "primaryChannel": "S SPORT 1",
+      "tvplusChannel": {
+        "id": 2025,
+        "name": "S SPORT 1",
+        "originalName": "S Sport"
+      },
+      "hasStream": true,
+      "streamId": 2025,
+      "banner": "https://img.sporekrani.com/event/484379.jpg?v=1788567562",
+      "stadium": "Ceramica Stadyumu"
+    },
+    {
+      "id": "event-86",
+      "title": "St.Mirren - Celtic",
+      "homeTeam": {
+        "name": "St.Mirren",
+        "logo": "https://img.sporekrani.com/teams/LgXKH4ErxkrSOGBwRWAcS0PUrv5zPZWorfrN1mkT.png"
+      },
+      "awayTeam": {
+        "name": "Celtic",
+        "logo": "https://img.sporekrani.com/teams/FfznoO3Yw5s80GjcLNIoN14mOSVtiDO8tDnjbs91.png"
+      },
+      "startDate": "2026-09-05T22:00:00+03:00",
+      "endDate": "2026-09-06T01:00:00+03:00",
+      "time": "22:00",
+      "date": "05.09.2026",
+      "status": "UPCOMING",
+      "leagueName": "İskoçya Premier Lig",
+      "category": "europe",
+      "isSuperLig": false,
+      "isTff1Lig": false,
+      "channels": [
+        "S Sport Plus"
+      ],
+      "primaryChannel": "S SPORT 1",
+      "tvplusChannel": {
+        "id": 2025,
+        "name": "S SPORT 1",
+        "originalName": "S Sport Plus"
+      },
+      "hasStream": true,
+      "streamId": 2025,
+      "banner": "https://img.sporekrani.com/event/486080.jpg?v=1787849882",
+      "stadium": "St Mirren Park Stadyumu"
+    },
+    {
+      "id": "event-87",
+      "title": "L.Keita - M.Naimov",
+      "homeTeam": {
+        "name": "L.Keita",
+        "logo": "https://img.sporekrani.com/teams/972fc3a0-3f45-4f36-8e6a-c658b08d7ffa.png"
+      },
+      "awayTeam": {
+        "name": "M.Naimov",
+        "logo": "https://img.sporekrani.com/teams/524234ef-91c7-4be5-be88-b7db6c82726c.png"
+      },
+      "startDate": "2026-09-05T22:00:00+03:00",
+      "endDate": "2026-09-06T01:00:00+03:00",
+      "time": "22:00",
+      "date": "05.09.2026",
+      "status": "UPCOMING",
+      "leagueName": "UFC Dövüş Serisi",
+      "category": "other_sports",
+      "isSuperLig": false,
+      "isTff1Lig": false,
+      "channels": [
+        "S Sport Plus"
+      ],
+      "primaryChannel": "S SPORT 1",
+      "tvplusChannel": {
+        "id": 2025,
+        "name": "S SPORT 1",
+        "originalName": "S Sport Plus"
+      },
+      "hasStream": true,
+      "streamId": 2025,
+      "banner": "https://img.sporekrani.com/event/486087.jpg?v=1787852501",
+      "stadium": "Accor Arena Stadyumu"
+    },
+    {
+      "id": "event-88",
+      "title": "Bragantino - Bahia",
+      "homeTeam": {
+        "name": "Bragantino",
+        "logo": "https://img.sporekrani.com/teams/h9dN0XoVfzfsmPHXdOM8qJjtgPnzsxgdnRSnlvUC.png"
+      },
+      "awayTeam": {
+        "name": "Bahia",
+        "logo": "https://img.sporekrani.com/teams/nKBU9PaqyPXvjUs3FoGQf7FH9mFEcjc9Ue40j0Y8.png"
+      },
+      "startDate": "2026-09-05T22:00:00+03:00",
+      "endDate": "2026-09-06T01:00:00+03:00",
+      "time": "22:00",
+      "date": "05.09.2026",
+      "status": "UPCOMING",
+      "leagueName": "Brezilya Serie A",
+      "category": "europe",
+      "isSuperLig": false,
+      "isTff1Lig": false,
+      "channels": [
+        "Smart Spor 2",
+        "Spor Smart 2"
+      ],
+      "primaryChannel": "SPOR SMART 2",
+      "tvplusChannel": {
+        "id": 635445,
+        "name": "SPOR SMART 2",
+        "originalName": "Spor Smart 2"
+      },
+      "hasStream": true,
+      "streamId": 635445,
+      "banner": "https://img.sporekrani.com/event/487616.jpg?v=1788570119",
+      "stadium": "Estádio Municipal Cicero De Souza Marques Stadyumu"
+    },
+    {
+      "id": "event-89",
+      "title": "M.Charriere - F.Lima",
+      "homeTeam": {
+        "name": "M.Charriere",
+        "logo": "https://img.sporekrani.com/teams/FeZMADN72DZHZQqvEIceoT01uyO5C6ZzfUTKopEf.png"
+      },
+      "awayTeam": {
+        "name": "F.Lima",
+        "logo": "https://img.sporekrani.com/teams/97bb07db-1677-4705-8ed9-622cd922de29.png"
+      },
+      "startDate": "2026-09-05T22:30:00+03:00",
+      "endDate": "2026-09-06T01:30:00+03:00",
+      "time": "22:30",
+      "date": "05.09.2026",
+      "status": "UPCOMING",
+      "leagueName": "UFC Dövüş Serisi",
+      "category": "other_sports",
+      "isSuperLig": false,
+      "isTff1Lig": false,
+      "channels": [
+        "S Sport Plus"
+      ],
+      "primaryChannel": "S SPORT 1",
+      "tvplusChannel": {
+        "id": 2025,
+        "name": "S SPORT 1",
+        "originalName": "S Sport Plus"
+      },
+      "hasStream": true,
+      "streamId": 2025,
+      "banner": "https://img.sporekrani.com/event/486088.jpg?v=1787852501",
+      "stadium": "Accor Arena Stadyumu"
+    },
+    {
+      "id": "event-90",
+      "title": "Sporting Lisbon - Nacional",
+      "homeTeam": {
+        "name": "Sporting Lisbon",
+        "logo": "https://img.sporekrani.com/teams/wmkMpVv7deEV46KqRI9Evc7cCPEqzIIZoGNt6t1j.png"
+      },
+      "awayTeam": {
+        "name": "Nacional",
+        "logo": "https://img.sporekrani.com/teams/9TQPH1qy4FX6kLdVqcl4n9Vc9whC6j5p1BcHTHhn.png"
+      },
+      "startDate": "2026-09-05T22:30:00+03:00",
+      "endDate": "2026-09-06T01:30:00+03:00",
+      "time": "22:30",
+      "date": "05.09.2026",
+      "status": "UPCOMING",
+      "leagueName": "Portekiz Liga Portugal",
+      "category": "europe",
+      "isSuperLig": false,
+      "isTff1Lig": false,
+      "channels": [
+        "Bein Sports 2"
+      ],
+      "primaryChannel": "beIN SPORTS 2",
+      "tvplusChannel": {
+        "id": 2205,
+        "name": "beIN SPORTS 2",
+        "originalName": "Bein Sports 2"
+      },
+      "hasStream": true,
+      "streamId": 2205,
+      "banner": "https://img.sporekrani.com/event/486902.jpg?v=1788269869",
+      "stadium": "Guimaraes Stadyumu"
+    },
+    {
+      "id": "event-91",
+      "title": "D.Donchenko - P.Soriano",
+      "homeTeam": {
+        "name": "D.Donchenko",
+        "logo": "https://img.sporekrani.com/teams/b17b2d30-523e-4c9f-8e28-9699294d17ab.png"
+      },
+      "awayTeam": {
+        "name": "P.Soriano",
+        "logo": "https://img.sporekrani.com/teams/HsJ25jTe5nJHrYIXe5DvLIc2sSIWdMc0m9EbI0Dl.png"
+      },
+      "startDate": "2026-09-05T23:00:00+03:00",
+      "endDate": "2026-09-06T02:00:00+03:00",
+      "time": "23:00",
+      "date": "05.09.2026",
+      "status": "UPCOMING",
+      "leagueName": "UFC Dövüş Serisi",
+      "category": "other_sports",
+      "isSuperLig": false,
+      "isTff1Lig": false,
+      "channels": [
+        "S Sport Plus"
+      ],
+      "primaryChannel": "S SPORT 1",
+      "tvplusChannel": {
+        "id": 2025,
+        "name": "S SPORT 1",
+        "originalName": "S Sport Plus"
+      },
+      "hasStream": true,
+      "streamId": 2025,
+      "banner": "https://img.sporekrani.com/event/486089.jpg?v=1787852501",
+      "stadium": "Accor Arena Stadyumu"
+    },
+    {
+      "id": "event-92",
+      "title": "M.Venom Page - N.Ruziboev",
+      "homeTeam": {
+        "name": "M.Venom Page",
+        "logo": "https://img.sporekrani.com/teams/8caf0d17-3a96-46e0-86cf-0b19f9b34b06.png"
+      },
+      "awayTeam": {
+        "name": "N.Ruziboev",
+        "logo": "https://img.sporekrani.com/teams/6b2dc5e2-7fd2-42c1-8868-5ea52319e2c7.png"
+      },
+      "startDate": "2026-09-05T23:30:00+03:00",
+      "endDate": "2026-09-06T02:30:00+03:00",
+      "time": "23:30",
+      "date": "05.09.2026",
+      "status": "UPCOMING",
+      "leagueName": "UFC Dövüş Serisi",
+      "category": "other_sports",
+      "isSuperLig": false,
+      "isTff1Lig": false,
+      "channels": [
+        "S Sport Plus"
+      ],
+      "primaryChannel": "S SPORT 1",
+      "tvplusChannel": {
+        "id": 2025,
+        "name": "S SPORT 1",
+        "originalName": "S Sport Plus"
+      },
+      "hasStream": true,
+      "streamId": 2025,
+      "banner": "https://img.sporekrani.com/event/486090.jpg?v=1787852501",
+      "stadium": "Accor Arena Stadyumu"
+    }
+  ]
+}

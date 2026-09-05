@@ -3,9 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <base href="/">
-  <title>TV+ | Canlı TV, Dizi & Film İzle</title>
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 rx=%2220%22 fill=%22%23000000%22/><text y=%2270%22 x=%2212%22 font-size=%2255%22 font-weight=%22900%22 fill=%22%23FFFFFF%22>tv<tspan fill=%22%23FFC700%22>+</tspan></text></svg>">
+  <title>NoLimit | Canlı TV, Dizi & Film İzle</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 
   <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
@@ -15,8 +14,10 @@
         extend: {
           colors: {
             tv: {
-              yellow: '#FFC700',
-              'yellow-hover': '#E5B300',
+              yellow: '#00C951',
+              'yellow-hover': '#00B048',
+              orange: '#00C951',
+              'orange-hover': '#00B048',
               dark: '#000000',
               surface: '#0E121B',
               card: '#131926',
@@ -58,7 +59,7 @@
   <script src="https://www.gstatic.com/cv/js/sender/v1/cast_sender.js?loadCastFramework=1"></script>
 
   <!-- Custom Stylesheet -->
-  <link rel="stylesheet" href="/styles.css?v=6.0">
+  <link rel="stylesheet" href="/styles.css?v=7.0">
 </head>
 <body class="bg-black text-gray-100 min-h-screen selection:bg-tv-yellow selection:text-black">
 
@@ -66,10 +67,10 @@
   <!-- 1. PROFİL SEÇİM EKRANI ("Kim izliyor?" - GÖRSEL 1)       -->
   <!-- ======================================================== -->
   <div id="profile-screen" class="fixed inset-0 z-50 profile-screen-bg flex flex-col justify-between p-8 sm:p-12 transition-opacity duration-500">
-    <!-- TV+ Logo -->
+    <!-- NoLimit Logo -->
     <div>
-      <div class="tvplus-logo">
-        tv<span class="plus">+</span>
+      <div class="nolimit-logo flex items-center space-x-2">
+        <img src="/assets/nolimit-logo.svg" alt="NoLimit" class="h-10 w-auto" />
       </div>
     </div>
 
@@ -81,7 +82,7 @@
         <!-- Cemal Profile Avatar (Yellow Smiling Mascot) -->
         <div class="flex flex-col items-center space-y-3 cursor-pointer group" onclick="selectProfile('Cemal Küller')">
           <div class="relative w-24 h-24 sm:w-28 sm:h-28 rounded-full avatar-mascot flex items-center justify-center overflow-hidden shadow-2xl">
-            <!-- Smiling TV+ Yellow Mascot Face -->
+            <!-- Smiling Yellow Mascot Face -->
             <div class="w-16 h-16 sm:w-20 sm:h-20 bg-tv-yellow rounded-full flex flex-col items-center justify-center relative shadow-inner">
               <div class="flex space-x-3 mb-1">
                 <div class="w-2 h-2.5 bg-black rounded-full"></div>
@@ -118,8 +119,8 @@
       </div>
     </div>
 
-    <div class="text-center text-xs text-gray-500">
-      Turkcell TV+ Deneyimi
+    <div class="text-center text-xs text-gray-500 font-medium tracking-wide">
+      NoLimit Eğlence & Medya Deneyimi
     </div>
   </div>
 
@@ -133,8 +134,8 @@
     <header id="main-header" class="sticky top-0 z-40 bg-black/90 backdrop-blur-md border-b border-tv-border/50 px-4 lg:px-8 py-3.5 flex items-center justify-between">
       <div class="flex items-center space-x-8">
         <!-- Logo -->
-        <div class="tvplus-logo cursor-pointer" onclick="switchTab('home')">
-          tv<span class="plus">+</span>
+        <div class="cursor-pointer flex items-center py-1 group" onclick="switchTab('home')">
+          <img src="/assets/nolimit-logo.svg" alt="NoLimit" class="h-9 w-auto object-contain filter drop-shadow-md group-hover:scale-105 transition-transform duration-200" />
         </div>
 
         <!-- Menu Links -->
@@ -212,62 +213,145 @@
     <div id="view-home" class="flex-1 space-y-10 pb-20">
 
       <!-- 1. CINEMATIC HERO SPOTLIGHT -->
-      <section class="relative w-full h-[440px] sm:h-[500px] lg:h-[560px] overflow-hidden">
+      <section id="home-hero-section" onmouseenter="pauseHeroTimer()" onmouseleave="resumeHeroTimer()" class="relative w-full h-[500px] sm:h-[560px] lg:h-[620px] overflow-hidden group bg-black">
         <div id="home-hero-backdrop" class="absolute inset-0 bg-cover bg-center transition-all duration-700 filter brightness-90"></div>
-        <div class="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-transparent"></div>
-        <div class="absolute inset-0 bg-gradient-to-r from-black via-black/60 to-transparent"></div>
+        <!-- Sol Sinematik Karartma (Netflix Vinyeti) -->
+        <div id="home-hero-left-vignette" class="absolute inset-0 bg-gradient-to-r from-black via-black/85 md:via-black/55 to-transparent pointer-events-none z-10 transition-opacity duration-700"></div>
+        <!-- Alt Geçiş Karartması -->
+        <div class="absolute inset-0 bg-gradient-to-t from-[#0b0c10] via-black/50 to-transparent pointer-events-none z-10"></div>
+        <!-- Üst Karartma -->
+        <div class="absolute inset-0 bg-gradient-to-b from-black/80 via-transparent to-transparent pointer-events-none z-10"></div>
 
-        <div class="absolute inset-0 max-w-7xl mx-auto px-6 sm:px-10 flex flex-col justify-end pb-12 sm:pb-16 space-y-3 sm:space-y-4">
-          <div class="flex items-center space-x-3">
-            <span id="home-hero-provider" class="text-xs sm:text-sm font-bold tracking-wider uppercase text-tv-yellow flex items-center space-x-1.5">
-              <i data-lucide="sparkles" class="w-4 h-4"></i>
-              <span>ÖNE ÇIKAN</span>
-            </span>
-            <span id="home-hero-rating" class="bg-white/10 backdrop-blur border border-white/20 px-2 py-0.5 rounded text-xs text-yellow-400 font-semibold flex items-center space-x-1">
-              <span>★</span> <span id="home-hero-rating-val">8.8</span>
-            </span>
-            <span id="home-hero-year" class="border border-white/20 text-gray-300 text-xs px-2 py-0.5 rounded">2024</span>
-            <span id="home-hero-type" class="bg-tv-yellow text-black font-extrabold text-[10px] px-2 py-0.5 rounded uppercase">DİZİ</span>
+        <!-- Slider Arrows (Birden fazla maç olduğunda gezinme) -->
+        <button id="hero-prev-btn" onclick="prevHeroSlide()" class="hidden group-hover:flex absolute left-4 sm:left-6 top-1/2 -translate-y-1/2 z-30 w-11 h-11 rounded-full bg-black/60 hover:bg-tv-yellow text-white hover:text-black border border-white/20 items-center justify-center transition shadow-2xl backdrop-blur-md">
+          <i data-lucide="chevron-left" class="w-6 h-6"></i>
+        </button>
+        <button id="hero-next-btn" onclick="nextHeroSlide()" class="hidden group-hover:flex absolute right-4 sm:right-6 top-1/2 -translate-y-1/2 z-30 w-11 h-11 rounded-full bg-black/60 hover:bg-tv-yellow text-white hover:text-black border border-white/20 items-center justify-center transition shadow-2xl backdrop-blur-md">
+          <i data-lucide="chevron-right" class="w-6 h-6"></i>
+        </button>
+
+        <!-- Dynamic Hero Content Container (Hem Merkez Maç Tasarımı Hem Film Hero Desteği) -->
+        <div id="home-hero-content" class="absolute inset-0 w-full h-full flex flex-col items-center justify-center text-center z-20 select-none overflow-hidden">
+          <!-- JavaScript ile doldurulacak (renderSportsHero veya renderHomeHero) -->
+        </div>
+
+        <!-- Slider Dots -->
+        <div id="hero-dots-container" class="absolute bottom-4 sm:bottom-6 right-6 sm:right-10 z-30 flex items-center space-x-2">
+          <!-- Populated by JS -->
+        </div>
+      </section>
+
+      <!-- 2. PLATFORMLAR (DİKDÖRTGEN KARTLAR + SAĞA LİNEAR GRADIENT FADE) -->
+      <section class="max-w-7xl mx-auto px-4 sm:px-8 space-y-3 -mt-6 sm:-mt-10 relative z-20 group/platform-row">
+        <div class="flex items-center justify-between px-1">
+          <div class="flex items-center space-x-2.5">
+            <i data-lucide="layout-grid" class="w-4 h-4 text-tv-yellow"></i>
+            <h2 class="text-base sm:text-lg font-bold text-white tracking-tight flex items-center space-x-2">
+              <span>Platformlar</span>
+              <span class="text-xs text-gray-400 font-normal hidden sm:inline">• Popüler dijital platformlar</span>
+            </h2>
           </div>
 
-          <h1 id="home-hero-title" class="text-3xl sm:text-5xl lg:text-6xl font-black text-white tracking-tight drop-shadow-2xl max-w-3xl leading-tight">
-            Pose
-          </h1>
-
-          <p id="home-hero-tagline" class="text-sm sm:text-base text-gray-300 font-medium italic max-w-xl">
-            Trending | Gerçeğinle yüzleşmeye cesaretin var mı?
-          </p>
-
-          <p id="home-hero-desc" class="text-xs sm:text-sm text-gray-400 max-w-2xl line-clamp-3 drop-shadow">
-            Dünya genelinde milyonlarca izleyicinin takip ettiği heyecan dolu serüven.
-          </p>
-
-          <div class="pt-3 flex items-center space-x-4">
-            <button id="home-hero-play-btn" class="px-7 py-3 rounded-xl bg-tv-yellow hover:bg-tv-yellow-hover text-black font-extrabold text-sm transition transform hover:scale-105 flex items-center space-x-2 shadow-2xl">
-              <i data-lucide="play" class="w-5 h-5 fill-current"></i>
-              <span>Hemen İzle</span>
+          <!-- Slider Gezinme Okları -->
+          <div class="flex items-center space-x-1.5 opacity-80 hover:opacity-100 transition">
+            <button onclick="scrollPlatformsRow(-1)" class="w-8 h-8 rounded-full bg-white/5 hover:bg-tv-yellow text-gray-300 hover:text-black border border-white/10 flex items-center justify-center transition shadow cursor-pointer" title="Sola kaydır">
+              <i data-lucide="chevron-left" class="w-4 h-4"></i>
             </button>
-            <button id="home-hero-detail-btn" class="px-6 py-3 rounded-xl bg-white/10 hover:bg-white/20 border border-white/20 text-white font-semibold text-sm transition backdrop-blur-sm flex items-center space-x-2">
-              <i data-lucide="info" class="w-4 h-4"></i>
-              <span>Detaylar</span>
+            <button onclick="scrollPlatformsRow(1)" class="w-8 h-8 rounded-full bg-white/5 hover:bg-tv-yellow text-gray-300 hover:text-black border border-white/10 flex items-center justify-center transition shadow cursor-pointer" title="Sağa kaydır">
+              <i data-lucide="chevron-right" class="w-4 h-4"></i>
             </button>
+          </div>
+        </div>
+
+        <!-- Horizontal Scrollable Container with Linear Fade Gradients -->
+        <div class="relative overflow-hidden rounded-2xl">
+          <!-- Sol Karartma (Kullanıcı kaydırdığında yumuşakça belirir) -->
+          <div id="platforms-left-fade" class="pointer-events-none absolute left-0 top-0 bottom-0 w-16 sm:w-28 bg-gradient-to-r from-black via-black/90 to-transparent z-10 opacity-0 transition-opacity duration-300"></div>
+
+          <!-- Sağ Karartma (Linear Effect: 6. kartı yarıda kesip kaydırma hissini verir) -->
+          <div id="platforms-right-fade" class="pointer-events-none absolute right-0 top-0 bottom-0 w-28 sm:w-44 bg-gradient-to-l from-black via-black/90 to-transparent z-10 transition-opacity duration-300"></div>
+
+          <!-- Kart Listesi (Maksimum 6 logo sığacak, 6. logo yarıda görünecek) -->
+          <div 
+            id="home-platforms-grid" 
+            class="flex items-center space-x-3.5 sm:space-x-4 overflow-x-auto no-scrollbar py-3 px-1 select-none"
+            style="scrollbar-width: none; -ms-overflow-style: none;"
+          >
+            <!-- Populated by JavaScript with Rectangular Platform Cards -->
           </div>
         </div>
       </section>
 
-      <!-- 2. PLATFORMLAR (Görsel 1 "Favorite Apps" benzeri platform logoları) -->
-      <section class="max-w-7xl mx-auto px-4 sm:px-8 space-y-4 -mt-8 sm:-mt-12 relative z-20">
-        <div class="flex items-center justify-between">
-          <div class="flex items-center space-x-2.5">
-            <i data-lucide="layout-grid" class="w-5 h-5 text-tv-yellow"></i>
-            <h2 class="text-lg sm:text-xl font-bold text-white tracking-tight">Platformlar</h2>
-            <span class="text-xs text-gray-400 hidden sm:inline">• İstediğiniz platforma tıklayarak film ve dizilerini keşfedin</span>
+      <!-- 2.1 GÜNÜN MAÇLARI & SPOR EKRANI (sporekrani.com) -->
+      <section id="home-sports-section" class="max-w-7xl mx-auto px-4 sm:px-8 space-y-4">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/10 pb-3">
+          <div class="flex items-center space-x-3">
+            <div class="w-9 h-9 rounded-xl bg-tv-yellow/10 border border-tv-yellow/30 flex items-center justify-center text-tv-yellow shadow-lg">
+              <i data-lucide="trophy" class="w-5 h-5"></i>
+            </div>
+            <div>
+              <div class="flex items-center space-x-2">
+                <h2 class="text-lg sm:text-xl font-bold text-white tracking-tight">Günün Maçları & Spor Ekranı</h2>
+                <span class="text-[10px] bg-red-600/90 text-white font-black px-2 py-0.5 rounded-full uppercase tracking-wider animate-pulse">CANLI YAYINLAR</span>
+              </div>
+              <p class="text-xs text-gray-400 mt-0.5 flex items-center space-x-1.5">
+                <span>sporekrani.com • TV+ Canlı Kanal Eşleştirmesi</span>
+                <span id="sports-last-updated" class="text-gray-500 hidden sm:inline"></span>
+              </p>
+            </div>
+          </div>
+
+          <div class="flex items-center space-x-2">
+            <!-- Yenile Butonu -->
+            <button id="sports-refresh-btn" onclick="refreshSportsSchedule()" class="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-xs text-gray-300 hover:text-white font-medium flex items-center space-x-1.5 transition">
+              <i data-lucide="rotate-cw" class="w-3.5 h-3.5" id="sports-refresh-icon"></i>
+              <span>Yenile</span>
+            </button>
           </div>
         </div>
 
-        <!-- Platform Logo Cards Grid -->
-        <div id="home-platforms-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3.5 sm:gap-4">
-          <!-- Populated by JavaScript with rich SVG brand logos -->
+        <!-- Sekmeler (Tabs) -->
+        <div class="flex items-center space-x-2 overflow-x-auto pb-1 scrollbar-none text-xs font-semibold">
+          <button onclick="switchSportsTab('super_lig')" id="sports-tab-super_lig" class="sports-tab-btn active px-4 py-2 rounded-xl bg-tv-yellow text-black font-extrabold shadow-lg transition flex items-center space-x-2 whitespace-nowrap">
+            <span>🏆 Trendyol Süper Lig</span>
+            <span id="sports-badge-super_lig" class="bg-black/20 text-black text-[10px] px-1.5 py-0.5 rounded-full font-black"></span>
+          </button>
+          <button onclick="switchSportsTab('tff_1lig')" id="sports-tab-tff_1lig" class="sports-tab-btn px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-gray-300 hover:text-white border border-white/10 transition flex items-center space-x-2 whitespace-nowrap">
+            <span>🇹🇷 Trendyol 1. Lig</span>
+            <span id="sports-badge-tff_1lig" class="bg-white/10 text-gray-300 text-[10px] px-1.5 py-0.5 rounded-full font-bold"></span>
+          </button>
+          <button onclick="switchSportsTab('europe')" id="sports-tab-europe" class="sports-tab-btn px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-gray-300 hover:text-white border border-white/10 transition flex items-center space-x-2 whitespace-nowrap">
+            <span>🌍 Avrupa & Dünya</span>
+            <span id="sports-badge-europe" class="bg-white/10 text-gray-300 text-[10px] px-1.5 py-0.5 rounded-full font-bold"></span>
+          </button>
+          <button onclick="switchSportsTab('basketball')" id="sports-tab-basketball" class="sports-tab-btn px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-gray-300 hover:text-white border border-white/10 transition flex items-center space-x-2 whitespace-nowrap">
+            <span>🏀 Basketbol</span>
+            <span id="sports-badge-basketball" class="bg-white/10 text-gray-300 text-[10px] px-1.5 py-0.5 rounded-full font-bold"></span>
+          </button>
+          <button onclick="switchSportsTab('other_sports')" id="sports-tab-other_sports" class="sports-tab-btn px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-gray-300 hover:text-white border border-white/10 transition flex items-center space-x-2 whitespace-nowrap">
+            <span>🎾 Diğer Sporlar</span>
+            <span id="sports-badge-other_sports" class="bg-white/10 text-gray-300 text-[10px] px-1.5 py-0.5 rounded-full font-bold"></span>
+          </button>
+          <button onclick="switchSportsTab('all')" id="sports-tab-all" class="sports-tab-btn px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-gray-300 hover:text-white border border-white/10 transition flex items-center space-x-2 whitespace-nowrap">
+            <span>📅 Bugünkü Tüm Maçlar</span>
+            <span id="sports-badge-all" class="bg-white/10 text-gray-300 text-[10px] px-1.5 py-0.5 rounded-full font-bold"></span>
+          </button>
+        </div>
+
+        <!-- Maç Kartları Alanı -->
+        <div id="home-sports-matches-container" class="relative">
+          <div id="home-sports-matches-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            <!-- JavaScript ile doldurulacak -->
+          </div>
+          <!-- Yükleniyor / Boş Durum -->
+          <div id="home-sports-loading" class="hidden py-12 text-center text-gray-400 space-y-2">
+            <div class="inline-block animate-spin rounded-full h-8 w-8 border-2 border-tv-yellow border-t-transparent"></div>
+            <p class="text-xs">sporekrani.com üzerinden maç listesi güncelleniyor...</p>
+          </div>
+          <div id="home-sports-empty" class="hidden py-12 text-center text-gray-400 space-y-2">
+            <i data-lucide="calendar-x" class="w-10 h-10 text-gray-600 mx-auto"></i>
+            <p class="text-sm font-medium text-gray-300">Bu kategoride bugün planlanmış maç bulunamadı.</p>
+          </div>
         </div>
       </section>
 
@@ -805,12 +889,13 @@
     </div>
 
 
-    <!-- AUTHENTIC TURKCELL TV+ FOOTER WITH NEON GLOWING PLUS WATERMARK -->
+    <!-- AUTHENTIC NOLIMIT FOOTER WITH NEON GLOWING WATERMARK -->
     <footer class="relative overflow-hidden border-t border-[#18202F] bg-black pt-12 pb-14 px-6 lg:px-12 text-gray-400 text-xs">
-      <!-- Big Neon Yellow TV+ Watermark in bottom-right (Birebir Görsel) -->
-      <div class="absolute -bottom-8 right-2 lg:right-12 pointer-events-none opacity-20 select-none">
-        <svg width="280" height="280" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M50 15V85M15 50H85" stroke="#FFC700" stroke-width="12" stroke-linecap="round" stroke-linejoin="round" filter="drop-shadow(0 0 35px rgba(255, 199, 0, 0.9))"/>
+      <!-- Big Neon Orange Infinity Watermark in bottom-right -->
+      <div class="absolute -bottom-10 right-2 lg:right-12 pointer-events-none opacity-15 select-none">
+        <svg width="320" height="180" viewBox="0 0 100 60" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M20 30 C20 18 28 12 36 12 C44 12 49 20 52 30 C55 40 60 48 68 48 C76 48 84 42 84 30 C84 18 76 12 68 12 C60 12 55 20 52 30 C49 40 44 48 36 48 C28 48 20 42 20 30 Z" 
+                stroke="#00C951" stroke-width="8" stroke-linecap="round" stroke-linejoin="round" filter="drop-shadow(0 0 25px rgba(0, 201, 81, 0.9))"/>
         </svg>
       </div>
 
@@ -818,16 +903,16 @@
         <!-- Col 1 -->
         <div class="space-y-2.5">
           <h4 class="text-white font-bold text-xs uppercase tracking-wider mb-3">Cihazlar</h4>
-          <p class="hover:text-white cursor-pointer transition">TV+ Box</p>
-          <p class="hover:text-white cursor-pointer transition">TV+ Smart TV</p>
-          <p class="hover:text-white cursor-pointer transition">TV+ Apple TV</p>
-          <p class="hover:text-white cursor-pointer transition">TV+ Web</p>
+          <p class="hover:text-white cursor-pointer transition">NoLimit TV Box</p>
+          <p class="hover:text-white cursor-pointer transition">NoLimit Smart TV</p>
+          <p class="hover:text-white cursor-pointer transition">NoLimit Apple TV</p>
+          <p class="hover:text-white cursor-pointer transition">NoLimit Web</p>
         </div>
 
         <!-- Col 2 -->
         <div class="space-y-2.5">
           <h4 class="text-white font-bold text-xs uppercase tracking-wider mb-3">Öne Çıkanlar</h4>
-          <p class="hover:text-white cursor-pointer transition">Canlı Spor</p>
+          <p class="hover:text-white cursor-pointer transition">Canlı Spor & Maçlar</p>
           <p class="hover:text-white cursor-pointer transition">Filmler</p>
           <p class="hover:text-white cursor-pointer transition">Diziler</p>
           <p class="hover:text-white cursor-pointer transition">Belgeseller</p>
@@ -837,7 +922,7 @@
         <div class="space-y-2.5">
           <h4 class="text-white font-bold text-xs uppercase tracking-wider mb-3">Yardım</h4>
           <p class="hover:text-white cursor-pointer transition">Sıkça Sorulan Sorular</p>
-          <p class="hover:text-white cursor-pointer transition">TV+ Kullanım Kılavuzu</p>
+          <p class="hover:text-white cursor-pointer transition">NoLimit Kullanım Kılavuzu</p>
           <p class="hover:text-white cursor-pointer transition">İletişim</p>
         </div>
 
@@ -864,12 +949,12 @@
       </div>
 
       <div class="max-w-7xl mx-auto pt-6 border-t border-[#18202F]/60 flex flex-col sm:flex-row items-center justify-between text-[11px] text-gray-500 relative z-10">
-        <div class="tvplus-logo text-sm">
-          tv<span class="plus">+</span>
-          <span class="ml-2 text-xs font-normal text-gray-400">© 2026 Turkcell TV+ Deneyimi</span>
+        <div class="flex items-center space-x-3">
+          <img src="/assets/nolimit-logo.svg" alt="NoLimit" class="h-6 w-auto opacity-90" />
+          <span class="text-xs font-normal text-gray-400">© 2026 NoLimit Eğlence & Medya Deneyimi</span>
         </div>
         <div class="mt-2 sm:mt-0">
-          <span>Gizli Yerel Proxy Akışı Aktif</span>
+          <span class="text-gray-400">NoLimit Yüksek Hızlı Akış Motoru Aktif</span>
         </div>
       </div>
     </footer>
@@ -934,8 +1019,11 @@
           </div>
         </div>
 
-        <!-- Top Right: Cast, PiP, Settings, Close -->
+        <!-- Top Right: Rotate, Cast, PiP, Settings, Close -->
         <div class="flex items-center space-x-3 sm:space-x-4 text-white relative">
+          <button onclick="togglePlayerOrientation()" id="btn-player-rotate" title="Ekranı Yan Döndür (Yatay Mod)" class="hover:text-tv-yellow transition p-1.5 rounded-lg hover:bg-white/10 flex items-center">
+            <i data-lucide="smartphone" class="w-5 h-5 player-rotate-icon"></i>
+          </button>
           <button onclick="toggleCastPanel()" id="btn-cast" title="TV'ye Yayınla (Chromecast & Philips TV)" class="hover:text-tv-yellow transition p-1.5 rounded-lg hover:bg-white/10 flex items-center">
             <i data-lucide="cast" class="w-5 h-5"></i>
           </button>
@@ -1116,12 +1204,15 @@
             </button>
           </div>
 
-          <!-- Fullscreen Toggle -->
-          <div>
-            <button id="btn-media-options" onclick="toggleMediaOptions()" class="hidden mr-4 text-white hover:text-tv-yellow transition" title="Dil, altyazı ve kalite">
+          <!-- Fullscreen & Orientation Toggle -->
+          <div class="flex items-center space-x-2">
+            <button onclick="togglePlayerOrientation()" class="p-1 text-white hover:text-tv-yellow transition" title="Ekranı Yan Döndür (Yatay Mod)">
+              <i data-lucide="smartphone" class="w-5 h-5 player-rotate-icon"></i>
+            </button>
+            <button id="btn-media-options" onclick="toggleMediaOptions()" class="hidden mr-2 text-white hover:text-tv-yellow transition" title="Dil, altyazı ve kalite">
               <i data-lucide="captions" class="w-5 h-5"></i>
             </button>
-            <button onclick="toggleFullscreen()" class="text-white hover:text-tv-yellow transition">
+            <button onclick="toggleFullscreen()" class="text-white hover:text-tv-yellow transition p-1">
               <i data-lucide="maximize" class="w-5 h-5"></i>
             </button>
           </div>
@@ -1459,6 +1550,46 @@
             </button>
           </div>
         </div>
+
+        <!-- Yetişkin İçerik & Ebeveyn PIN Ayarı -->
+        <div class="space-y-3 p-4 rounded-xl bg-gradient-to-r from-red-500/10 via-red-500/5 to-transparent border border-red-500/30">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center space-x-2.5">
+              <div class="w-8 h-8 rounded-lg bg-red-500/20 border border-red-500/30 text-red-400 flex items-center justify-center flex-shrink-0">
+                <i data-lucide="shield-alert" class="w-4 h-4"></i>
+              </div>
+              <div>
+                <h4 class="text-xs font-bold text-white flex items-center space-x-1.5">
+                  <span>Yetişkin İçerik & Ebeveyn Koruması (+18)</span>
+                  <span class="text-[9px] px-1.5 py-0.5 rounded bg-red-500/20 text-red-300 font-semibold border border-red-500/30">PIN KORUMALI</span>
+                </h4>
+                <p class="text-[10px] text-gray-400">Yetişkin kategori ve içeriklere girişte bu şifre sorulur.</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+            <div>
+              <label class="block text-xs font-semibold text-gray-300 mb-1">Yetişkin PIN / Şifre</label>
+              <div class="relative">
+                <input 
+                  id="settings-adult-pin-input" 
+                  type="password" 
+                  maxlength="8"
+                  placeholder="0000" 
+                  class="w-full bg-[#131926] border border-[#212C42] focus:border-red-400 rounded-lg pl-3 pr-10 py-2 text-xs text-white placeholder-gray-500 focus:outline-none transition font-mono tracking-widest font-bold"
+                >
+                <button type="button" onclick="toggleSettingsAdultPinVisibility()" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white p-1">
+                  <i data-lucide="eye" id="toggle-settings-adult-pin-icon" class="w-4 h-4"></i>
+                </button>
+              </div>
+            </div>
+            <div class="flex flex-col justify-center text-[10px] text-gray-400 leading-relaxed bg-black/20 p-2.5 rounded-lg border border-white/5">
+              <span>Varsayılan PIN: <strong class="text-tv-yellow font-mono">0000</strong></span>
+              <span>Yetişkin bir kategoriye veya yayına tıklandığında bu şifre istenecektir.</span>
+            </div>
+          </div>
+        </div>
       </div>
 
       <!-- Buttons -->
@@ -1471,6 +1602,85 @@
           <span id="save-btn-text">Bağlantıyı Test Et & Kaydet</span>
         </button>
       </div>
+    </div>
+  </div>
+
+  <!-- ======================================================== -->
+  <!-- 6.1 YETİŞKİN İÇERİK (+18) PIN KORUMA MODALI                -->
+  <!-- ======================================================== -->
+  <div id="adult-pin-modal" class="hidden fixed inset-0 z-50 bg-black/90 backdrop-blur-lg flex items-center justify-center p-4">
+    <div class="bg-[#0E121B] border border-red-500/40 rounded-2xl max-w-md w-full p-6 space-y-5 shadow-2xl relative">
+      <!-- Close Button -->
+      <button onclick="closeAdultPinModal()" class="absolute top-4 right-4 text-gray-400 hover:text-white p-1 rounded-lg hover:bg-white/10 transition">
+        <i data-lucide="x" class="w-5 h-5"></i>
+      </button>
+
+      <!-- Icon & Title -->
+      <div class="text-center space-y-2 pt-2">
+        <div class="w-14 h-14 rounded-2xl bg-red-500/10 border border-red-500/30 mx-auto flex items-center justify-center text-red-400 shadow-lg shadow-red-500/20">
+          <i data-lucide="lock" class="w-7 h-7"></i>
+        </div>
+        <h3 class="text-lg font-black text-white tracking-tight">Yetişkin İçerik Koruması</h3>
+        <p class="text-xs text-gray-400 max-w-xs mx-auto">
+          Bu içerik +18 koruma altındadır. Devam etmek için lütfen Ebeveyn PIN kodunuzu girin.
+        </p>
+      </div>
+
+      <!-- Target Item Info -->
+      <div id="adult-pin-target-info" class="p-3 rounded-xl bg-white/5 border border-white/10 flex items-center space-x-3">
+        <div class="w-8 h-8 rounded-lg bg-red-500/20 flex items-center justify-center text-red-400 font-black text-xs flex-shrink-0">
+          +18
+        </div>
+        <div class="min-w-0 flex-1">
+          <span id="adult-pin-target-title" class="text-xs font-bold text-white truncate block">Yetişkin İçerik</span>
+          <span class="text-[10px] text-gray-400 block">Korumalı Yayın / Kategori</span>
+        </div>
+      </div>
+
+      <!-- Error Banner -->
+      <div id="adult-pin-error" class="hidden p-3 rounded-lg bg-red-500/15 border border-red-500/30 text-red-400 text-xs flex items-center space-x-2">
+        <i data-lucide="alert-circle" class="w-4 h-4 flex-shrink-0"></i>
+        <span id="adult-pin-error-text">Hatalı PIN kodu! Lütfen tekrar deneyin.</span>
+      </div>
+
+      <!-- PIN Input -->
+      <form onsubmit="submitAdultPin(event)" class="space-y-4">
+        <div class="space-y-2">
+          <label class="block text-center text-xs font-semibold text-gray-300">4 Haneli PIN Kodunu Girin</label>
+          <div class="relative max-w-xs mx-auto">
+            <input 
+              id="adult-pin-input" 
+              type="password" 
+              inputmode="numeric" 
+              maxlength="8" 
+              placeholder="••••" 
+              autocomplete="off"
+              class="w-full text-center tracking-[1em] text-2xl font-mono font-bold bg-[#131926] border-2 border-red-500/40 focus:border-red-500 rounded-xl px-4 py-3 text-white placeholder-gray-600 focus:outline-none transition shadow-inner"
+            >
+          </div>
+        </div>
+
+        <!-- Buttons -->
+        <div class="flex items-center space-x-3 pt-2">
+          <button type="button" onclick="closeAdultPinModal()" class="flex-1 py-2.5 rounded-xl bg-white/10 hover:bg-white/15 text-gray-300 text-xs font-semibold transition">
+            İptal
+          </button>
+          <button type="submit" id="btn-submit-pin" class="flex-1 py-2.5 rounded-xl bg-red-600 hover:bg-red-500 text-white text-xs font-bold transition flex items-center justify-center space-x-2 shadow-lg shadow-red-600/30 cursor-pointer">
+            <i data-lucide="unlock" class="w-4 h-4"></i>
+            <span>Kilidi Aç</span>
+          </button>
+        </div>
+      </form>
+
+      <div class="text-center">
+        <p class="text-[10px] text-gray-500">
+          PIN kodunuzu unuttuysanız veya değiştirmek istiyorsanız sağ üstteki 
+          <button type="button" onclick="closeAdultPinModal(); openSettingsModal();" class="text-tv-yellow hover:underline font-semibold cursor-pointer">Ayarlar</button> 
+          menüsünü kullanabilirsiniz. (Varsayılan: 0000)
+        </p>
+      </div>
+    </div>
+  </div>
   <!-- ======================================================== -->
   <!-- TV GİRİŞ & QR KOD İLE TELEFON EŞLEŞTİRME MODALI          -->
   <!-- ======================================================== -->
@@ -1483,7 +1693,9 @@
 
       <!-- Header -->
       <div class="flex items-center space-x-3 border-b border-white/10 pb-4">
-        <div class="tvplus-logo">tv<span class="plus">+</span></div>
+        <div class="flex items-center space-x-2">
+          <img src="/assets/nolimit-logo.svg" alt="NoLimit" class="h-8 w-auto" />
+        </div>
         <span class="text-xs font-bold px-2.5 py-1 rounded-full bg-tv-yellow/10 border border-tv-yellow/30 text-tv-yellow uppercase tracking-wider">
           Kullanıcı Girişi & TV Eşleştirme
         </span>
@@ -1569,6 +1781,6 @@
   </div>
 
   <!-- Main Application Logic -->
-  <script src="/app.js?v=6.1"></script>
+  <script src="/app.js?v=15.2"></script>
 </body>
 </html>

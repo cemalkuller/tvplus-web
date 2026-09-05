@@ -1,5 +1,5 @@
 // =============================================================
-// TURKCELL TV+ WEB APPLICATION LOGIC (1:1 UI/UX IMPLEMENTATION)
+// NOLIMIT WEB APPLICATION LOGIC (STREAMING & MEDIA PLATFORM)
 // =============================================================
 
 const STATE = {
@@ -68,7 +68,10 @@ const STATE = {
   selectedAudioTrack: '',
   selectedQuality: 'original',
   resumeBannerTimer: null,
-  lastWatchedSeriesEpisode: null
+  lastWatchedSeriesEpisode: null,
+  adultUnlocked: sessionStorage.getItem('tvplus_adult_unlocked') === 'true',
+  adultPin: '0000',
+  pendingAdultAction: null
 };
 
 // Tek eşzamanlı bağlantı limitine karşı sunucunun bu sekmenin eski VOD akışını
@@ -658,23 +661,37 @@ function renderGuideCategories() {
     </button>
   `;
 
-  // Yetişkin içerikleri filtrele ve temiz isimleri koy
-  const validCats = STATE.categories.filter(c => !c.name.includes('XXX'));
-
-  for (const cat of validCats) {
+  // Kategorileri listele (Yetişkin kategoriler de kilit rozeti ile listelenir)
+  for (const cat of STATE.categories) {
     const isActive = String(STATE.activeCategory) === String(cat.id);
+    const isAdult = isAdultCategoryItem(cat);
     const label = cleanName(cat.name).replace(/TR\s*⭐\s*/g, '').replace(/VIP\s*⭐\s*/g, '').trim();
+    
+    let lockIcon = '';
+    if (isAdult) {
+      lockIcon = STATE.adultUnlocked 
+        ? '<i data-lucide="lock-open" class="w-3.5 h-3.5 text-emerald-400 inline-block ml-1"></i>' 
+        : '<i data-lucide="lock" class="w-3.5 h-3.5 text-red-400 inline-block ml-1"></i>';
+    }
+
     html += `
-      <button onclick="setGuideCategory('${cat.id}')" class="cat-tab ${isActive ? 'active' : ''}">
-        ${escapeHtml(label)}
+      <button onclick="setGuideCategory('${cat.id}')" class="cat-tab ${isActive ? 'active' : ''} ${isAdult ? 'border border-red-500/30 text-red-300 hover:text-white' : ''}">
+        <span>${escapeHtml(label)}</span>
+        ${lockIcon}
       </button>
     `;
   }
 
   strip.innerHTML = html;
+  initIcons();
 }
 
 function setGuideCategory(catId) {
+  const cat = STATE.categories.find(c => String(c.id) === String(catId));
+  if (cat && isAdultCategoryItem(cat) && !STATE.adultUnlocked) {
+    requestAdultPin(() => setGuideCategory(catId), cat.name);
+    return;
+  }
   STATE.activeCategory = catId;
   renderGuideCategories();
   loadGuideChannels(true);
@@ -818,18 +835,127 @@ function loadMoreGuideChannels() {
 function openPlayerById(channelId) {
   const found = STATE.channels.find(c => c.id === channelId);
   if (found) {
+    if (isAdultItem(found) && !STATE.adultUnlocked) {
+      requestAdultPin(() => openPlayer(found), found.name);
+      return;
+    }
     openPlayer(found);
   } else {
     fetch(`/api/streams?ids=${channelId}`)
       .then(r => r.json())
       .then(data => {
-        if (data.streams && data.streams[0]) openPlayer(data.streams[0]);
+        if (data.streams && data.streams[0]) {
+          const ch = data.streams[0];
+          if (isAdultItem(ch) && !STATE.adultUnlocked) {
+            requestAdultPin(() => openPlayer(ch), ch.name);
+            return;
+          }
+          openPlayer(ch);
+        }
       });
   }
 }
 
+function primeMediaAudio() {
+  if (!video) return;
+  video.muted = false;
+  video.volume = STATE.volume || 1;
+  STATE.isMuted = false;
+  try {
+    const p = video.play();
+    if (p !== undefined) {
+      p.catch(() => {});
+    }
+  } catch (_) {}
+}
+
+// =============================================================
+// MOBİL YAN DÖNME / SCREEN ORIENTATION & LANDSCAPE MANAGEMENT
+// =============================================================
+STATE.playerManualPortrait = false;
+
+function applyMobileLandscapeOnPlayerOpen() {
+  const isMobile = window.innerWidth <= 900 || ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
+  if (!isMobile) return;
+
+  // 1. Android Chrome / PWA Screen Orientation API
+  try {
+    if (screen.orientation && screen.orientation.lock) {
+      screen.orientation.lock('landscape').catch(() => {});
+    }
+  } catch (_) {}
+
+  // 2. CSS Force-Landscape rotation (Otomatik olarak yan/yatay mod)
+  updatePlayerOrientation();
+}
+
+function updatePlayerOrientation() {
+  const modal = document.getElementById('tvplus-player-modal');
+  if (!modal || modal.classList.contains('hidden')) return;
+
+  const isMobile = window.innerWidth <= 900 || ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
+  const isPortrait = window.innerHeight > window.innerWidth;
+
+  // Mobilde ve dikey tutuluyorsa
+  if (isMobile && isPortrait) {
+    if (STATE.playerManualPortrait) {
+      modal.classList.remove('force-landscape');
+      updateRotateButtonUI(false);
+    } else {
+      modal.classList.add('force-landscape');
+      updateRotateButtonUI(true);
+    }
+  } else {
+    // Cihaz zaten yatay tutuluyor veya masaüstü
+    modal.classList.remove('force-landscape');
+    updateRotateButtonUI(false);
+  }
+}
+
+function togglePlayerOrientation() {
+  const modal = document.getElementById('tvplus-player-modal');
+  if (!modal) return;
+
+  if (modal.classList.contains('force-landscape')) {
+    modal.classList.remove('force-landscape');
+    STATE.playerManualPortrait = true;
+    updateRotateButtonUI(false);
+    showToast('Dikey moda geçildi');
+  } else {
+    modal.classList.add('force-landscape');
+    STATE.playerManualPortrait = false;
+    updateRotateButtonUI(true);
+    showToast('Yatay (yan) moda geçildi');
+  }
+}
+
+function updateRotateButtonUI(isLandscape) {
+  const icons = document.querySelectorAll('.player-rotate-icon');
+  icons.forEach(icon => {
+    if (isLandscape) {
+      icon.classList.add('text-tv-yellow');
+    } else {
+      icon.classList.remove('text-tv-yellow');
+    }
+  });
+}
+
+window.addEventListener('resize', updatePlayerOrientation);
+window.addEventListener('orientationchange', () => {
+  setTimeout(updatePlayerOrientation, 200);
+});
+if (window.screen && window.screen.orientation) {
+  window.screen.orientation.addEventListener('change', () => {
+    setTimeout(updatePlayerOrientation, 200);
+  });
+}
+
 function openPlayer(channel, push = true) {
   if (!channel) return;
+  if (isAdultItem(channel) && !STATE.adultUnlocked) {
+    requestAdultPin(() => openPlayer(channel, push), channel.name);
+    return;
+  }
   STATE.currentChannel = channel;
   addToRecents(channel.id);
 
@@ -837,9 +963,11 @@ function openPlayer(channel, push = true) {
   playerModal.classList.remove('hidden');
   document.body.style.overflow = 'hidden';
 
+  // Mobilde otomatik yan dönme (Landscape)
+  applyMobileLandscapeOnPlayerOpen();
+
   // Ses her zaman açık başlasın, seviye hatırlansın
-  video.muted = false;
-  video.volume = STATE.volume || 1;
+  primeMediaAudio();
   updateVolumeUI();
   hideUnmuteBanner();
 
@@ -923,6 +1051,10 @@ function openPlayer(channel, push = true) {
 
 function openMediaItem(item, type = 'movie') {
   if (!item) return;
+  if (isAdultItem(item) && !STATE.adultUnlocked) {
+    requestAdultPin(() => openMediaItem(item, type), item.name || item.title);
+    return;
+  }
   STATE.currentMedia = { ...item, type };
   STATE.sourceDuration = 0;
   STATE.mediaStartOffset = 0;
@@ -935,9 +1067,11 @@ function openMediaItem(item, type = 'movie') {
   playerModal.classList.remove('hidden');
   document.body.style.overflow = 'hidden';
 
+  // Mobilde otomatik yan dönme (Landscape)
+  applyMobileLandscapeOnPlayerOpen();
+
   // Ses her zaman açık başlasın, seviye hatırlansın
-  video.muted = false;
-  video.volume = STATE.volume || 1;
+  primeMediaAudio();
   updateVolumeUI();
   hideUnmuteBanner();
 
@@ -1066,11 +1200,12 @@ function openMediaItem(item, type = 'movie') {
     // Resume yok, normal oynatma başlat
     video.play().catch(e => {
       if (e.name === 'NotAllowedError') {
-        video.muted = true;
+        video.muted = false;
+        video.volume = STATE.volume || 1;
+        STATE.isMuted = false;
         updateVolumeUI();
-        video.play().catch(() => {});
-        showUnmuteBanner();
-        setupAutoUnmuteOnFirstGesture();
+        showPlayToStartOverlay();
+        setupPlayOnFirstGesture();
       }
     });
   };
@@ -1083,11 +1218,12 @@ function openMediaItem(item, type = 'movie') {
       playPromise.catch(e => {
         if (playerModal.classList.contains('hidden')) return;
         if (e.name === 'NotAllowedError') {
-          video.muted = true;
+          video.muted = false;
+          video.volume = STATE.volume || 1;
+          STATE.isMuted = false;
           updateVolumeUI();
-          video.play().catch(() => {});
-          showUnmuteBanner();
-          setupAutoUnmuteOnFirstGesture();
+          showPlayToStartOverlay();
+          setupPlayOnFirstGesture();
         } else if (e.name !== 'AbortError') {
           showError('Bu içerik oynatılamadı. Lütfen tekrar deneyin.');
           console.error('VOD playback error:', e);
@@ -1187,6 +1323,11 @@ function closePlayer(push = true) {
   clearTimeout(STATE.resumeBannerTimer);
 
   playerModal.classList.add('hidden');
+  playerModal.classList.remove('force-landscape');
+  STATE.playerManualPortrait = false;
+  if (screen.orientation && screen.orientation.unlock) {
+    try { screen.orientation.unlock(); } catch (e) {}
+  }
   document.body.style.overflow = '';
   if (channelDrawer) channelDrawer.classList.remove('open');
 
@@ -1216,10 +1357,8 @@ function closePlayer(push = true) {
     STATE.hls = null;
   }
 
-  // 2. Video öğesini anında sustur, durdur ve boru hattını sıfırla
+  // 2. Video öğesini anında durdur ve boru hattını sıfırla
   try {
-    video.muted = true;
-    video.volume = 0;
     video.pause();
     video.currentTime = 0;
     video.removeAttribute('src');
@@ -1252,6 +1391,11 @@ function closePlayer(push = true) {
 function startPlayback(channel) {
   const sessionId = Date.now();
   STATE.playbackSession = sessionId;
+
+  // Ses her zaman açık başlasın, seviye hatırlansın (asla sessize alma)
+  primeMediaAudio();
+  updateVolumeUI();
+  hideUnmuteBanner();
 
   const displayName = cleanName(channel.name);
   showLoading(true, `${displayName} bağlanıyor...`);
@@ -1317,12 +1461,13 @@ function startPlayback(channel) {
             return;
           }
           if (e.name === 'NotAllowedError') {
-            console.warn('Otomatik oynatma kısıtlaması, ses geçici sessize alınıyor...');
-            video.muted = true;
+            console.info('Tarayıcı sesli oynatma için ilk dokunuşu bekliyor. Ses ASLA kapatılmıyor.');
+            video.muted = false;
+            video.volume = STATE.volume || 1;
+            STATE.isMuted = false;
             updateVolumeUI();
-            video.play().catch(() => {});
-            showUnmuteBanner();
-            setupAutoUnmuteOnFirstGesture();
+            showPlayToStartOverlay();
+            setupPlayOnFirstGesture();
           }
         });
       }
@@ -1427,8 +1572,12 @@ function restartMediaAt(targetSec) {
     playPromise.catch(err => {
       console.warn('[VOD Seek Play]', `Offset=${STATE.mediaStartOffset}s`, err.name, err.message);
       if (err.name === 'NotAllowedError') {
-        video.muted = true;
-        video.play().catch(() => {});
+        video.muted = false;
+        video.volume = STATE.volume || 1;
+        STATE.isMuted = false;
+        updateVolumeUI();
+        showPlayToStartOverlay();
+        setupPlayOnFirstGesture();
       }
     });
   }
@@ -1514,8 +1663,6 @@ function initPlayerEvents() {
   video.addEventListener('playing', () => {
     if (playerModal.classList.contains('hidden')) {
       video.pause();
-      video.muted = true;
-      video.volume = 0;
       video.removeAttribute('src');
       video.src = '';
       return;
@@ -1536,8 +1683,6 @@ function initPlayerEvents() {
   video.addEventListener('timeupdate', () => {
     if (playerModal.classList.contains('hidden')) {
       video.pause();
-      video.muted = true;
-      video.volume = 0;
       return;
     }
 
@@ -1707,12 +1852,27 @@ function updateVolumeUI() {
   }
 }
 
-function showUnmuteBanner() {
+function showPlayToStartOverlay() {
   const banner = document.getElementById('player-unmute-banner');
   if (banner) {
+    banner.innerHTML = '<i data-lucide="play" class="w-4 h-4 fill-current"></i><span>Yayını Başlatmak İçin Tıklayın (Ses Açık)</span>';
+    banner.onclick = () => {
+      if (video) {
+        video.muted = false;
+        video.volume = STATE.volume || 1;
+        STATE.isMuted = false;
+        updateVolumeUI();
+        video.play().catch(() => {});
+      }
+      hideUnmuteBanner();
+    };
     banner.classList.remove('hidden');
     initIcons();
   }
+}
+
+function showUnmuteBanner() {
+  showPlayToStartOverlay();
 }
 
 function hideUnmuteBanner() {
@@ -1725,30 +1885,36 @@ function unmuteFromBanner() {
     video.volume = STATE.volume || 1;
     STATE.isMuted = false;
     updateVolumeUI();
+    video.play().catch(() => {});
   }
   hideUnmuteBanner();
 }
 
-let autoUnmuteListenerAttached = false;
-function setupAutoUnmuteOnFirstGesture() {
-  if (autoUnmuteListenerAttached) return;
-  autoUnmuteListenerAttached = true;
+let playOnGestureAttached = false;
+function setupPlayOnFirstGesture() {
+  if (playOnGestureAttached) return;
+  playOnGestureAttached = true;
   const onGesture = () => {
-    autoUnmuteListenerAttached = false;
+    playOnGestureAttached = false;
     window.removeEventListener('click', onGesture, true);
     window.removeEventListener('keydown', onGesture, true);
     window.removeEventListener('touchstart', onGesture, true);
-    if (video && video.muted && !playerModal.classList.contains('hidden')) {
+    hideUnmuteBanner();
+    if (video && !playerModal.classList.contains('hidden')) {
       video.muted = false;
       video.volume = STATE.volume || 1;
       STATE.isMuted = false;
       updateVolumeUI();
-      hideUnmuteBanner();
+      video.play().catch(() => {});
     }
   };
   window.addEventListener('click', onGesture, true);
   window.addEventListener('keydown', onGesture, true);
   window.addEventListener('touchstart', onGesture, true);
+}
+
+function setupAutoUnmuteOnFirstGesture() {
+  setupPlayOnFirstGesture();
 }
 
 // =============================================================
@@ -2887,16 +3053,30 @@ function renderMovieCategories() {
 
   for (const cat of STATE.movieCategories) {
     const isActive = String(STATE.activeMovieCategory) === String(cat.category_id);
+    const isAdult = isAdultCategoryItem(cat);
+    let lockIcon = '';
+    if (isAdult) {
+      lockIcon = STATE.adultUnlocked 
+        ? '<i data-lucide="lock-open" class="w-3.5 h-3.5 text-emerald-400 inline-block ml-1"></i>' 
+        : '<i data-lucide="lock" class="w-3.5 h-3.5 text-red-400 inline-block ml-1"></i>';
+    }
     html += `
-      <button onclick="setMovieCategory('${cat.category_id}')" class="vod-cat-pill ${isActive ? 'active' : ''}">
-        ${escapeHtml(cat.category_name)}
+      <button onclick="setMovieCategory('${cat.category_id}')" class="vod-cat-pill ${isActive ? 'active' : ''} ${isAdult ? 'border border-red-500/40 text-red-300' : ''}">
+        <span>${escapeHtml(cat.category_name)}</span>
+        ${lockIcon}
       </button>
     `;
   }
   strip.innerHTML = html;
+  initIcons();
 }
 
 function setMovieCategory(catId) {
+  const cat = STATE.movieCategories.find(c => String(c.category_id) === String(catId));
+  if (cat && isAdultCategoryItem(cat) && !STATE.adultUnlocked) {
+    requestAdultPin(() => setMovieCategory(catId), cat.category_name);
+    return;
+  }
   STATE.activeMovieCategory = catId;
   renderMovieCategories();
   loadMovies(true);
@@ -3038,16 +3218,30 @@ function renderSeriesCategories() {
 
   for (const cat of STATE.seriesCategories) {
     const isActive = String(STATE.activeSeriesCategory) === String(cat.category_id);
+    const isAdult = isAdultCategoryItem(cat);
+    let lockIcon = '';
+    if (isAdult) {
+      lockIcon = STATE.adultUnlocked 
+        ? '<i data-lucide="lock-open" class="w-3.5 h-3.5 text-emerald-400 inline-block ml-1"></i>' 
+        : '<i data-lucide="lock" class="w-3.5 h-3.5 text-red-400 inline-block ml-1"></i>';
+    }
     html += `
-      <button onclick="setSeriesCategory('${cat.category_id}')" class="vod-cat-pill ${isActive ? 'active' : ''}">
-        ${escapeHtml(cat.category_name)}
+      <button onclick="setSeriesCategory('${cat.category_id}')" class="vod-cat-pill ${isActive ? 'active' : ''} ${isAdult ? 'border border-red-500/40 text-red-300' : ''}">
+        <span>${escapeHtml(cat.category_name)}</span>
+        ${lockIcon}
       </button>
     `;
   }
   strip.innerHTML = html;
+  initIcons();
 }
 
 function setSeriesCategory(catId) {
+  const cat = STATE.seriesCategories.find(c => String(c.category_id) === String(catId));
+  if (cat && isAdultCategoryItem(cat) && !STATE.adultUnlocked) {
+    requestAdultPin(() => setSeriesCategory(catId), cat.category_name);
+    return;
+  }
   STATE.activeSeriesCategory = catId;
   renderSeriesCategories();
   loadSeries(true);
@@ -3706,6 +3900,9 @@ async function openSettingsModal() {
       if (userInput) userInput.value = data.username || '';
       if (passInput) passInput.value = data.password || '';
       if (m3uInput) m3uInput.value = data.m3uUrl || '';
+      const pinInput = document.getElementById('settings-adult-pin-input');
+      if (pinInput) pinInput.value = data.adultPin || '0000';
+      STATE.adultPin = data.adultPin || '0000';
     }
   } catch (err) {
     console.warn('Settings load error:', err);
@@ -3758,10 +3955,150 @@ function togglePasswordVisibility() {
   initIcons();
 }
 
+function toggleSettingsAdultPinVisibility() {
+  const pinInput = document.getElementById('settings-adult-pin-input');
+  const icon = document.getElementById('toggle-settings-adult-pin-icon');
+  if (!pinInput) return;
+
+  if (pinInput.type === 'password') {
+    pinInput.type = 'text';
+    icon?.setAttribute('data-lucide', 'eye-off');
+  } else {
+    pinInput.type = 'password';
+    icon?.setAttribute('data-lucide', 'eye');
+  }
+  initIcons();
+}
+
+// =============================================================
+// YETİŞKİN İÇERİK (+18) PIN KORUMASI VE DOĞRULAMA MOTORU
+// =============================================================
+function isAdultItem(item) {
+  if (!item) return false;
+  if (item.isAdult || item.is_adult === 1 || item.is_adult === '1') return true;
+  const name = (item.name || item.title || '').toUpperCase();
+  const catName = (item.category_name || '').toUpperCase();
+  const catId = String(item.category_id || item.categoryId || '');
+  if (['112', '547', '865', '866', '269', '270', '271', '272', '273', '274', '275', '276', '279', '280', '281', '283', '284', '286', '288', '289', '290', '621', '622', '623', '477', '178', '624', '625', '626', '627', '628', '629', '630', '631', '632', '633', '634', '635', '636', '637', '638', '639', '640', '642', '643', '644', '136', '469', '470', '474', '475', '476', '479'].includes(catId)) return true;
+  return name.includes('XXX') || name.includes('ADULT') || name.includes('PORN') || name.includes('+18') || catName.includes('XXX') || catName.includes('ADULT');
+}
+
+function isAdultCategoryItem(cat) {
+  if (!cat) return false;
+  if (cat.isAdult) return true;
+  const name = (cat.name || cat.category_name || '').toUpperCase();
+  const catId = String(cat.id || cat.category_id || '');
+  if (['112', '547', '865', '866', '269', '270', '271', '272', '273', '274', '275', '276', '279', '280', '281', '283', '284', '286', '288', '289', '290', '621', '622', '623', '477', '178', '624', '625', '626', '627', '628', '629', '630', '631', '632', '633', '634', '635', '636', '637', '638', '639', '640', '642', '643', '644', '136', '469', '470', '474', '475', '476', '479'].includes(catId)) return true;
+  return name.includes('XXX') || name.includes('ADULT') || name.includes('PORN') || name.includes('+18');
+}
+
+function requestAdultPin(callback, title = 'Yetişkin İçerik') {
+  if (STATE.adultUnlocked) {
+    if (typeof callback === 'function') callback();
+    return;
+  }
+  STATE.pendingAdultAction = callback;
+  const modal = document.getElementById('adult-pin-modal');
+  const targetTitle = document.getElementById('adult-pin-target-title');
+  const pinInput = document.getElementById('adult-pin-input');
+  const err = document.getElementById('adult-pin-error');
+  
+  if (targetTitle) targetTitle.textContent = title;
+  if (err) err.classList.add('hidden');
+  if (pinInput) {
+    pinInput.value = '';
+    setTimeout(() => pinInput.focus(), 150);
+  }
+  
+  modal?.classList.remove('hidden');
+  initIcons();
+}
+
+function closeAdultPinModal() {
+  const modal = document.getElementById('adult-pin-modal');
+  modal?.classList.add('hidden');
+  STATE.pendingAdultAction = null;
+}
+
+async function submitAdultPin(e) {
+  if (e) e.preventDefault();
+  const pinInput = document.getElementById('adult-pin-input');
+  const err = document.getElementById('adult-pin-error');
+  const errText = document.getElementById('adult-pin-error-text');
+  const btn = document.getElementById('btn-submit-pin');
+  const pin = pinInput?.value.trim() || '';
+
+  if (!pin) {
+    if (err && errText) {
+      errText.textContent = 'Lütfen PIN kodunuzu girin.';
+      err.classList.remove('hidden');
+    }
+    return;
+  }
+
+  if (btn) btn.disabled = true;
+
+  try {
+    const res = await fetch('/api/verify-adult-pin', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ pin })
+    });
+    const data = await res.json();
+    if (res.ok && data.success) {
+      STATE.adultUnlocked = true;
+      sessionStorage.setItem('tvplus_adult_unlocked', 'true');
+      closeAdultPinModal();
+      showToast('Kilit açıldı! Yetişkin içeriklere erişebilirsiniz.');
+      if (typeof STATE.pendingAdultAction === 'function') {
+        const action = STATE.pendingAdultAction;
+        STATE.pendingAdultAction = null;
+        action();
+      }
+      renderGuideCategories();
+      renderMovieCategories();
+      renderSeriesCategories();
+    } else {
+      if (err && errText) {
+        errText.textContent = data.error || 'Hatalı PIN kodu! Lütfen tekrar deneyin.';
+        err.classList.remove('hidden');
+        if (pinInput) {
+          pinInput.value = '';
+          pinInput.focus();
+        }
+      }
+    }
+  } catch (error) {
+    console.warn('PIN server verify error, fallback to local:', error);
+    if (pin === (STATE.adultPin || '0000')) {
+      STATE.adultUnlocked = true;
+      sessionStorage.setItem('tvplus_adult_unlocked', 'true');
+      closeAdultPinModal();
+      showToast('Kilit açıldı!');
+      if (typeof STATE.pendingAdultAction === 'function') {
+        const action = STATE.pendingAdultAction;
+        STATE.pendingAdultAction = null;
+        action();
+      }
+      renderGuideCategories();
+      renderMovieCategories();
+      renderSeriesCategories();
+    } else {
+      if (err && errText) {
+        errText.textContent = 'Hatalı PIN kodu! Lütfen tekrar deneyin.';
+        err.classList.remove('hidden');
+      }
+    }
+  } finally {
+    if (btn) btn.disabled = false;
+  }
+}
+
 async function saveSettings() {
   const host = document.getElementById('settings-host-input')?.value.trim();
   const username = document.getElementById('settings-username-input')?.value.trim();
   const password = document.getElementById('settings-password-input')?.value.trim();
+  const adultPin = document.getElementById('settings-adult-pin-input')?.value.trim() || '0000';
 
   const errBadge = document.getElementById('settings-error-badge');
   const errText = document.getElementById('settings-error-text');
@@ -3787,7 +4124,7 @@ async function saveSettings() {
     const res = await fetch('/api/settings', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ host, username, password })
+      body: JSON.stringify({ host, username, password, adultPin })
     });
 
     const data = await res.json();
@@ -3796,9 +4133,10 @@ async function saveSettings() {
       throw new Error(data.error || 'Ayarlar kaydedilemedi.');
     }
 
+    STATE.adultPin = adultPin;
     if (succText) succText.textContent = data.message || 'Ayarlar .env dosyasına kaydedildi ve kanallar yenilendi!';
     succBadge?.classList.remove('hidden');
-    showToast('Ayarlar .env dosyasına başarıyla kaydedildi!');
+    showToast('Ayarlar ve Yetişkin PIN kodu başarıyla kaydedildi!');
 
     // Refresh entire frontend state with new IPTV
     setTimeout(async () => {
@@ -3832,25 +4170,25 @@ async function saveSettings() {
 function getPlatformLogoHtml(id) {
   switch (id) {
     case 'netflix':
-      return `<div class="flex items-center space-x-1.5"><span class="font-black text-red-600 text-xl tracking-tight font-sans">NETFLIX</span></div>`;
+      return `<img src="/assets/platforms/netflix.svg" alt="Netflix" class="h-6 sm:h-7 object-contain" />`;
     case 'prime':
-      return `<div class="flex items-center space-x-1"><span class="font-black text-white text-base tracking-tight">prime</span><span class="font-bold text-sky-400 text-base">video</span></div>`;
+      return `<img src="/assets/platforms/prime.svg" alt="Prime Video" class="h-6 sm:h-7 object-contain" />`;
     case 'disney':
-      return `<div class="flex items-center space-x-0.5 font-serif"><span class="font-black text-white text-lg italic tracking-wider">Disney</span><span class="text-blue-400 font-black text-xl">+</span></div>`;
+      return `<img src="/assets/platforms/disney.svg" alt="Disney+" class="h-7 sm:h-8 object-contain" />`;
     case 'blutv':
-      return `<div class="flex items-center space-x-1"><span class="font-black text-cyan-400 text-lg tracking-tight">blu<span class="bg-cyan-400 text-black text-[10px] px-1 py-0.5 rounded font-black ml-0.5">TV</span></span><span class="text-gray-500 text-xs">/</span><span class="font-black text-white text-xs tracking-wider">MAX</span></div>`;
+      return `<div class="flex items-center space-x-2"><img src="/assets/platforms/max.svg" alt="Max" class="h-5 sm:h-6 object-contain" /><span class="text-gray-500 text-xs">/</span><img src="/assets/platforms/blutv.svg" alt="BluTV" class="h-4 sm:h-5 object-contain" /></div>`;
     case 'exxen':
-      return `<div class="flex items-center justify-center"><span class="font-black italic text-yellow-300 text-xl tracking-widest font-sans">EXXEN</span></div>`;
+      return `<img src="/assets/platforms/exxen.png" alt="Exxen" class="h-6 sm:h-7 object-contain" />`;
     case 'tabii':
-      return `<div class="flex items-center space-x-0.5"><span class="font-extrabold text-emerald-400 text-xl tracking-tighter lowercase">tabii</span><span class="w-2 h-2 rounded-full bg-emerald-400 self-start mt-1"></span></div>`;
+      return `<img src="/assets/platforms/tabii.svg" alt="Tabii" class="h-6 sm:h-7 object-contain" />`;
     case 'bein':
-      return `<div class="flex items-center space-x-1.5"><span class="bg-purple-700 text-white font-extrabold text-[10px] px-1.5 py-0.5 rounded">beIN</span><span class="font-black text-white text-base tracking-wider">TOD</span></div>`;
+      return `<img src="/assets/platforms/bein.png" alt="beIN / TOD" class="h-7 sm:h-8 object-contain" />`;
     case 'appletv':
-      return `<div class="flex items-center space-x-1"><span class="text-white text-lg font-bold"></span><span class="font-bold text-white text-base tracking-tight">tv+</span></div>`;
+      return `<img src="/assets/platforms/appletv.svg" alt="Apple TV+" class="h-6 sm:h-7 object-contain" />`;
     case 'gain':
-      return `<div class="flex items-center justify-center"><span class="font-black text-amber-300 text-xl tracking-wider">GAİN</span></div>`;
+      return `<img src="/assets/platforms/gain.png" alt="GAİN" class="h-6 sm:h-7 object-contain" />`;
     case 'tvplus':
-      return `<div class="flex items-center justify-center"><span class="font-black text-tv-yellow text-xl tracking-tight">tv<span class="text-white">+</span></span></div>`;
+      return `<img src="/assets/platforms/tvplus.png" alt="Turkcell TV+" class="h-7 sm:h-8 object-contain" />`;
     default:
       return `<span class="font-bold text-white text-base">${id}</span>`;
   }
@@ -3858,21 +4196,40 @@ function getPlatformLogoHtml(id) {
 
 async function loadHomeData() {
   try {
-    const [platRes, featRes, progressRes] = await Promise.all([
+    const [platRes, featRes, progressRes, sportsRes] = await Promise.all([
       fetch('/api/platforms').then(r => r.json()).catch(() => ({ platforms: [] })),
       fetch('/api/featured').then(r => r.json()).catch(() => ({ heroes: [], trendingMovies: [], popularSeries: [], topChannels: [] })),
-      fetch(`/api/progress?profile=${encodeURIComponent(STATE.profileName || 'Cemal Küller')}`).then(r => r.json()).catch(() => ({ items: [] }))
+      fetch(`/api/progress?profile=${encodeURIComponent(STATE.profileName || 'Cemal Küller')}`).then(r => r.json()).catch(() => ({ items: [] })),
+      fetch('/api/sports-schedule').then(r => r.json()).catch(() => ({ matches: [] }))
     ]);
 
     STATE.platforms = platRes.platforms || [];
     STATE.homeFeatured = featRes;
+    STATE.sportsSchedule.data = sportsRes;
 
     renderHomePlatforms(STATE.platforms);
     renderHomeContinueWatching(progressRes.items || []);
 
-    if (featRes.heroes && featRes.heroes.length > 0) {
-      renderHomeHero(featRes.heroes);
+    // Spor Ekranı Fikstür ve Rozetleri
+    updateSportsBadges(sportsRes);
+    renderSportsSchedule(STATE.sportsSchedule.activeTab);
+
+    // Son güncelleme saati
+    const timeEl = document.getElementById('sports-last-updated');
+    if (timeEl && sportsRes.updatedAt) {
+      const dt = new Date(sportsRes.updatedAt);
+      const timeStr = dt.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
+      timeEl.textContent = `• Güncelleme: ${timeStr}`;
     }
+
+    // Hero Spotlight: Öncelik yayın saati GELMEMİŞ Trendyol Süper Lig maçlarında
+    const upcomingSuperLig = getUpcomingSuperLigMatches(sportsRes.matches || []);
+    if (upcomingSuperLig.length > 0) {
+      renderSportsHero(upcomingSuperLig);
+    } else {
+      renderRandomPlatformFeaturedHero();
+    }
+
     if (featRes.trendingMovies) {
       renderHomeMoviesShelf(featRes.trendingMovies);
     }
@@ -3889,85 +4246,1264 @@ async function loadHomeData() {
   }
 }
 
+// =============================================================
+// SPOR EKRANI & GÜNÜN MAÇLARI (sporekrani.com)
+// =============================================================
+STATE.sportsSchedule = {
+  activeTab: 'super_lig',
+  data: null,
+  isLoading: false
+};
+
+STATE.sportsHero = {
+  matches: [],
+  currentIndex: 0,
+  timer: null,
+  countdownInterval: null
+};
+
+async function loadSportsSchedule(force = false) {
+  const container = document.getElementById('home-sports-matches-grid');
+  const loading = document.getElementById('home-sports-loading');
+  const empty = document.getElementById('home-sports-empty');
+  if (!container) return;
+
+  if (force) {
+    STATE.sportsSchedule.isLoading = true;
+    if (loading) loading.classList.remove('hidden');
+    if (empty) empty.classList.add('hidden');
+    container.innerHTML = '';
+  }
+
+  try {
+    const url = `/api/sports-schedule${force ? '?force=true' : ''}`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error('API hatası: ' + res.status);
+    const result = await res.json();
+    STATE.sportsSchedule.data = result;
+
+    // Son güncelleme zamanı
+    const timeEl = document.getElementById('sports-last-updated');
+    if (timeEl && result.updatedAt) {
+      const dt = new Date(result.updatedAt);
+      const timeStr = dt.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
+      timeEl.textContent = `• Güncelleme: ${timeStr}`;
+    }
+
+    // Rozet sayıları
+    updateSportsBadges(result);
+
+    // Aktif sekmeye göre listele
+    renderSportsSchedule(STATE.sportsSchedule.activeTab);
+
+    // Hero banner'ı da güncelle: sadece yayın saati gelmemiş olanlar
+    const upcomingSuperLig = getUpcomingSuperLigMatches(result.matches || []);
+    if (upcomingSuperLig.length > 0) {
+      renderSportsHero(upcomingSuperLig);
+    } else {
+      renderRandomPlatformFeaturedHero();
+    }
+  } catch (err) {
+    console.error('[SportsSchedule] Yükleme hatası:', err);
+    if (empty) empty.classList.remove('hidden');
+  } finally {
+    STATE.sportsSchedule.isLoading = false;
+    if (loading) loading.classList.add('hidden');
+    const refreshIcon = document.getElementById('sports-refresh-icon');
+    if (refreshIcon) refreshIcon.classList.remove('animate-spin');
+  }
+}
+
+function updateSportsBadges(data) {
+  if (!data || !data.matches) return;
+  const matches = data.matches;
+
+  const superLigCount = matches.filter(m => m.isSuperLig).length;
+  const tff1LigCount = matches.filter(m => m.isTff1Lig).length;
+  const europeCount = matches.filter(m => m.category === 'europe').length;
+  const basketCount = matches.filter(m => m.category === 'basketball').length;
+  const otherCount = matches.filter(m => m.category === 'other_sports').length;
+  const allCount = matches.length;
+
+  const bSuper = document.getElementById('sports-badge-super_lig');
+  if (bSuper) bSuper.textContent = superLigCount > 0 ? superLigCount : '0';
+
+  const bTff = document.getElementById('sports-badge-tff_1lig');
+  if (bTff) bTff.textContent = tff1LigCount > 0 ? tff1LigCount : '0';
+
+  const bEurope = document.getElementById('sports-badge-europe');
+  if (bEurope) bEurope.textContent = europeCount > 0 ? europeCount : '0';
+
+  const bBasket = document.getElementById('sports-badge-basketball');
+  if (bBasket) bBasket.textContent = basketCount > 0 ? basketCount : '0';
+
+  const bOther = document.getElementById('sports-badge-other_sports');
+  if (bOther) bOther.textContent = otherCount > 0 ? otherCount : '0';
+
+  const bAll = document.getElementById('sports-badge-all');
+  if (bAll) bAll.textContent = allCount > 0 ? allCount : '0';
+}
+
+function switchSportsTab(tab) {
+  STATE.sportsSchedule.activeTab = tab;
+
+  // Sekme butonlarının stilini güncelle
+  document.querySelectorAll('.sports-tab-btn').forEach(btn => {
+    btn.className = 'sports-tab-btn px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-gray-300 hover:text-white border border-white/10 transition flex items-center space-x-2 whitespace-nowrap';
+    const badge = btn.querySelector('span:last-child');
+    if (badge) badge.className = 'bg-white/10 text-gray-300 text-[10px] px-1.5 py-0.5 rounded-full font-bold';
+  });
+
+  const activeBtn = document.getElementById(`sports-tab-${tab}`);
+  if (activeBtn) {
+    activeBtn.className = 'sports-tab-btn active px-4 py-2 rounded-xl bg-tv-yellow text-black font-extrabold shadow-lg transition flex items-center space-x-2 whitespace-nowrap';
+    const activeBadge = activeBtn.querySelector('span:last-child');
+    if (activeBadge) activeBadge.className = 'bg-black/20 text-black text-[10px] px-1.5 py-0.5 rounded-full font-black';
+  }
+
+  renderSportsSchedule(tab);
+}
+
+function renderSportsSchedule(tab = 'super_lig') {
+  const container = document.getElementById('home-sports-matches-grid');
+  const empty = document.getElementById('home-sports-empty');
+  if (!container) return;
+
+  const data = STATE.sportsSchedule.data;
+  if (!data || !data.matches || data.matches.length === 0) {
+    container.innerHTML = '';
+    if (empty) empty.classList.remove('hidden');
+    return;
+  }
+
+  let filtered = [];
+  if (tab === 'super_lig') {
+    filtered = data.matches.filter(m => m.isSuperLig);
+  } else if (tab === 'tff_1lig') {
+    filtered = data.matches.filter(m => m.isTff1Lig);
+  } else if (tab === 'europe') {
+    filtered = data.matches.filter(m => m.category === 'europe');
+  } else if (tab === 'basketball') {
+    filtered = data.matches.filter(m => m.category === 'basketball');
+  } else if (tab === 'other_sports') {
+    filtered = data.matches.filter(m => m.category === 'other_sports');
+  } else {
+    filtered = data.matches;
+  }
+
+  if (filtered.length === 0) {
+    container.innerHTML = '';
+    if (empty) empty.classList.remove('hidden');
+    return;
+  }
+
+  if (empty) empty.classList.add('hidden');
+
+  container.innerHTML = filtered.map(m => {
+    const isLive = m.status === 'LIVE';
+    const timeDisplay = isLive 
+      ? `<span class="flex items-center space-x-1 text-red-400 font-extrabold text-xs animate-pulse"><span class="w-2 h-2 rounded-full bg-red-500"></span><span>CANLI</span></span>`
+      : `<span class="text-xs font-bold text-gray-300 bg-white/10 px-2 py-0.5 rounded-md">${m.time}</span>`;
+
+    const homeLogo = m.homeTeam?.logo 
+      ? `<img src="${m.homeTeam.logo}" alt="${escapeHtml(m.homeTeam.name)}" class="w-8 h-8 object-contain rounded-full bg-white/5 p-0.5" onerror="this.src='/favicon.ico'; this.onerror=null;">`
+      : `<div class="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-xs font-bold text-gray-300">${(m.homeTeam?.name || '?').charAt(0)}</div>`;
+
+    const awayLogo = m.awayTeam?.logo 
+      ? `<img src="${m.awayTeam.logo}" alt="${escapeHtml(m.awayTeam.name)}" class="w-8 h-8 object-contain rounded-full bg-white/5 p-0.5" onerror="this.src='/favicon.ico'; this.onerror=null;">`
+      : `<div class="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-xs font-bold text-gray-300">${(m.awayTeam?.name || '?').charAt(0)}</div>`;
+
+    const actionHtml = m.hasStream && m.streamId
+      ? `<button onclick="playMatchChannel(${m.streamId})" class="px-3 py-1.5 rounded-lg bg-tv-yellow hover:bg-tv-yellow-hover text-black font-extrabold text-xs transition transform hover:scale-105 flex items-center space-x-1.5 shadow-md">
+           <i data-lucide="play" class="w-3.5 h-3.5 fill-current"></i>
+           <span>Canlı İzle</span>
+         </button>`
+      : `<span class="text-[11px] text-gray-400 font-medium bg-white/5 border border-white/10 px-2.5 py-1 rounded-lg truncate max-w-[120px] text-right" title="${escapeHtml(m.primaryChannel)}">
+           ${escapeHtml(m.primaryChannel)}
+         </span>`;
+
+    const leagueBadgeClass = m.isSuperLig
+      ? 'bg-tv-yellow/20 text-tv-yellow border-tv-yellow/30'
+      : 'bg-white/10 text-gray-300 border-white/10';
+
+    return `
+      <div class="group relative bg-[#141418] hover:bg-[#1a1a22] border border-white/10 hover:border-tv-yellow/50 rounded-2xl p-4 transition-all duration-300 flex flex-col justify-between shadow-xl space-y-3.5">
+        <!-- Kart Üst Başlık (Lig + Saat) -->
+        <div class="flex items-center justify-between">
+          <span class="text-[11px] font-bold px-2 py-0.5 rounded-full border ${leagueBadgeClass} truncate max-w-[170px]" title="${escapeHtml(m.leagueName)}">
+            ${escapeHtml(m.leagueName)}
+          </span>
+          <div>${timeDisplay}</div>
+        </div>
+
+        <!-- Takımlar Bölümü -->
+        <div class="space-y-2.5 py-1">
+          <!-- Ev Sahibi -->
+          <div class="flex items-center justify-between space-x-2">
+            <div class="flex items-center space-x-2.5 min-w-0">
+              ${homeLogo}
+              <span class="text-sm font-bold text-white truncate group-hover:text-tv-yellow transition" title="${escapeHtml(m.homeTeam?.name || '')}">
+                ${escapeHtml(m.homeTeam?.name || 'Ev Sahibi')}
+              </span>
+            </div>
+          </div>
+
+          <!-- Deplasman -->
+          <div class="flex items-center justify-between space-x-2">
+            <div class="flex items-center space-x-2.5 min-w-0">
+              ${awayLogo}
+              <span class="text-sm font-bold text-white truncate group-hover:text-tv-yellow transition" title="${escapeHtml(m.awayTeam?.name || '')}">
+                ${escapeHtml(m.awayTeam?.name || 'Deplasman')}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Kart Alt Barı (Kanal + İzle Butonu) -->
+        <div class="pt-2.5 border-t border-white/10 flex items-center justify-between text-xs">
+          <div class="flex items-center space-x-1.5 text-gray-300 font-semibold truncate max-w-[140px]" title="${escapeHtml(m.primaryChannel)}">
+            <i data-lucide="tv" class="w-3.5 h-3.5 text-tv-yellow flex-shrink-0"></i>
+            <span class="truncate">${escapeHtml(m.primaryChannel)}</span>
+          </div>
+          <div>${actionHtml}</div>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  initIcons();
+}
+
+async function refreshSportsSchedule() {
+  const refreshIcon = document.getElementById('sports-refresh-icon');
+  if (refreshIcon) refreshIcon.classList.add('animate-spin');
+  await loadSportsSchedule(true);
+}
+
+async function playMatchChannel(streamId) {
+  if (!streamId) return;
+  let ch = STATE.channels.find(c => c.id === streamId);
+  if (!ch) {
+    try {
+      const res = await fetch(`/api/streams?ids=${streamId}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.streams && data.streams.length > 0) {
+          ch = data.streams[0];
+        }
+      }
+    } catch (_) {}
+  }
+  if (ch) {
+    openPlayer(ch, true);
+  } else {
+    window.location.href = `/izle/${streamId}`;
+  }
+}
+
+// =============================================================
+// GOOGLE TV "YOUR APPS" ROW (DAİRESEL UYGULAMA İKONLARI)
+// =============================================================
+// =============================================================
+// // PLATFORMLAR (DİKDÖRTGEN KARTLAR & LINEAR GRADIENT FADE)
+// =============================================================
+function getPlatformRectangularConfig(id, name) {
+  switch (id) {
+    case 'netflix':
+      return {
+        label: 'Netflix',
+        logoHtml: `<img src="/assets/platforms/netflix.svg" alt="Netflix" class="h-7 sm:h-9 max-w-[135px] object-contain select-none pointer-events-none filter drop-shadow-md group-hover:scale-110 transition-transform duration-300" />`,
+        cardBg: 'bg-gradient-to-br from-[#E50914] via-[#b5070f] to-[#831010]',
+        border: 'border-red-700/50',
+        hoverBorder: 'hover:border-red-300',
+        hoverShadow: 'hover:shadow-[0_12px_32px_rgba(229,9,20,0.7)]',
+        radialGlow: 'rgba(229,9,20,0.35)'
+      };
+    case 'prime':
+      return {
+        label: 'Prime Video',
+        logoHtml: `<img src="/assets/platforms/prime.svg" alt="Prime Video" class="h-7 sm:h-9 max-w-[135px] object-contain select-none pointer-events-none filter drop-shadow-md group-hover:scale-110 transition-transform duration-300" />`,
+        cardBg: 'bg-gradient-to-br from-[#00A8E1] via-[#0079a8] to-[#00506e]',
+        border: 'border-sky-400/50',
+        hoverBorder: 'hover:border-sky-200',
+        hoverShadow: 'hover:shadow-[0_12px_32px_rgba(0,168,225,0.7)]',
+        radialGlow: 'rgba(0,168,225,0.35)'
+      };
+    case 'disney':
+      return {
+        label: 'Disney+',
+        logoHtml: `<img src="/assets/platforms/disney.svg" alt="Disney+" class="h-8 sm:h-10 max-w-[135px] object-contain select-none pointer-events-none filter drop-shadow-md group-hover:scale-110 transition-transform duration-300" />`,
+        cardBg: 'bg-gradient-to-br from-[#1434CB] via-[#0d25a0] to-[#071670]',
+        border: 'border-blue-400/50',
+        hoverBorder: 'hover:border-blue-300',
+        hoverShadow: 'hover:shadow-[0_12px_32px_rgba(20,52,203,0.7)]',
+        radialGlow: 'rgba(20,52,203,0.35)'
+      };
+    case 'appletv':
+      return {
+        label: 'Apple TV+',
+        logoHtml: `<img src="/assets/platforms/appletv.svg" alt="Apple TV+" class="h-7 sm:h-9 max-w-[130px] object-contain select-none pointer-events-none filter drop-shadow-md group-hover:scale-110 transition-transform duration-300" />`,
+        cardBg: 'bg-gradient-to-br from-[#3a3a3c] via-[#1c1c1e] to-[#000000]',
+        border: 'border-white/30',
+        hoverBorder: 'hover:border-white/80',
+        hoverShadow: 'hover:shadow-[0_12px_32px_rgba(255,255,255,0.3)]',
+        radialGlow: 'rgba(255,255,255,0.18)'
+      };
+    case 'blutv':
+      return {
+        label: 'BluTV / Max',
+        logoHtml: `
+          <div class="flex items-center space-x-2.5 select-none pointer-events-none group-hover:scale-110 transition-transform duration-300">
+            <img src="/assets/platforms/max.svg" alt="Max" class="h-6 sm:h-8 max-w-[80px] object-contain filter drop-shadow" />
+            <span class="text-white/60 font-light text-sm">/</span>
+            <img src="/assets/platforms/blutv.svg" alt="BluTV" class="h-5 sm:h-6 max-w-[65px] object-contain filter drop-shadow" />
+          </div>
+        `,
+        cardBg: 'bg-gradient-to-br from-[#6A1F9E] via-[#4e1678] to-[#2d0c4a]',
+        border: 'border-purple-500/50',
+        hoverBorder: 'hover:border-purple-300',
+        hoverShadow: 'hover:shadow-[0_12px_32px_rgba(106,31,158,0.7)]',
+        radialGlow: 'rgba(106,31,158,0.35)'
+      };
+    case 'exxen':
+      return {
+        label: 'Exxen',
+        logoHtml: `<img src="/assets/platforms/exxen.png" alt="Exxen" class="h-7 sm:h-9 max-w-[135px] object-contain select-none pointer-events-none filter drop-shadow-md group-hover:scale-110 transition-transform duration-300" />`,
+        cardBg: 'bg-gradient-to-br from-[#B8971E] via-[#8a6e12] to-[#5a470a]',
+        border: 'border-yellow-500/50',
+        hoverBorder: 'hover:border-yellow-300',
+        hoverShadow: 'hover:shadow-[0_12px_32px_rgba(184,151,30,0.7)]',
+        radialGlow: 'rgba(184,151,30,0.35)'
+      };
+    case 'tabii':
+      return {
+        label: 'Tabii',
+        logoHtml: `<img src="/assets/platforms/tabii.svg" alt="Tabii" class="h-7 sm:h-9 max-w-[135px] object-contain select-none pointer-events-none filter drop-shadow-md group-hover:scale-110 transition-transform duration-300" />`,
+        cardBg: 'bg-gradient-to-br from-[#00A878] via-[#007a57] to-[#005038]',
+        border: 'border-emerald-400/50',
+        hoverBorder: 'hover:border-emerald-300',
+        hoverShadow: 'hover:shadow-[0_12px_32px_rgba(0,168,120,0.7)]',
+        radialGlow: 'rgba(0,168,120,0.35)'
+      };
+    case 'bein':
+      return {
+        label: 'beIN / TOD',
+        logoHtml: `<img src="/assets/platforms/bein.png" alt="beIN / TOD" class="h-8 sm:h-10 max-w-[135px] object-contain select-none pointer-events-none filter drop-shadow-md group-hover:scale-110 transition-transform duration-300" />`,
+        cardBg: 'bg-gradient-to-br from-[#6B189E] via-[#4d0f74] to-[#2e0847]',
+        border: 'border-purple-500/50',
+        hoverBorder: 'hover:border-purple-300',
+        hoverShadow: 'hover:shadow-[0_12px_32px_rgba(107,24,158,0.7)]',
+        radialGlow: 'rgba(107,24,158,0.35)'
+      };
+    case 'gain':
+      return {
+        label: 'GAİN',
+        logoHtml: `<img src="/assets/platforms/gain.png" alt="GAİN" class="h-7 sm:h-9 max-w-[130px] object-contain select-none pointer-events-none filter drop-shadow-md group-hover:scale-110 transition-transform duration-300" />`,
+        cardBg: 'bg-gradient-to-br from-[#F5A623] via-[#c07f10] to-[#7a5108]',
+        border: 'border-amber-400/50',
+        hoverBorder: 'hover:border-amber-300',
+        hoverShadow: 'hover:shadow-[0_12px_32px_rgba(245,166,35,0.7)]',
+        radialGlow: 'rgba(245,166,35,0.35)'
+      };
+    case 'tvplus':
+      return {
+        label: 'NoLimit',
+        logoHtml: `<img src="/assets/platforms/tvplus.png" alt="NoLimit" class="h-8 sm:h-10 max-w-[135px] object-contain select-none pointer-events-none filter drop-shadow-md group-hover:scale-110 transition-transform duration-300" />`,
+        cardBg: 'bg-gradient-to-br from-[#00C951] via-[#009940] to-[#006428]',
+        border: 'border-green-400/50',
+        hoverBorder: 'hover:border-green-300',
+        hoverShadow: 'hover:shadow-[0_12px_32px_rgba(0,201,81,0.7)]',
+        radialGlow: 'rgba(0,201,81,0.35)'
+      };
+    default:
+      return {
+        label: name || id,
+
+        logoHtml: `<span class="font-bold text-white text-base select-none">${escapeHtml(name || id)}</span>`,
+        cardBg: 'bg-gradient-to-br from-[#1b1c23] via-[#131418] to-[#0c0d10]',
+        border: 'border-white/10',
+        hoverBorder: 'hover:border-white/40',
+        hoverShadow: 'hover:shadow-[0_12px_32px_rgba(255,255,255,0.25)]',
+        radialGlow: 'rgba(255,255,255,0.1)'
+      };
+  }
+}
+
 function renderHomePlatforms(platforms) {
   const container = document.getElementById('home-platforms-grid');
   if (!container) return;
 
-  container.innerHTML = platforms.map(p => `
-    <div 
-      onclick="openPlatformPage('${p.id}')" 
-      class="group relative overflow-hidden rounded-2xl bg-gradient-to-br from-white/10 via-white/5 to-transparent border border-white/10 hover:border-white/40 hover:scale-[1.03] transition-all duration-300 p-4 sm:p-5 flex flex-col justify-between cursor-pointer shadow-lg hover:shadow-2xl"
-    >
-      <div class="absolute -right-6 -top-6 w-24 h-24 rounded-full blur-2xl opacity-25 group-hover:opacity-50 transition" style="background-color: ${p.color}"></div>
-      <div class="h-10 flex items-center">
-        ${getPlatformLogoHtml(p.id)}
+  // Dikdörtgen platform kartları: ekrana en fazla 6 kart sığar, 6. kart yarıda (half) görünür
+  container.innerHTML = platforms.map(p => {
+    const cfg = getPlatformRectangularConfig(p.id, p.name);
+    return `
+      <div 
+        onclick="openPlatformPage('${p.id}')"
+        class="platform-rect-card group relative flex-shrink-0 w-[165px] sm:w-[190px] md:w-[204px] lg:w-[214px] h-[92px] sm:h-[105px] lg:h-[114px] rounded-2xl p-4 sm:p-5 flex items-center justify-center cursor-pointer transition-transform duration-300 ease-out transform hover:scale-[1.04] hover:-translate-y-1 shadow-lg border ${cfg.border || 'border-white/10'} ${cfg.cardBg} ${cfg.hoverBorder} ${cfg.hoverShadow} overflow-hidden select-none"
+        title="${escapeHtml(p.name)}"
+      >
+        <!-- Arka Plan Radial Glow Efekti -->
+        <div class="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" style="background: radial-gradient(circle at center, ${cfg.radialGlow} 0%, transparent 70%);"></div>
+
+        <!-- Üst Cam Işıltısı -->
+        <div class="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent pointer-events-none"></div>
+
+        <!-- Resmi Yüksek Çözünürlüklü Marka Logosu -->
+        ${cfg.logoHtml}
       </div>
-      <div class="mt-4 flex items-center justify-between">
-        <span class="text-[11px] font-semibold text-gray-300 group-hover:text-white transition">${p.name}</span>
-        <span class="text-[10px] px-2 py-0.5 rounded-full bg-white/10 text-gray-300 group-hover:bg-tv-yellow group-hover:text-black font-bold transition flex items-center space-x-0.5">
-          <span>Keşfet</span>
-          <i data-lucide="chevron-right" class="w-3 h-3"></i>
-        </span>
-      </div>
-    </div>
-  `).join('');
+    `;
+  }).join('');
+
+  initPlatformsScroll();
+  updatePlatformsFade();
 }
 
-function renderHomeHero(heroes) {
-  if (!heroes || heroes.length === 0) return;
-  const hero = heroes[0];
+function initPlatformsScroll() {
+  const container = document.getElementById('home-platforms-grid');
+  if (!container || container.dataset.scrollInited) return;
+  container.dataset.scrollInited = 'true';
 
-  const backdrop = document.getElementById('home-hero-backdrop');
-  if (backdrop && (hero.poster || hero.cover)) {
-    backdrop.style.backgroundImage = `url('${hero.poster || hero.cover}')`;
-  }
+  let isDown = false;
+  let startX = 0;
+  let scrollStartLeft = 0;
+  let hasMoved = false;
+  let momentumAnimId = null;
 
-  const titleEl = document.getElementById('home-hero-title');
-  if (titleEl) titleEl.textContent = hero.name;
+  // Hareket geçmişi (Son 100ms içindeki hız hesaplaması için)
+  let history = [];
 
-  const ratingEl = document.getElementById('home-hero-rating-val');
-  if (ratingEl) ratingEl.textContent = hero.rating ? parseFloat(hero.rating).toFixed(1) : '8.5';
-
-  const yearEl = document.getElementById('home-hero-year');
-  if (yearEl) yearEl.textContent = hero.year || '2024';
-
-  const typeEl = document.getElementById('home-hero-type');
-  if (typeEl) {
-    typeEl.textContent = hero.type === 'movie' ? 'FİLM' : 'DİZİ';
-    if (hero.type === 'movie') {
-      typeEl.className = 'bg-sky-400 text-black font-extrabold text-[10px] px-2 py-0.5 rounded uppercase';
-    } else {
-      typeEl.className = 'bg-tv-yellow text-black font-extrabold text-[10px] px-2 py-0.5 rounded uppercase';
+  function stopMomentum() {
+    if (momentumAnimId) {
+      cancelAnimationFrame(momentumAnimId);
+      momentumAnimId = null;
     }
   }
 
-  const taglineEl = document.getElementById('home-hero-tagline');
-  if (taglineEl) taglineEl.textContent = hero.tagline || (hero.type === 'movie' ? 'Popüler Sinema Seçkisi' : 'En Çok İzlenen Dizi');
+  function startMomentum(velocity) {
+    stopMomentum();
+    let v = velocity;
+    const friction = 0.94; // Pürüzsüz serbest kayma (free-glide)
 
-  const descEl = document.getElementById('home-hero-desc');
-  if (descEl) descEl.textContent = hero.plot || 'Yüksek çözünürlüklü kesintisiz yayın.';
-
-  const playBtn = document.getElementById('home-hero-play-btn');
-  if (playBtn) {
-    playBtn.onclick = () => {
-      if (hero.type === 'movie') {
-        openMediaItem(hero, 'movie');
-      } else {
-        openSeriesDetailPage(hero.id);
+    function step() {
+      if (Math.abs(v) < 0.25) {
+        stopMomentum();
+        return;
       }
-    };
+      container.scrollLeft -= v;
+      v *= friction;
+      updatePlatformsFade();
+      momentumAnimId = requestAnimationFrame(step);
+    }
+    momentumAnimId = requestAnimationFrame(step);
   }
 
-  const detailBtn = document.getElementById('home-hero-detail-btn');
-  if (detailBtn) {
-    detailBtn.onclick = () => {
-      if (hero.type === 'movie') {
-        openMediaItem(hero, 'movie');
-      } else {
-        openSeriesDetailPage(hero.id);
-      }
-    };
+  function onDown(clientX) {
+    stopMomentum();
+    isDown = true;
+    hasMoved = false;
+    startX = clientX;
+    scrollStartLeft = container.scrollLeft;
+    history = [{ x: clientX, t: performance.now() }];
+    container.classList.add('cursor-grabbing');
   }
+
+  function onMove(clientX) {
+    if (!isDown) return;
+    const now = performance.now();
+    const deltaX = clientX - startX;
+    if (Math.abs(deltaX) > 6) {
+      hasMoved = true;
+    }
+    container.scrollLeft = scrollStartLeft - deltaX;
+    history.push({ x: clientX, t: now });
+    // Son 100ms içindeki noktaları koru
+    while (history.length > 1 && (now - history[0].t > 100)) {
+      history.shift();
+    }
+    updatePlatformsFade();
+  }
+
+  function onUp() {
+    if (!isDown) return;
+    isDown = false;
+    if (container) container.classList.remove('cursor-grabbing');
+
+    if (hasMoved && history.length >= 2) {
+      const now = performance.now();
+      const first = history[0];
+      const last = history[history.length - 1];
+      const dt = last.t - first.t;
+      if (dt > 10 && (now - last.t < 80)) {
+        const dx = last.x - first.x;
+        let v = (dx / dt) * 16;
+        v = Math.max(-45, Math.min(45, v));
+        if (Math.abs(v) > 0.5) {
+          startMomentum(v);
+        }
+      }
+    }
+  }
+
+  // Fare Dinleyicileri
+  container.addEventListener('mousedown', (e) => {
+    onDown(e.clientX);
+  });
+
+  window.addEventListener('mouseup', () => {
+    onUp();
+  });
+
+  container.addEventListener('mouseleave', () => {
+    onUp();
+  });
+
+  window.addEventListener('mousemove', (e) => {
+    if (isDown) {
+      onMove(e.clientX);
+    }
+  });
+
+  // Dokunmatik Ekran / Touch Dinleyicileri
+  container.addEventListener('touchstart', (e) => {
+    if (e.touches && e.touches.length === 1) {
+      onDown(e.touches[0].clientX);
+    }
+  }, { passive: true });
+
+  window.addEventListener('touchmove', (e) => {
+    if (isDown && e.touches && e.touches.length === 1) {
+      onMove(e.touches[0].clientX);
+    }
+  }, { passive: true });
+
+  window.addEventListener('touchend', () => {
+    onUp();
+  }, { passive: true });
+
+  // Sürükleme yapıldığında kartların tıklanıp açılmasını önle
+  container.addEventListener('click', (e) => {
+    if (hasMoved) {
+      e.preventDefault();
+      e.stopPropagation();
+      setTimeout(() => { hasMoved = false; }, 60);
+    }
+  }, true);
+
+  // Fare tekerleğiyle (wheel) pürüzsüz yatay kaydırma
+  container.addEventListener('wheel', (e) => {
+    if (e.deltaY !== 0) {
+      e.preventDefault();
+      stopMomentum();
+      container.scrollBy({ left: e.deltaY * 1.8, behavior: 'smooth' });
+      setTimeout(updatePlatformsFade, 50);
+    }
+  }, { passive: false });
+
+  // Scroll eventinde karartma efektlerini güncelle
+  container.addEventListener('scroll', updatePlatformsFade);
+}
+
+function updatePlatformsFade() {
+  const container = document.getElementById('home-platforms-grid');
+  const leftFade = document.getElementById('platforms-left-fade');
+  const rightFade = document.getElementById('platforms-right-fade');
+  if (!container) return;
+
+  // Sol karartma: Kullanıcı sağa kaydırdıysa görünür
+  if (leftFade) {
+    if (container.scrollLeft > 20) {
+      leftFade.classList.remove('opacity-0');
+      leftFade.classList.add('opacity-100');
+    } else {
+      leftFade.classList.add('opacity-0');
+      leftFade.classList.remove('opacity-100');
+    }
+  }
+
+  // Sağ karartma: En sona ulaşıldığında gizlenir, aksi halde linear kaydırma hissi verir
+  if (rightFade) {
+    const maxScroll = container.scrollWidth - container.clientWidth - 25;
+    if (container.scrollLeft >= maxScroll) {
+      rightFade.classList.add('opacity-0');
+    } else {
+      rightFade.classList.remove('opacity-0');
+    }
+  }
+}
+
+function scrollPlatformsRow(direction) {
+  const container = document.getElementById('home-platforms-grid');
+  if (!container) return;
+  const scrollAmount = direction * 350;
+  container.scrollBy({ left: scrollAmount, behavior: 'smooth' });
+  setTimeout(updatePlatformsFade, 300);
+}
+
+// =============================================================
+// CINEMATIC HERO SPOTLIGHT (NETFLIX STYLE - TRENDYOL SÜPER LİG & ÖNE ÇIKAN İÇERİKLER)
+// =============================================================
+
+function getMatchStartTime(m) {
+  if (!m) return 0;
+  if (m.startDate) {
+    const t = new Date(m.startDate).getTime();
+    if (!isNaN(t) && t > 0) return t;
+  }
+  if (m.date && m.time) {
+    try {
+      const p = m.date.split('.');
+      if (p.length === 3) {
+        const tp = m.time.split(':');
+        const d = new Date(Date.UTC(
+          parseInt(p[2], 10),
+          parseInt(p[1], 10) - 1,
+          parseInt(p[0], 10),
+          parseInt(tp[0], 10) - 3, // Türkiye UTC+3
+          parseInt(tp[1] || '0', 10)
+        ));
+        const t = d.getTime();
+        if (!isNaN(t) && t > 0) return t;
+      }
+    } catch (_) {}
+  }
+  return 0;
+}
+
+function getUpcomingSuperLigMatches(matches) {
+  const now = Date.now();
+  return (matches || []).filter(m => {
+    if (!m.isSuperLig) return false;
+    if (m.status === 'LIVE' || m.status === 'FINISHED') return false;
+    const start = getMatchStartTime(m);
+    // Maç yayın saati gelmişse sliderda gösterme (yalnızca henüz başlamamış olanlar)
+    return start > now;
+  });
+}
+
+function formatCountdown(diffMs) {
+  if (diffMs <= 0) return '00:00:00';
+  const totalSecs = Math.floor(diffMs / 1000);
+  const days = Math.floor(totalSecs / 86400);
+  const hours = Math.floor((totalSecs % 86400) / 3600);
+  const minutes = Math.floor((totalSecs % 3600) / 60);
+  const seconds = totalSecs % 60;
+  const pad = (n) => String(n).padStart(2, '0');
+
+  if (days > 0) {
+    return `${days} gün ${pad(hours)}:${pad(minutes)}:${pad(seconds)}`;
+  }
+  return `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`;
+}
+
+function startHeroCountdownTimer(startTime) {
+  if (STATE.sportsHero.countdownInterval) {
+    clearInterval(STATE.sportsHero.countdownInterval);
+    STATE.sportsHero.countdownInterval = null;
+  }
+
+  function tick() {
+    const el = document.getElementById('hero-match-countdown-text');
+    if (!el) return;
+    const now = Date.now();
+    const diff = startTime - now;
+
+    if (diff <= 0) {
+      // Maç yayın saati geldi! Slider'dan çıkar
+      if (STATE.sportsHero.countdownInterval) {
+        clearInterval(STATE.sportsHero.countdownInterval);
+        STATE.sportsHero.countdownInterval = null;
+      }
+      handleHeroMatchExpired();
+      return;
+    }
+
+    el.textContent = formatCountdown(diff) + ' kaldı.';
+  }
+
+  tick();
+  STATE.sportsHero.countdownInterval = setInterval(tick, 1000);
+}
+
+function handleHeroMatchExpired() {
+  const allMatches = STATE.sportsSchedule?.data?.matches || [];
+  const upcoming = getUpcomingSuperLigMatches(allMatches);
+  if (upcoming.length > 0) {
+    renderSportsHero(upcoming);
+  } else {
+    // Maç kalmadıysa platformlardan rastgele öne çıkan içerik göster
+    renderRandomPlatformFeaturedHero();
+  }
+}
+
+function renderRandomPlatformFeaturedHero() {
+  // Spor slider zamanlayıcılarını durdur
+  if (STATE.sportsHero.timer) {
+    clearInterval(STATE.sportsHero.timer);
+    STATE.sportsHero.timer = null;
+  }
+  if (STATE.sportsHero.countdownInterval) {
+    clearInterval(STATE.sportsHero.countdownInterval);
+    STATE.sportsHero.countdownInterval = null;
+  }
+
+  let pool = [];
+  if (STATE.homeFeatured && Array.isArray(STATE.homeFeatured.heroes) && STATE.homeFeatured.heroes.length > 0) {
+    pool = STATE.homeFeatured.heroes;
+  } else if (STATE.homeFeatured) {
+    if (Array.isArray(STATE.homeFeatured.popularSeries)) pool.push(...STATE.homeFeatured.popularSeries);
+    if (Array.isArray(STATE.homeFeatured.trendingMovies)) pool.push(...STATE.homeFeatured.trendingMovies);
+  }
+
+  if (pool.length > 0) {
+    renderHomeHero(pool);
+  }
+}
+
+function renderSportsHero(matches) {
+  const upcoming = getUpcomingSuperLigMatches(matches);
+  if (!upcoming || upcoming.length === 0) {
+    renderRandomPlatformFeaturedHero();
+    return;
+  }
+
+  STATE.sportsHero.matches = upcoming;
+  if (STATE.sportsHero.currentIndex >= upcoming.length) {
+    STATE.sportsHero.currentIndex = 0;
+  }
+
+  showSportsHeroSlide(STATE.sportsHero.currentIndex);
+  setupSportsHeroTimer();
+}
+
+function showSportsHeroSlide(index) {
+  // Yayın saati gelmiş veya geçmiş maçları temizle
+  const upcoming = getUpcomingSuperLigMatches(STATE.sportsHero.matches);
+  if (!upcoming || upcoming.length === 0) {
+    renderRandomPlatformFeaturedHero();
+    return;
+  }
+
+  STATE.sportsHero.matches = upcoming;
+  index = (index + upcoming.length) % upcoming.length;
+  STATE.sportsHero.currentIndex = index;
+
+  const m = upcoming[index];
+  const startTime = getMatchStartTime(m);
+  const heroContent = document.getElementById('home-hero-content');
+  const backdrop = document.getElementById('home-hero-backdrop');
+  const prevBtn = document.getElementById('hero-prev-btn');
+  const nextBtn = document.getElementById('hero-next-btn');
+  const dotsContainer = document.getElementById('hero-dots-container');
+
+  // Slider butonlarının görünürlüğü
+  if (upcoming.length > 1) {
+    if (prevBtn) prevBtn.classList.remove('hidden');
+    if (nextBtn) nextBtn.classList.remove('hidden');
+  } else {
+    if (prevBtn) prevBtn.classList.add('hidden');
+    if (nextBtn) nextBtn.classList.add('hidden');
+  }
+
+  // Arka plan: Maçlar varken kullanıcının yüklediği gece stadyum görseli
+  if (backdrop) {
+    backdrop.style.backgroundImage = "url('/stadium_hero_bg.png')";
+    backdrop.style.backgroundPosition = 'center center';
+    backdrop.style.backgroundSize = 'cover';
+    backdrop.style.backgroundRepeat = 'no-repeat';
+    backdrop.style.backgroundColor = '#000000';
+  }
+
+  const leftVignette = document.getElementById('home-hero-left-vignette');
+  if (leftVignette) {
+    leftVignette.classList.remove('opacity-100');
+    leftVignette.classList.add('opacity-0');
+  }
+
+  const homeLogoUrl = m.homeTeam?.logo || '';
+  const awayLogoUrl = m.awayTeam?.logo || '';
+
+  // Takım Logoları (Yüksek Çözünürlük ve Drop-shadow)
+  const homeLogo = homeLogoUrl
+    ? `<img src="${homeLogoUrl}" alt="${escapeHtml(m.homeTeam.name)}" class="w-20 h-20 sm:w-24 sm:h-24 md:w-28 md:h-28 object-contain filter drop-shadow-[0_10px_25px_rgba(0,0,0,0.95)]" onerror="this.src='/favicon.ico'; this.onerror=null;">`
+    : `<div class="w-20 h-20 sm:w-24 sm:h-24 md:w-28 md:h-28 rounded-2xl bg-white/10 flex items-center justify-center text-3xl font-black text-white">${(m.homeTeam?.name || '?').charAt(0)}</div>`;
+
+  const awayLogo = awayLogoUrl
+    ? `<img src="${awayLogoUrl}" alt="${escapeHtml(m.awayTeam.name)}" class="w-20 h-20 sm:w-24 sm:h-24 md:w-28 md:h-28 object-contain filter drop-shadow-[0_10px_25px_rgba(0,0,0,0.95)]" onerror="this.src='/favicon.ico'; this.onerror=null;">`
+    : `<div class="w-20 h-20 sm:w-24 sm:h-24 md:w-28 md:h-28 rounded-2xl bg-white/10 flex items-center justify-center text-3xl font-black text-white">${(m.awayTeam?.name || '?').charAt(0)}</div>`;
+
+  const pad = (n) => String(n).padStart(2, '0');
+  let formattedDate = '';
+  if (startTime > 0) {
+    const d = new Date(startTime);
+    formattedDate = `${pad(d.getDate())}.${pad(d.getMonth() + 1)}.${d.getFullYear()}`;
+  } else if (m.date) {
+    const parts = m.date.split('-');
+    if (parts.length === 3) {
+      formattedDate = `${pad(parts[2])}.${pad(parts[1])}.${parts[0]}`;
+    } else {
+      formattedDate = m.date;
+    }
+  } else {
+    const today = new Date();
+    formattedDate = `${pad(today.getDate())}.${pad(today.getMonth() + 1)}.${today.getFullYear()}`;
+  }
+  const matchTime = m.time || '20:00';
+
+  if (heroContent) {
+    heroContent.className = "absolute inset-0 w-full h-full flex flex-col items-center justify-center text-center z-20 select-none overflow-hidden";
+    heroContent.innerHTML = `
+      <!-- Sol Takım 3D Yatık Arkaplan Filigranı (3D Perspective Slanted Watermark) -->
+      ${homeLogoUrl ? `
+        <div class="absolute -left-16 sm:-left-10 md:left-[0%] lg:left-[1%] top-1/2 -translate-y-1/2 w-[300px] h-[300px] sm:w-[400px] sm:h-[400px] md:w-[480px] md:h-[480px] lg:w-[560px] lg:h-[560px] pointer-events-none select-none z-10 transition-all duration-700" style="perspective: 1200px;">
+          <img 
+            src="${homeLogoUrl}" 
+            class="w-full h-full object-contain filter contrast-125 brightness-90 drop-shadow-[0_20px_50px_rgba(0,0,0,0.95)]" 
+            style="transform: perspective(1000px) rotateY(32deg) rotateX(8deg) rotateZ(-12deg); opacity: 0.12;" 
+            alt="" 
+            onerror="this.style.display='none'"
+          />
+        </div>
+      ` : ''}
+
+      <!-- Sağ Takım 3D Yatık Arkaplan Filigranı (3D Perspective Slanted Watermark) -->
+      ${awayLogoUrl ? `
+        <div class="absolute -right-16 sm:-right-10 md:right-[0%] lg:right-[1%] top-1/2 -translate-y-1/2 w-[300px] h-[300px] sm:w-[400px] sm:h-[400px] md:w-[480px] md:h-[480px] lg:w-[560px] lg:h-[560px] pointer-events-none select-none z-10 transition-all duration-700" style="perspective: 1200px;">
+          <img 
+            src="${awayLogoUrl}" 
+            class="w-full h-full object-contain filter contrast-125 brightness-90 drop-shadow-[0_20px_50px_rgba(0,0,0,0.95)]" 
+            style="transform: perspective(1000px) rotateY(-32deg) rotateX(8deg) rotateZ(12deg); opacity: 0.12;" 
+            alt="" 
+            onerror="this.style.display='none'"
+          />
+        </div>
+      ` : ''}
+
+      <!-- Merkez İçerik Alanı -->
+      <div class="w-full max-w-4xl mx-auto px-4 flex flex-col items-center justify-center space-y-2 sm:space-y-3 relative z-20 pt-1">
+        <!-- Üst Başlık & Saat & Tarih & Slogan -->
+        <div class="space-y-0.5 sm:space-y-1 select-none">
+          <div class="text-[11px] sm:text-xs md:text-sm font-semibold tracking-[0.35em] sm:tracking-[0.45em] text-gray-300 uppercase">
+            TRENDYOL SÜPER LİG
+          </div>
+          <div class="text-5xl sm:text-6xl md:text-7xl font-black text-white tracking-tight drop-shadow-[0_4px_24px_rgba(0,0,0,0.95)] leading-none">
+            ${escapeHtml(matchTime)}
+          </div>
+          <div class="text-base sm:text-xl md:text-2xl font-light text-gray-300 tracking-[0.25em] pt-0.5">
+            ${escapeHtml(formattedDate)}
+          </div>
+          <div class="text-[9px] sm:text-[10px] md:text-xs font-medium tracking-[0.35em] sm:tracking-[0.45em] text-gray-400 uppercase pt-0.5">
+            B Ü Y Ü K &nbsp; H E Y E C A N A &nbsp; O R T A K &nbsp; O L
+          </div>
+        </div>
+
+        <!-- Maç Karşılaşması -->
+        <div class="flex items-center justify-center space-x-6 sm:space-x-12 md:space-x-16 my-2 sm:my-3">
+          <!-- Ev Sahibi -->
+          <div class="flex flex-col items-center text-center group cursor-pointer" onclick="${m.streamId ? `playMatchChannel(${m.streamId})` : ''}">
+            <div class="w-20 h-20 sm:w-24 sm:h-24 md:w-28 md:h-28 flex items-center justify-center transform group-hover:scale-105 transition duration-300">
+              ${homeLogo}
+            </div>
+            <span class="text-xl sm:text-2xl md:text-3xl font-extrabold text-white mt-2 tracking-tight drop-shadow-[0_4px_12px_rgba(0,0,0,0.9)] max-w-[160px] sm:max-w-[220px] truncate">
+              ${escapeHtml(m.homeTeam?.name || 'Ev Sahibi')}
+            </span>
+          </div>
+
+          <!-- Süper Lig Logosu -->
+          <div class="flex-shrink-0 px-2 sm:px-4 flex items-center justify-center">
+            <img 
+              src="/assets/trendyol_super_lig_white.svg" 
+              alt="Trendyol Süper Lig" 
+              class="h-14 sm:h-18 md:h-22 w-auto object-contain select-none pointer-events-none filter drop-shadow-2xl" 
+            />
+          </div>
+
+          <!-- Deplasman -->
+          <div class="flex flex-col items-center text-center group cursor-pointer" onclick="${m.streamId ? `playMatchChannel(${m.streamId})` : ''}">
+            <div class="w-20 h-20 sm:w-24 sm:h-24 md:w-28 md:h-28 flex items-center justify-center transform group-hover:scale-105 transition duration-300">
+              ${awayLogo}
+            </div>
+            <span class="text-xl sm:text-2xl md:text-3xl font-extrabold text-white mt-2 tracking-tight drop-shadow-[0_4px_12px_rgba(0,0,0,0.9)] max-w-[160px] sm:max-w-[220px] truncate">
+              ${escapeHtml(m.awayTeam?.name || 'Deplasman')}
+            </span>
+          </div>
+        </div>
+
+        <!-- Bilgi Satırı: Saat, Kanal, Stadyum -->
+        <div class="space-y-1 text-center">
+          <div class="flex items-center justify-center space-x-3 sm:space-x-5 text-xs sm:text-sm text-gray-300 flex-wrap gap-y-1 font-medium">
+            <div class="flex items-center space-x-1.5">
+              <i data-lucide="clock" class="w-4 h-4 text-gray-400"></i>
+              <span>Bugün ${escapeHtml(matchTime)}</span>
+            </div>
+
+            ${m.primaryChannel ? `
+              <span class="text-gray-600 hidden sm:inline">•</span>
+              <div class="flex items-center space-x-1.5">
+                <i data-lucide="tv" class="w-4 h-4 text-gray-400"></i>
+                <span>${escapeHtml(m.primaryChannel)}</span>
+              </div>
+            ` : ''}
+
+            ${m.stadium ? `
+              <span class="text-gray-600 hidden sm:inline">•</span>
+              <div class="flex items-center space-x-1.5">
+                <svg class="w-4 h-4 text-gray-400 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <ellipse cx="12" cy="12" rx="10" ry="6"></ellipse>
+                  <path d="M2 12v2c0 3.3 4.5 6 10 6s10-2.7 10-6v-2"></path>
+                  <path d="M6 9v3"></path>
+                  <path d="M10 11v3"></path>
+                  <path d="M14 11v3"></path>
+                  <path d="M18 9v3"></path>
+                </svg>
+                <span class="max-w-[260px] sm:max-w-md truncate">${escapeHtml(m.stadium)}</span>
+              </div>
+            ` : ''}
+          </div>
+
+          <!-- Canlı Geri Sayım Ticker -->
+          ${startTime > Date.now() ? `
+            <div class="flex items-center justify-center space-x-1.5 text-tv-yellow text-sm sm:text-base font-bold font-mono tracking-tight pt-0.5" title="Maçın başlamasına kalan süre">
+              <i data-lucide="timer" class="w-4 h-4 text-tv-yellow"></i>
+              <span id="hero-match-countdown-text">${formatCountdown(startTime - Date.now())} kaldı.</span>
+            </div>
+          ` : ''}
+        </div>
+
+        <!-- Aksiyon Butonları -->
+        <div class="flex items-center justify-center pt-2">
+          ${m.hasStream && m.streamId ? `
+            <button onclick="playMatchChannel(${m.streamId})" class="px-7 sm:px-9 py-3 sm:py-3.5 rounded-xl bg-tv-yellow hover:bg-tv-yellow-hover text-black font-extrabold text-sm sm:text-base flex items-center space-x-2.5 transition transform hover:scale-105 shadow-xl shadow-yellow-500/30 active:scale-95 cursor-pointer">
+              <i data-lucide="play" class="w-5 h-5 fill-current"></i>
+              <span>Maçı Canlı İzle</span>
+            </button>
+          ` : ''}
+        </div>
+      </div>
+    `;
+  }
+
+  // Alt Slider Noktaları
+  if (dotsContainer) {
+    if (upcoming.length > 1) {
+      dotsContainer.innerHTML = upcoming.map((_, i) => `
+        <button onclick="showSportsHeroSlide(${i}); resetSportsHeroTimer();" title="Maç ${i + 1}" class="h-2.5 rounded-full transition-all duration-300 cursor-pointer ${i === index ? 'bg-tv-yellow w-8 shadow-lg shadow-yellow-500/50' : 'bg-white/30 hover:bg-white/60 w-2.5'}"></button>
+      `).join('');
+    } else {
+      dotsContainer.innerHTML = '';
+    }
+  }
+
+  if (startTime > Date.now()) {
+    startHeroCountdownTimer(startTime);
+  }
+
+  initIcons();
+}
+
+STATE.netflixHero = {
+  heroes: [],
+  currentIndex: 0,
+  timer: null
+};
+
+function nextHeroSlide() {
+  if (STATE.sportsHero.matches && STATE.sportsHero.matches.length > 0) {
+    showSportsHeroSlide(STATE.sportsHero.currentIndex + 1);
+    resetSportsHeroTimer();
+  } else if (STATE.netflixHero.heroes && STATE.netflixHero.heroes.length > 0) {
+    showHomeHeroSlide(STATE.netflixHero.currentIndex + 1);
+    resetHomeHeroTimer();
+  }
+}
+
+function prevHeroSlide() {
+  if (STATE.sportsHero.matches && STATE.sportsHero.matches.length > 0) {
+    showSportsHeroSlide(STATE.sportsHero.currentIndex - 1);
+    resetSportsHeroTimer();
+  } else if (STATE.netflixHero.heroes && STATE.netflixHero.heroes.length > 0) {
+    showHomeHeroSlide(STATE.netflixHero.currentIndex - 1);
+    resetHomeHeroTimer();
+  }
+}
+
+function setupSportsHeroTimer() {
+  if (STATE.sportsHero.timer) clearInterval(STATE.sportsHero.timer);
+  if (STATE.sportsHero.matches && STATE.sportsHero.matches.length > 1) {
+    STATE.sportsHero.timer = setInterval(() => {
+      showSportsHeroSlide(STATE.sportsHero.currentIndex + 1);
+    }, 8000);
+  }
+}
+
+function resetSportsHeroTimer() {
+  setupSportsHeroTimer();
+}
+
+function pauseSportsHeroTimer() {
+  if (STATE.sportsHero && STATE.sportsHero.timer) {
+    clearInterval(STATE.sportsHero.timer);
+    STATE.sportsHero.timer = null;
+  }
+}
+
+function resumeSportsHeroTimer() {
+  setupSportsHeroTimer();
+}
+
+function setupHomeHeroTimer() {
+  if (STATE.netflixHero.timer) clearInterval(STATE.netflixHero.timer);
+  if (STATE.netflixHero.heroes && STATE.netflixHero.heroes.length > 1) {
+    STATE.netflixHero.timer = setInterval(() => {
+      showHomeHeroSlide(STATE.netflixHero.currentIndex + 1);
+    }, 8000);
+  }
+}
+
+function resetHomeHeroTimer() {
+  setupHomeHeroTimer();
+}
+
+function pauseHomeHeroTimer() {
+  if (STATE.netflixHero && STATE.netflixHero.timer) {
+    clearInterval(STATE.netflixHero.timer);
+    STATE.netflixHero.timer = null;
+  }
+}
+
+function resumeHomeHeroTimer() {
+  setupHomeHeroTimer();
+}
+
+function pauseHeroTimer() {
+  pauseSportsHeroTimer();
+  pauseHomeHeroTimer();
+}
+
+function resumeHeroTimer() {
+  resumeSportsHeroTimer();
+  resumeHomeHeroTimer();
+}
+
+function scrollToSportsSchedule() {
+  const el = document.getElementById('home-sports-section');
+  if (el) {
+    el.scrollIntoView({ behavior: 'smooth' });
+    switchSportsTab('super_lig');
+  }
+}
+
+// Fallback: Süper Lig maçı yoksa Netflix / Platform Orijinal Hero Banner'ı
+function renderHomeHero(heroes) {
+  if (!heroes || heroes.length === 0) return;
+  STATE.netflixHero.heroes = heroes;
+  if (STATE.netflixHero.currentIndex >= heroes.length) {
+    STATE.netflixHero.currentIndex = 0;
+  }
+  showHomeHeroSlide(STATE.netflixHero.currentIndex);
+  setupHomeHeroTimer();
+}
+
+function showHomeHeroSlide(index) {
+  const heroes = STATE.netflixHero.heroes;
+  if (!heroes || heroes.length === 0) return;
+
+  index = (index + heroes.length) % heroes.length;
+  STATE.netflixHero.currentIndex = index;
+
+  const hero = heroes[index];
+  const heroContent = document.getElementById('home-hero-content');
+  const backdrop = document.getElementById('home-hero-backdrop');
+  const leftVignette = document.getElementById('home-hero-left-vignette');
+  const prevBtn = document.getElementById('hero-prev-btn');
+  const nextBtn = document.getElementById('hero-next-btn');
+  const dotsContainer = document.getElementById('hero-dots-container');
+
+  // Arka plan görseli (Yatay TMDB Backdrop)
+  if (backdrop) {
+    const bg = hero.backdrop || hero.cover || 'https://images.unsplash.com/photo-1574375927938-d5a98e8ffe85?auto=format&fit=crop&w=1920&q=80';
+    backdrop.style.backgroundImage = `url('${bg}')`;
+    backdrop.style.backgroundPosition = 'center 20%';
+  }
+
+  // Sol sinematik vinyet karartmasını aktif et
+  if (leftVignette) {
+    leftVignette.classList.remove('opacity-0', 'opacity-20');
+    leftVignette.classList.add('opacity-100');
+  }
+
+  // Slider butonlarının görünürlüğü
+  if (heroes.length > 1) {
+    if (prevBtn) prevBtn.classList.remove('hidden');
+    if (nextBtn) nextBtn.classList.remove('hidden');
+  } else {
+    if (prevBtn) prevBtn.classList.add('hidden');
+    if (nextBtn) nextBtn.classList.add('hidden');
+  }
+
+  const isMovie = hero.type === 'movie' || hero.mediaType === 'movie';
+  const typeText = isMovie ? 'FİLM' : 'DİZİ';
+  const matchRate = hero.matchRate || 98;
+  const year = hero.year || '2024';
+  const ageRating = hero.ageRating || '16+';
+  const durationText = hero.seasons || (isMovie ? '1 sa 54 dk' : '1 Sezon');
+  const desc = hero.plot || 'Yüksek çözünürlüklü ve kesintisiz dijital yayın deneyimi.';
+
+  // Platform Marka İkonu (Netflix, Prime, Disney, Apple vb.)
+  let platformBadge = '';
+  switch (hero.platform) {
+    case 'netflix':
+      platformBadge = `
+        <div class="flex items-center space-x-2">
+          <img src="/assets/platforms/netflix.svg" alt="Netflix" class="h-5 sm:h-6 object-contain filter drop-shadow" />
+          <span class="text-xs sm:text-sm font-black tracking-[0.3em] uppercase text-gray-200">${typeText}</span>
+        </div>`;
+      break;
+    case 'prime':
+      platformBadge = `
+        <div class="flex items-center space-x-2">
+          <img src="/assets/platforms/prime.svg" alt="Prime Video" class="h-4 sm:h-5 object-contain filter drop-shadow" />
+          <span class="text-xs sm:text-sm font-black tracking-[0.25em] uppercase text-gray-200">ORİJİNAL ${typeText}</span>
+        </div>`;
+      break;
+    case 'disney':
+      platformBadge = `
+        <div class="flex items-center space-x-2">
+          <img src="/assets/platforms/disney.svg" alt="Disney+" class="h-5 sm:h-6 object-contain filter drop-shadow" />
+          <span class="text-xs sm:text-sm font-black tracking-[0.25em] uppercase text-gray-200">ORİJİNAL ${typeText}</span>
+        </div>`;
+      break;
+    case 'appletv':
+      platformBadge = `
+        <div class="flex items-center space-x-2">
+          <img src="/assets/platforms/appletv.svg" alt="Apple TV+" class="h-4 sm:h-5 object-contain filter drop-shadow" />
+          <span class="text-xs sm:text-sm font-black tracking-[0.25em] uppercase text-gray-200">ORIGINAL</span>
+        </div>`;
+      break;
+    case 'max':
+    case 'blutv':
+      platformBadge = `
+        <div class="flex items-center space-x-2">
+          <img src="/assets/platforms/max.svg" alt="Max" class="h-4 sm:h-5 object-contain filter drop-shadow" />
+          <span class="text-xs sm:text-sm font-black tracking-[0.25em] uppercase text-gray-200">${typeText}</span>
+        </div>`;
+      break;
+    default:
+      platformBadge = `
+        <div class="flex items-center space-x-1.5">
+          <span class="w-2.5 h-2.5 rounded-full bg-red-600"></span>
+          <span class="text-xs sm:text-sm font-black tracking-[0.3em] uppercase text-gray-200">NETFLIX ${typeText}</span>
+        </div>`;
+  }
+
+  if (heroContent) {
+    // Sola hizalı, geniş, sinematik Netflix stili
+    heroContent.className = "absolute inset-0 max-w-7xl mx-auto px-6 sm:px-12 md:px-16 flex flex-col justify-center items-start text-left z-20 select-none";
+    heroContent.innerHTML = `
+      <div class="w-full max-w-2xl lg:max-w-3xl space-y-3.5 sm:space-y-4 pt-4 sm:pt-0">
+        <!-- 1. Platform & TOP 10 Satırı -->
+        <div class="flex items-center space-x-3 select-none flex-wrap gap-y-1">
+          ${platformBadge}
+          <span class="text-gray-500 hidden sm:inline">•</span>
+          <div class="inline-flex items-center space-x-1.5 bg-black/60 border border-white/15 px-2.5 py-1 rounded-md backdrop-blur-md">
+            <span class="bg-[#e50914] text-white text-[10px] font-black px-1.5 py-0.5 rounded shadow">TOP 10</span>
+            <span class="text-xs font-bold text-white tracking-wide">Bugün Türkiye'de 1 Numara</span>
+          </div>
+        </div>
+
+        <!-- 2. Büyük Sinematik Başlık -->
+        <h1 class="text-3xl sm:text-5xl md:text-6xl lg:text-7xl font-black text-white tracking-tight leading-[1.06] drop-shadow-[0_4px_24px_rgba(0,0,0,0.95)] line-clamp-2">
+          ${escapeHtml(hero.name)}
+        </h1>
+
+        <!-- 3. Netflix Meta Bilgileri (Eşleşme Oranı, Yıl, Yaş, Sezon, 4K HDR) -->
+        <div class="flex items-center space-x-3 text-xs sm:text-sm flex-wrap gap-y-1.5 select-none font-semibold">
+          <span class="text-[#46d369] font-black tracking-wide">%${matchRate} Eşleşme</span>
+          <span class="text-gray-200 font-medium">${escapeHtml(year)}</span>
+          <span class="border border-gray-400/60 bg-black/40 px-1.5 py-0.5 text-[11px] text-gray-200 font-bold rounded">
+            ${escapeHtml(ageRating)}
+          </span>
+          <span class="text-gray-200 font-medium">${escapeHtml(durationText)}</span>
+          <div class="flex items-center space-x-1.5 text-[10px] text-gray-300 font-bold">
+            <span class="border border-white/30 bg-black/40 px-1.5 py-0.5 rounded">4K ULTRA HD</span>
+            <span class="border border-white/30 bg-black/40 px-1.5 py-0.5 rounded">HDR</span>
+            <span class="border border-white/30 bg-black/40 px-1.5 py-0.5 rounded">5.1</span>
+          </div>
+          ${hero.genre ? `
+            <span class="text-gray-400 text-xs hidden md:inline font-normal">• ${escapeHtml(hero.genre)}</span>
+          ` : ''}
+        </div>
+
+        <!-- 4. Konu Özeti (Plot Synopsis) -->
+        <p class="text-sm sm:text-base md:text-lg text-gray-200 font-normal leading-relaxed max-w-xl line-clamp-3 drop-shadow-[0_2px_12px_rgba(0,0,0,0.95)]">
+          ${escapeHtml(desc)}
+        </p>
+
+        <!-- 5. Netflix Aksiyon Butonları (Beyaz Oynat, Cam Detaylar, Yuvarlak Liste) -->
+        <div class="flex items-center space-x-3 pt-2 select-none flex-wrap gap-y-2">
+          <!-- Oynat (Play) -->
+          <button id="netflix-hero-play-btn" class="px-7 sm:px-9 py-3 sm:py-3.5 rounded-lg bg-white hover:bg-white/85 text-black font-extrabold text-base sm:text-lg flex items-center space-x-2.5 transition transform hover:scale-105 active:scale-95 shadow-2xl cursor-pointer">
+            <i data-lucide="play" class="w-6 h-6 fill-current"></i>
+            <span>Oynat</span>
+          </button>
+
+          <!-- Daha Fazla Bilgi (More Info) -->
+          <button id="netflix-hero-detail-btn" class="px-6 sm:px-8 py-3 sm:py-3.5 rounded-lg bg-white/20 hover:bg-white/30 text-white font-bold text-base sm:text-lg flex items-center space-x-2.5 border border-white/20 backdrop-blur-md transition transform hover:scale-105 active:scale-95 cursor-pointer">
+            <i data-lucide="info" class="w-6 h-6"></i>
+            <span>Daha Fazla Bilgi</span>
+          </button>
+
+          <!-- Listeme Ekle (Add to List) -->
+          <button id="netflix-hero-fav-btn" class="w-12 h-12 rounded-full bg-black/50 hover:bg-white/20 text-white border border-white/30 flex items-center justify-center transition transform hover:scale-105 active:scale-95 cursor-pointer" title="Listeme Ekle">
+            <i data-lucide="plus" class="w-6 h-6"></i>
+          </button>
+        </div>
+      </div>
+    `;
+
+    // Buton Eylemleri
+    const playBtn = document.getElementById('netflix-hero-play-btn');
+    if (playBtn) {
+      playBtn.onclick = () => {
+        if (isMovie) {
+          openMediaItem(hero, 'movie');
+        } else {
+          openSeriesDetailPage(hero.id);
+        }
+      };
+    }
+
+    const detailBtn = document.getElementById('netflix-hero-detail-btn');
+    if (detailBtn) {
+      detailBtn.onclick = () => {
+        if (isMovie) {
+          openMediaItem(hero, 'movie');
+        } else {
+          openSeriesDetailPage(hero.id);
+        }
+      };
+    }
+
+    const favBtn = document.getElementById('netflix-hero-fav-btn');
+    if (favBtn) {
+      favBtn.onclick = () => {
+        toggleFavorite(hero, isMovie ? 'movie' : 'series');
+        showToast(isFavorite(hero.id, isMovie ? 'movie' : 'series') ? 'Listeye eklendi' : 'Listeden çıkarıldı');
+      };
+    }
+  }
+
+  // Alt Slider Noktaları
+  if (dotsContainer) {
+    if (heroes.length > 1) {
+      dotsContainer.innerHTML = heroes.map((_, i) => `
+        <button onclick="showHomeHeroSlide(${i}); resetHomeHeroTimer();" title="İçerik ${i + 1}" class="h-2 rounded-full transition-all duration-300 cursor-pointer ${i === index ? 'bg-white w-8 shadow-lg' : 'bg-white/30 hover:bg-white/60 w-2'}"></button>
+      `).join('');
+    } else {
+      dotsContainer.innerHTML = '';
+    }
+  }
+
+  initIcons();
 }
 
 function renderHomeMoviesShelf(movies) {

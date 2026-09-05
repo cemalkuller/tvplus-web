@@ -3,21 +3,22 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>TV+ • TV Oturumunu Onayla</title>
+  <title>NoLimit • TV Oturumunu Onayla</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/lucide@latest"></script>
   <style>
     body { background-color: #000000; color: #FFFFFF; font-family: -apple-system, BlinkMacSystemFont, sans-serif; }
-    .tvplus-yellow { color: #FFC700; }
-    .bg-tvplus-yellow { background-color: #FFC700; }
+    .tvplus-yellow, .nolimit-orange { color: #00C951; }
+    .bg-tvplus-yellow, .bg-nolimit-orange { background-color: #00C951; }
   </style>
 </head>
 <body class="min-h-screen flex flex-col justify-between p-6">
 
   <!-- Header -->
   <header class="flex items-center justify-between border-b border-white/10 pb-4">
-    <div class="text-2xl font-black">
-      tv<span class="tvplus-yellow">+</span>
+    <div class="flex items-center">
+      <img src="/assets/nolimit-logo.svg" alt="NoLimit" class="h-8 w-auto" />
     </div>
     <span class="text-xs font-semibold px-2.5 py-1 rounded-full bg-white/10 text-gray-300">
       TV Cihaz Eşleştirme
@@ -37,7 +38,7 @@
       <div class="space-y-2">
         <h1 class="text-2xl font-black text-white">TV Girişini Onayla</h1>
         <p class="text-xs text-gray-400">
-          Televizyonunuzda Turkcell TV+ oturumunu açmak üzeresiniz. TV ekranınızdaki 6 haneli kodu kontrol edin.
+          Televizyonunuzda NoLimit oturumunu açmak üzeresiniz. TV ekranınızdaki 6 haneli kodu kontrol edin.
         </p>
       </div>
 
@@ -69,7 +70,7 @@
         <button 
           id="btn-authorize" 
           onclick="authorizeTv()" 
-          class="w-full py-3.5 rounded-xl bg-tvplus-yellow hover:bg-yellow-400 text-black font-extrabold text-sm transition transform active:scale-95 shadow-xl flex items-center justify-center space-x-2"
+          class="w-full py-3.5 rounded-xl bg-tvplus-yellow hover:bg-orange-600 text-black font-extrabold text-sm transition transform active:scale-95 shadow-xl flex items-center justify-center space-x-2"
         >
           <i data-lucide="check-circle" class="w-5 h-5"></i>
           <span>Televizyonda Oturumu Aç</span>
@@ -84,7 +85,7 @@
 
   <!-- Footer -->
   <footer class="text-center text-xs text-gray-500 pt-4 border-t border-white/5">
-    Turkcell TV+ Akıllı TV Güvenli Giriş Sistemi
+    NoLimit Akıllı TV Güvenli Giriş Sistemi
   </footer>
 
   <script>

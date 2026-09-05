@@ -78,5 +78,19 @@ export const CONFIG = {
       process.env.IPTV_PASSWORD = val;
     }
   },
-  cacheTTL: 24 * 60 * 60 * 1000 // 24 hours (1 day) in ms
+  cacheTTL: 24 * 60 * 60 * 1000, // 24 hours (1 day) in ms
+  parental: {
+    get pin() {
+      return process.env.ADULT_PIN || '0000';
+    },
+    set pin(val) {
+      process.env.ADULT_PIN = String(val || '0000');
+    },
+    get enabled() {
+      return process.env.ENABLE_ADULT !== 'false';
+    },
+    set enabled(val) {
+      process.env.ENABLE_ADULT = String(val);
+    }
+  }
 };

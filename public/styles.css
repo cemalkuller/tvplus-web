@@ -1,8 +1,10 @@
 @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
 
 :root {
-  --tv-yellow: #FFC700;
-  --tv-yellow-hover: #E5B300;
+  --tv-yellow: #00C951;
+  --tv-yellow-hover: #00B048;
+  --tv-orange: #00C951;
+  --tv-orange-hover: #00B048;
   --tv-bg-dark: #000000;
   --tv-bg-surface: #0E121B;
   --tv-bg-card: #131926;
@@ -48,8 +50,8 @@ body {
   scrollbar-width: none;
 }
 
-/* TV+ Brand Logo Text */
-.tvplus-logo {
+/* NoLimit Brand Logo */
+.tvplus-logo, .nolimit-logo {
   font-family: 'Plus Jakarta Sans', sans-serif;
   font-weight: 900;
   letter-spacing: -0.04em;
@@ -57,11 +59,16 @@ body {
   color: #FFFFFF;
   display: inline-flex;
   align-items: center;
+  user-select: none;
 }
-.tvplus-logo .plus {
+.tvplus-logo .limit, .nolimit-logo .limit, .tvplus-logo .plus {
   color: var(--tv-yellow);
   font-weight: 900;
-  margin-left: 1px;
+}
+.nolimit-svg-icon {
+  height: 38px;
+  width: auto;
+  object-fit: contain;
 }
 
 /* Profile Selection Screen (Image 1) */
@@ -111,8 +118,8 @@ body {
 }
 .channel-strip-card.active {
   border-color: var(--tv-yellow);
-  background: rgba(255, 199, 0, 0.1);
-  box-shadow: 0 0 15px rgba(255, 199, 0, 0.3);
+  background: rgba(0, 201, 81, 0.1);
+  box-shadow: 0 0 15px rgba(0, 201, 81, 0.3);
 }
 
 /* 3-Column Channel List Row Cards (Image 4) */
@@ -129,12 +136,12 @@ body {
 }
 .channel-list-row:hover {
   background: #161D2B;
-  border-color: rgba(255, 199, 0, 0.4);
+  border-color: rgba(0, 201, 81, 0.4);
   transform: translateY(-2px);
 }
 .channel-list-row.active {
   border-color: var(--tv-yellow);
-  background: linear-gradient(90deg, rgba(255, 199, 0, 0.12) 0%, #0E121B 100%);
+  background: linear-gradient(90deg, rgba(0, 201, 81, 0.12) 0%, #0E121B 100%);
 }
 
 /* Category Pill (Image 4) */
@@ -167,6 +174,38 @@ body {
   display: flex;
   flex-direction: column;
   justify-content: space-between;
+}
+
+/* MOBİLDE YAN DÖNME / FORCE LANDSCAPE STİLİ */
+.tvplus-player-modal.force-landscape {
+  position: fixed !important;
+  top: 50% !important;
+  left: 50% !important;
+  width: 100vh !important;
+  width: 100dvh !important;
+  height: 100vw !important;
+  height: 100dvw !important;
+  transform: translate(-50%, -50%) rotate(90deg) !important;
+  transform-origin: center center !important;
+  overflow: hidden !important;
+  z-index: 99999 !important;
+  box-sizing: border-box !important;
+}
+
+.tvplus-player-modal.force-landscape #video-player {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: contain !important;
+}
+
+.tvplus-player-modal.force-landscape .tvplus-player-overlay {
+  padding: 14px 24px !important;
+}
+
+.tvplus-player-modal.force-landscape .player-epg-tray,
+.tvplus-player-modal.force-landscape .player-channel-switcher,
+.tvplus-player-modal.force-landscape .player-episodes-tray {
+  max-height: 84% !important;
 }
 
 .tvplus-player-overlay {
@@ -220,7 +259,7 @@ body {
   right: -6px;
   top: 50%;
   transform: translateY(-50%);
-  box-shadow: 0 0 8px rgba(255, 199, 0, 0.8);
+  box-shadow: 0 0 8px rgba(0, 201, 81, 0.8);
 }
 
 /* Slide-over Channel Drawer */
@@ -290,7 +329,7 @@ body {
 }
 
 .episode-tray-card:hover {
-  border-color: rgba(255, 199, 0, 0.6);
+  border-color: rgba(0, 201, 81, 0.6);
   transform: translateY(-2px);
   background: #182030;
 }
@@ -298,7 +337,7 @@ body {
 .episode-tray-card.active {
   border-color: #FFC700;
   background: #182030;
-  box-shadow: 0 0 15px rgba(255, 199, 0, 0.25);
+  box-shadow: 0 0 15px rgba(0, 201, 81, 0.25);
 }
 
 .epg-day-pill {
@@ -338,8 +377,8 @@ body {
 }
 .epg-program-card.current {
   border-color: var(--tv-yellow);
-  background: linear-gradient(180deg, rgba(255, 199, 0, 0.12) 0%, #121826 100%);
-  box-shadow: 0 0 20px rgba(255, 199, 0, 0.25);
+  background: linear-gradient(180deg, rgba(0, 201, 81, 0.12) 0%, #121826 100%);
+  box-shadow: 0 0 20px rgba(0, 201, 81, 0.25);
 }
 
 /* ======================================================== */
@@ -371,7 +410,7 @@ body {
   width: 3px;
   background: var(--tv-yellow);
   border-radius: 3px 0 0 3px;
-  box-shadow: 0 0 12px rgba(255, 199, 0, 0.7);
+  box-shadow: 0 0 12px rgba(0, 201, 81, 0.7);
   pointer-events: none;
 }
 
@@ -388,10 +427,10 @@ body {
 }
 .switcher-channel-card:hover {
   background: #182030;
-  border-color: rgba(255, 199, 0, 0.4);
+  border-color: rgba(0, 201, 81, 0.4);
 }
 .switcher-channel-card.active {
-  border-color: rgba(255, 199, 0, 0.6);
+  border-color: rgba(0, 201, 81, 0.6);
   background: #1A2234;
 }
 
@@ -452,7 +491,7 @@ body {
 .media-card:hover {
   transform: translateY(-5px);
   border-color: var(--tv-yellow);
-  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.7), 0 0 15px rgba(255, 199, 0, 0.15);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.7), 0 0 15px rgba(0, 201, 81, 0.15);
 }
 
 .media-poster-wrapper {
@@ -498,7 +537,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 4px 16px rgba(255, 199, 0, 0.5);
+  box-shadow: 0 4px 16px rgba(0, 201, 81, 0.5);
   transform: scale(0.9);
   transition: transform 0.2s ease;
 }
@@ -527,18 +566,47 @@ body {
 }
 .vod-cat-pill.active {
   background: var(--tv-yellow);
+  background: var(--tv-orange);
   color: #000000;
-  border-color: var(--tv-yellow);
+  border-color: var(--tv-orange);
   font-weight: 800;
 }
 
-/* Netflix-style platform shelves */
+/* Netflix-style platform shelves */.episode-tray-card:hover {
+  border-color: rgba(0, 201, 81, 0.6);
+  transform: translateY(-2px);
+  background: #182030;
+}
+
+.episode-tray-card.active {
+  border-color: #00C951;
+  background: #182030;
+  box-shadow: 0 0 15px rgba(0, 201, 81, 0.25);
+}
+
+.epg-day-pill {
+  padding: 5px 14px;
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.08);
+  font-size: 11px;
+}
+
+/* ======================================================== */
+/* PLATFORM ROWS & POSTER CARDS                             */
+/* ======================================================== */
+.platform-section-title {
+  font-size: clamp(1.15rem, 2.2vw, 1.65rem);
+  font-weight: 800;
+  color: #fff;
+  letter-spacing: -0.02em;
+}
+
 .platform-shelf-row {
   display: flex;
-  gap: 0.55rem;
+  gap: clamp(0.75rem, 1.2vw, 1.25rem);
   overflow-x: auto;
-  overflow-y: hidden;
-  padding: 0.4rem 0 1rem;
+  padding: 0.5rem 0 1.25rem 0;
+  scroll-behavior: smooth;
   scrollbar-width: none;
   cursor: grab;
   user-select: none;
@@ -614,6 +682,6 @@ google-cast-launcher {
   display: inline-block;
   cursor: pointer;
   vertical-align: middle;
-  --connected-color: #FFC700;
+  --connected-color: #00C951;
   --disconnected-color: #FFFFFF;
 }

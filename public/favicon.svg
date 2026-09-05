@@ -1,0 +1,13 @@
+﻿<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="none">
+  <defs>
+    <linearGradient id="nlFavGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00C951" />
+      <stop offset="100%" stop-color="#009940" />
+    </linearGradient>
+  </defs>
+  <rect width="100" height="100" rx="24" fill="#0A0D14" />
+  <rect width="96" height="96" x="2" y="2" rx="22" stroke="#1E2738" stroke-width="2" />
+  <path d="M22 50 C22 38 31 30 40 30 C49 30 54 39 58 50 C62 61 67 70 76 70 C85 70 91 62 91 50 C91 38 82 30 73 30 C64 30 59 39 55 50 C51 61 46 70 37 70 C28 70 22 62 22 50 Z" 
+        stroke="url(#nlFavGrad)" stroke-width="9" stroke-linecap="round" stroke-linejoin="round" fill="none" />
+  <polygon points="72,43 81,50 72,57" fill="#00C951" />
+</svg>

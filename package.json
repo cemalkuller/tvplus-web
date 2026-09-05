@@ -1,7 +1,7 @@
 {
-  "name": "tvplus-web",
+  "name": "nolimit-web",
   "version": "1.0.0",
-  "description": "Turkcell TV+ benzeri modern web IPTV oynatıcısı",
+  "description": "NoLimit modern web IPTV ve medya oynatıcısı",
   "main": "server.js",
   "type": "module",
   "scripts": {

@@ -12,6 +12,7 @@ import { CONFIG, saveEnvFile } from './config.js';
 import { initDatabase, getDb } from './db.js';
 import { readCatalogAction } from './iptv-catalog.js';
 import { iptvFetch, proxyInputArgs } from './iptv-proxy.js';
+import { getSportsSchedule, initMidnightScheduler } from './sports-scraper.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -903,7 +904,8 @@ app.get('/api/categories', async (req, res) => {
     const categoriesWithCount = (cache.categories || []).map(cat => ({
       id: cat.category_id,
       name: cat.category_name,
-      count: cache.categoryCounts[cat.category_id] || 0
+      count: cache.categoryCounts[cat.category_id] || 0,
+      isAdult: isAdultCategory(cat.category_name)
     }));
 
     res.json({
@@ -979,6 +981,9 @@ app.get('/api/streams', async (req, res) => {
     } else {
       if (category_id && category_id !== 'all') {
         filtered = filtered.filter(s => String(s.category_id) === String(category_id));
+      } else if (!search) {
+        // Genel 'Tümü' listesinde aile deneyimini korumak için yetişkin kanalları ana listeye yığma
+        filtered = filtered.filter(s => !isAdultContent(s));
       }
 
       if (search) {
@@ -1004,7 +1009,8 @@ app.get('/api/streams', async (req, res) => {
       categoryId: s.category_id,
       epgId: s.epg_channel_id,
       streamUrl: `/stream/${s.stream_id}.m3u8`,
-      directTsUrl: `/live/${s.stream_id}.ts`
+      directTsUrl: `/live/${s.stream_id}.ts`,
+      isAdult: isAdultContent(s)
     }));
 
     res.json({
@@ -1038,14 +1044,38 @@ app.get('/api/settings', (req, res) => {
     host,
     username,
     password,
-    m3uUrl: `${host}/get.php?username=${username}&password=${password}&type=m3u&output=ts`
+    m3uUrl: `${host}/get.php?username=${username}&password=${password}&type=m3u&output=ts`,
+    adultPin: CONFIG.parental.pin,
+    enableAdult: CONFIG.parental.enabled
   });
+});
+
+// API: Yetişkin İçerik PIN Doğrulama
+app.post('/api/verify-adult-pin', (req, res) => {
+  const { pin } = req.body;
+  const configuredPin = String(CONFIG.parental.pin || '0000').trim();
+  const inputPin = String(pin || '').trim();
+  if (inputPin === configuredPin) {
+    return res.json({ success: true, message: 'PIN doğrulandı' });
+  } else {
+    return res.status(401).json({ success: false, error: 'Hatalı PIN kodu! Lütfen tekrar deneyin.' });
+  }
 });
 
 // API: Ayarları Güncelle & Doğrula & .env Kaydet
 app.post('/api/settings', async (req, res) => {
   try {
-    let { host, username, password, m3uUrl } = req.body;
+    let { host, username, password, m3uUrl, adultPin } = req.body;
+
+    // Yetişkin PIN güncellemesi
+    let pinUpdated = false;
+    if (adultPin !== undefined && adultPin !== null) {
+      const pinStr = String(adultPin).trim();
+      CONFIG.parental.pin = pinStr;
+      saveEnvFile({ ADULT_PIN: pinStr });
+      pinUpdated = true;
+      console.log(`[Ayarlar] ✅ Ebeveyn / Yetişkin PIN kodu güncellendi: ${pinStr}`);
+    }
 
     // Eğer kullanıcı tam M3U linki yapıştırdıysa otomatik ayrıştır
     if (m3uUrl && (!host || !username || !password)) {
@@ -1057,10 +1087,29 @@ app.post('/api/settings', async (req, res) => {
       }
     }
 
+    // Eğer IPTV bilgileri boşsa ama PIN güncellendiyse
     if (!host || !username || !password) {
+      if (pinUpdated) {
+        return res.json({
+          success: true,
+          message: 'Yetişkin içerik PIN kodu başarıyla güncellendi!',
+          adultPin: CONFIG.parental.pin
+        });
+      }
       return res.status(400).json({
         success: false,
         error: 'Lütfen Sunucu Adresi (Host), Kullanıcı Adı ve Şifre alanlarını eksiksiz girin.'
+      });
+    }
+
+    // Eğer IPTV bağlantı bilgileri değişmediyse ve sadece PIN güncellendiyse doğrudan başarılı dön
+    if (host.trim().replace(/\/+$/, '') === CONFIG.iptv.host && 
+        username.trim() === CONFIG.iptv.username && 
+        password.trim() === CONFIG.iptv.password) {
+      return res.json({
+        success: true,
+        message: 'Ayarlar ve Yetişkin PIN kodu başarıyla güncellendi!',
+        adultPin: CONFIG.parental.pin
       });
     }
 
@@ -1103,7 +1152,8 @@ app.post('/api/settings', async (req, res) => {
     saveEnvFile({
       IPTV_HOST: host,
       IPTV_USERNAME: username,
-      IPTV_PASSWORD: password
+      IPTV_PASSWORD: password,
+      ADULT_PIN: CONFIG.parental.pin
     });
 
     CONFIG.iptv.host = host;
@@ -1136,7 +1186,8 @@ app.post('/api/settings', async (req, res) => {
       success: true,
       message: 'IPTV ayarları başarıyla .env dosyasına kaydedildi ve kanal listesi yenilendi!',
       totalChannels: cache.streams?.length || 0,
-      userInfo: authData.user_info || {}
+      userInfo: authData.user_info || {},
+      adultPin: CONFIG.parental.pin
     });
   } catch (err) {
     console.error('[Ayarlar Hatası]', err);
@@ -1212,16 +1263,23 @@ async function getVodCategories() {
     return vodCache.categories;
   }
   const raw = await fetchFromXtream('get_vod_categories');
-  const clean = (raw || [])
-    .filter(c => !isAdultCategory(c.category_name))
-    .map(c => ({
-      category_id: String(c.category_id),
-      category_name: cleanName(c.category_name, 'category').replace(/TR\s*⭐\s*/g, '').trim(),
-      parent_id: c.parent_id || 0
-    }));
-  vodCache.categories = clean;
+  const allCats = (raw || []).map(c => ({
+    category_id: String(c.category_id),
+    category_name: cleanName(c.category_name, 'category').replace(/TR\s*⭐\s*/g, '').trim(),
+    parent_id: c.parent_id || 0,
+    isAdult: isAdultCategory(c.category_name)
+  }));
+
+  // Yetişkin kategorileri en sona yerleştir
+  allCats.sort((a, b) => {
+    if (a.isAdult && !b.isAdult) return 1;
+    if (!a.isAdult && b.isAdult) return -1;
+    return 0;
+  });
+
+  vodCache.categories = allCats;
   vodCache.lastFetched = Date.now();
-  return clean;
+  return allCats;
 }
 
 async function getSeriesCategories() {
@@ -1229,16 +1287,23 @@ async function getSeriesCategories() {
     return seriesCache.categories;
   }
   const raw = await fetchFromXtream('get_series_categories');
-  const clean = (raw || [])
-    .filter(c => !isAdultCategory(c.category_name))
-    .map(c => ({
-      category_id: String(c.category_id),
-      category_name: cleanName(c.category_name, 'category').replace(/TR\s*⭐\s*/g, '').trim(),
-      parent_id: c.parent_id || 0
-    }));
-  seriesCache.categories = clean;
+  const allCats = (raw || []).map(c => ({
+    category_id: String(c.category_id),
+    category_name: cleanName(c.category_name, 'category').replace(/TR\s*⭐\s*/g, '').trim(),
+    parent_id: c.parent_id || 0,
+    isAdult: isAdultCategory(c.category_name)
+  }));
+
+  // Yetişkin kategorileri en sona yerleştir
+  allCats.sort((a, b) => {
+    if (a.isAdult && !b.isAdult) return 1;
+    if (!a.isAdult && b.isAdult) return -1;
+    return 0;
+  });
+
+  seriesCache.categories = allCats;
   seriesCache.lastFetched = Date.now();
-  return clean;
+  return allCats;
 }
 
 async function getVodStreamsByCategory(catId) {
@@ -1249,8 +1314,7 @@ async function getVodStreamsByCategory(catId) {
   }
   const extra = catId && catId !== 'all' ? `get_vod_streams&category_id=${catId}` : 'get_vod_streams';
   const raw = await fetchFromXtream(extra);
-  const clean = (Array.isArray(raw) ? raw : [])
-    .filter(m => !isAdultContent(m))
+  let clean = (Array.isArray(raw) ? raw : [])
     .map(m => ({
       id: m.stream_id,
       stream_id: m.stream_id,
@@ -1262,8 +1326,16 @@ async function getVodStreamsByCategory(catId) {
       added: m.added,
       container_extension: m.container_extension || 'mp4',
       categoryId: String(m.category_id),
-      streamUrl: `/vod/browser/movie/${m.stream_id}.${m.container_extension || 'mp4'}`
+      streamUrl: `/vod/browser/movie/${m.stream_id}.${m.container_extension || 'mp4'}`,
+      isAdult: isAdultContent(m)
     }));
+
+  // Genel 'Tümü' listesinde aile deneyimini korumak için yetişkin filmleri genel listede gösterme,
+  // ancak kategori seçildiğinde eksiksiz göster!
+  if (!catId || catId === 'all') {
+    clean = clean.filter(m => !m.isAdult);
+  }
+
   vodCache.streamsByCat.set(key, { time: Date.now(), data: clean });
   return clean;
 }
@@ -1276,8 +1348,7 @@ async function getSeriesByCategory(catId) {
   }
   const extra = catId && catId !== 'all' ? `get_series&category_id=${catId}` : 'get_series';
   const raw = await fetchFromXtream(extra);
-  const clean = (Array.isArray(raw) ? raw : [])
-    .filter(s => !isAdultCategory(s.name) && !isAdultCategory(s.genre))
+  let clean = (Array.isArray(raw) ? raw : [])
     .map(s => ({
       id: s.series_id,
       series_id: s.series_id,
@@ -1292,8 +1363,14 @@ async function getSeriesByCategory(catId) {
       rating: s.rating || '',
       rating_5based: s.rating_5based || 0,
       backdrop: (s.backdrop_path && s.backdrop_path[0]) || '',
-      categoryId: String(s.category_id)
+      categoryId: String(s.category_id),
+      isAdult: isAdultCategory(s.name) || isAdultCategory(s.genre)
     }));
+
+  if (!catId || catId === 'all') {
+    clean = clean.filter(s => !s.isAdult);
+  }
+
   seriesCache.seriesByCat.set(key, { time: Date.now(), data: clean });
   return clean;
 }
@@ -1874,38 +1951,50 @@ app.get('/api/featured', async (req, res) => {
     await getOrUpdateData();
 
     // Öne çıkan film ve dizi kategorilerinden çek
-    const [vizyonMovies, netflixSeries, primeSeries] = await Promise.all([
+    const [vizyonMovies, netflixSeries, primeSeries, disneySeries, appleSeries] = await Promise.all([
       getVodStreamsByCategory('132').catch(() => []), // VIZYON FILMLER
       getSeriesByCategory('832').catch(() => []),    // NETFLIX DIZILER
-      getSeriesByCategory('295').catch(() => [])     // AMAZON PRIME DIZILER
+      getSeriesByCategory('295').catch(() => []),    // AMAZON PRIME DIZILER
+      getSeriesByCategory('744').catch(() => []),    // DISNEY DIZILER
+      getSeriesByCategory('670').catch(() => [])     // APPLE TV DIZILER
     ]);
 
-    // Hero banner için en kaliteli afişe/puanlamaya sahip 5 içerik
-    const heroPool = [
-      ...vizyonMovies.slice(0, 4).map(m => ({
-        id: m.id,
-        name: m.name,
-        type: 'movie',
-        poster: m.icon,
-        rating: m.rating || '8.4',
-        year: m.year || '2024',
-        tagline: 'Vizyonda Çok Sevilenler',
-        plot: 'Sinemalarda gişe rekorları kıran ve seyircilerin beğenisini toplayan en popüler yapım.',
-        playUrl: m.streamUrl
-      })),
-      ...netflixSeries.slice(0, 3).map(s => ({
-        id: s.id,
-        name: s.name,
+    // Netflix formatında sinematik yatay görseli (backdrop) ve açıklaması olan içerikler
+    const cleanHeroTitle = (name = '') => name.replace(/\s*\(\d{4}\).*$/, '').replace(/^TR\s*⭐\s*/, '').trim();
+
+    const buildSeriesHero = (s, platform, tagline, defGenre) => {
+      const ratingNum = parseFloat(s.rating) || 8.2;
+      const matchRate = Math.min(99, Math.max(86, Math.round(ratingNum * 10 + 8)));
+      return {
+        id: s.id || s.series_id,
+        name: cleanHeroTitle(s.name),
         type: 'series',
-        poster: s.backdrop || s.cover,
+        platform,
+        backdrop: s.backdrop || s.cover,
         cover: s.cover,
-        rating: s.rating || '8.8',
-        year: '2024',
-        genre: s.genre || 'Dram, Gerilim',
-        tagline: 'En Çok İzlenen Dizi',
+        rating: ratingNum.toFixed(1),
+        matchRate,
+        year: s.year || '2024',
+        genre: s.genre || defGenre,
+        tagline,
         plot: s.plot || 'Dünya genelinde milyonlarca izleyicinin takip ettiği heyecan dolu serüven.',
-        detailUrl: `/dizi/${s.id}`
-      }))
+        seasons: '1 Sezon',
+        ageRating: '16+',
+        detailUrl: `/dizi/${s.id || s.series_id}`
+      };
+    };
+
+    // Yüksek çözünürlüklü yatay afişi olan en kaliteli serileri seç
+    const validNet = netflixSeries.filter(s => s.backdrop && s.plot && s.plot.length > 25);
+    const validPri = primeSeries.filter(s => s.backdrop && s.plot && s.plot.length > 25);
+    const validDis = disneySeries.filter(s => s.backdrop && s.plot && s.plot.length > 25);
+    const validApp = appleSeries.filter(s => s.backdrop && s.plot && s.plot.length > 25);
+
+    const heroPool = [
+      ...validNet.slice(0, 4).map(s => buildSeriesHero(s, 'netflix', 'Netflix Orijinal Dizisi', 'Dram, Gerilim, Gizem')),
+      ...validPri.slice(0, 2).map(s => buildSeriesHero(s, 'prime', 'Prime Video Orijinal', 'Aksiyon, Bilim Kurgu')),
+      ...validDis.slice(0, 2).map(s => buildSeriesHero(s, 'disney', 'Disney+ Orijinal', 'Macera, Fantastik')),
+      ...validApp.slice(0, 2).map(s => buildSeriesHero(s, 'appletv', 'Apple Original', 'Dram, Gerilim'))
     ];
 
     // Popüler ulusal ve spor kanalları
@@ -1928,6 +2017,19 @@ app.get('/api/featured', async (req, res) => {
     });
   } catch (err) {
     res.status(500).json({ error: err.message });
+  }
+});
+
+// REST: Günün Spor Karşılaşmaları (Sporekrani.com & TV+ Eşleşmesi)
+app.get('/api/sports-schedule', async (req, res) => {
+  try {
+    await getOrUpdateData();
+    const force = req.query.force === 'true';
+    const schedule = await getSportsSchedule(cache.streams || [], force);
+    res.json(schedule);
+  } catch (err) {
+    console.error('[API /api/sports-schedule] Hata:', err);
+    res.status(500).json({ error: 'Spor fikstürü alınamadı', matches: [] });
   }
 });
 
@@ -2462,4 +2564,5 @@ app.listen(CONFIG.port, async () => {
   console.log(`====================================================`);
   
   getOrUpdateData().catch(e => console.error('Önbellek başlatma hatası:', e.message));
+  initMidnightScheduler(() => cache.streams || []);
 });
