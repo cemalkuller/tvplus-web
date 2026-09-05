@@ -9,6 +9,7 @@ import { spawn } from 'child_process';
 import dgram from 'dgram';
 import QRCode from 'qrcode';
 import { CONFIG, saveEnvFile } from './config.js';
+import { createVodHls } from './vod-hls.js';
 import { initDatabase, getDb } from './db.js';
 import { readCatalogAction } from './iptv-catalog.js';
 import { iptvFetch, proxyInputArgs } from './iptv-proxy.js';
@@ -671,6 +672,13 @@ function killVodSession(sid) {
   });
 }
 
+const vodHls = createVodHls(app, killProcessTree);
+
+app.post('/vod/hls-stop', (req, res) => {
+  if (typeof req.body.sid === 'string') vodHls.stop(req.body.sid.slice(0, 64));
+  res.sendStatus(204);
+});
+
 app.get('/vod/browser/:mediaType/:idWithExt', async (req, res) => {
   const { mediaType, idWithExt } = req.params;
   if (!['movie', 'series'].includes(mediaType) || !/^\d+\.[a-z0-9]+$/i.test(idWithExt)) {
@@ -730,6 +738,13 @@ app.get('/vod/browser/:mediaType/:idWithExt', async (req, res) => {
   // Sağlayıcının bağlantı yuvasını serbest bırakması için kısa bekleme
   await new Promise(resolve => setTimeout(resolve, 400));
   if (res.destroyed || res.writableEnded) return;
+
+  vodHls.stop(sid);
+  if (req.query.format === 'hls') {
+    // Reuse audio, quality and seek settings; replace only the MP4 pipe muxer.
+    res.removeHeader('Content-Type');
+    return vodHls.start(req, res, sid, ffmpegArgs.slice(0, ffmpegArgs.indexOf('-movflags')));
+  }
 
   const MAX_TRIES = 3;
   let current = null;
@@ -2552,6 +2567,7 @@ app.get('*', (req, res, next) => {
 // Start Server
 // Sunucu kapanırken açık kalan dönüştürme süreçlerini (ve bağlantı yuvasını) serbest bırak
 function cleanupVodSessions() {
+  vodHls.close();
   for (const proc of vodSessions.values()) {
     killProcessTree(proc);
   }

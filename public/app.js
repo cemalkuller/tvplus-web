@@ -1049,6 +1049,16 @@ function openPlayer(channel, push = true) {
   }
 }
 
+function stopNativeVod() {
+  if (video.canPlayType('application/vnd.apple.mpegurl')) {
+    return fetch('/vod/hls-stop', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sid: CLIENT_STREAM_ID }), keepalive: true
+    }).catch(() => {});
+  }
+  return Promise.resolve();
+}
+
 async function openMediaItem(item, type = 'movie') {
   if (!item) return;
   if (isAdultItem(item) && !STATE.adultUnlocked) {
@@ -1160,6 +1170,8 @@ async function openMediaItem(item, type = 'movie') {
 
   // Önce tek istekte medya bilgilerini al; oynatma sırasında ek kaynak bağlantısı açma.
   showLoading(true, `${title} yükleniyor...`);
+  await stopNativeVod();
+  if (STATE.playbackSession !== sessionId || playerModal.classList.contains('hidden')) return;
   await loadMediaTrackOptions();
   if (STATE.playbackSession !== sessionId || playerModal.classList.contains('hidden')) return;
   const cacheKey = `tvplus_resume_${type}_${mediaId}`;
@@ -1310,6 +1322,7 @@ function changeMediaSubtitle(index) {
 }
 
 function closePlayer(push = true) {
+  stopNativeVod();
   // Oynatma sonlanırken ilerlemeyi anında MySQL ve localStorage'a kaydet
   saveCurrentProgress(true);
 
@@ -1393,6 +1406,7 @@ function closePlayer(push = true) {
 }
 
 function startPlayback(channel) {
+  stopNativeVod();
   const sessionId = Date.now();
   STATE.playbackSession = sessionId;
 
@@ -1537,6 +1551,7 @@ function retryCurrentStream() {
 // -------------------------------------------------------------
 function buildMediaSrc(startSec = 0) {
   const params = new URLSearchParams();
+  if (video.canPlayType('application/vnd.apple.mpegurl')) params.set('format', 'hls');
   if (STATE.selectedAudioTrack !== '') params.set('audio', STATE.selectedAudioTrack);
   if (STATE.selectedQuality !== 'original') params.set('quality', STATE.selectedQuality);
   if (startSec > 0) params.set('start', Math.floor(startSec));
@@ -1663,6 +1678,14 @@ function initPlayerEvents() {
   updateVolumeUI();
 
   // Player Events
+  video.addEventListener('error', () => {
+    if (!STATE.currentMedia || playerModal.classList.contains('hidden')) return;
+    showLoading(false);
+    const code = video.error?.code;
+    if (code === 1) return;
+    showError(code === 2 ? 'Film bağlantısı kesildi. Tekrar deneyin.' :
+      `Film bu tarayıcıda yüklenemedi (medya hatası ${code || '?'}).`);
+  });
   video.addEventListener('waiting', () => showLoading(true, 'Yayın arabelleğe alınıyor...'));
   video.addEventListener('playing', () => {
     if (playerModal.classList.contains('hidden')) {
