@@ -1,7 +1,9 @@
 import './config.js';
 import { ProxyAgent, fetch } from 'undici';
 
-const proxyUrl = process.env.IPTV_PROXY_URL?.trim();
+const proxyEnabled = process.env.IPTV_PROXY_ENABLED?.trim().toLowerCase() === 'true';
+const proxyUrl = proxyEnabled ? process.env.IPTV_PROXY_URL?.trim() : '';
+if (proxyEnabled && !proxyUrl) throw new Error('IPTV_PROXY_ENABLED=true requires IPTV_PROXY_URL');
 let dispatcher;
 if (proxyUrl) {
   const url = new URL(proxyUrl);
