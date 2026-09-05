@@ -3045,8 +3045,19 @@ function renderMovieCategories() {
   const strip = document.getElementById('movies-categories-strip');
   if (!strip) return;
 
+  // Update the label on dropdown button
+  const label = document.getElementById('movies-cat-label');
+  if (label) {
+    if (STATE.activeMovieCategory === 'all') {
+      label.textContent = 'Tüm Kategoriler';
+    } else {
+      const active = STATE.movieCategories.find(c => String(c.category_id) === String(STATE.activeMovieCategory));
+      label.textContent = active ? active.category_name : 'Kategori';
+    }
+  }
+
   let html = `
-    <button onclick="setMovieCategory('all')" class="vod-cat-pill ${STATE.activeMovieCategory === 'all' ? 'active' : ''}">
+    <button onclick="setMovieCategory('all')" class="vod-cat-pill-item ${STATE.activeMovieCategory === 'all' ? 'active' : ''}">
       Tümü
     </button>
   `;
@@ -3056,12 +3067,12 @@ function renderMovieCategories() {
     const isAdult = isAdultCategoryItem(cat);
     let lockIcon = '';
     if (isAdult) {
-      lockIcon = STATE.adultUnlocked 
-        ? '<i data-lucide="lock-open" class="w-3.5 h-3.5 text-emerald-400 inline-block ml-1"></i>' 
+      lockIcon = STATE.adultUnlocked
+        ? '<i data-lucide="lock-open" class="w-3.5 h-3.5 text-emerald-400 inline-block ml-1"></i>'
         : '<i data-lucide="lock" class="w-3.5 h-3.5 text-red-400 inline-block ml-1"></i>';
     }
     html += `
-      <button onclick="setMovieCategory('${cat.category_id}')" class="vod-cat-pill ${isActive ? 'active' : ''} ${isAdult ? 'border border-red-500/40 text-red-300' : ''}">
+      <button onclick="setMovieCategory('${cat.category_id}')" class="vod-cat-pill-item ${isActive ? 'active' : ''} ${isAdult ? 'text-red-300' : ''}">
         <span>${escapeHtml(cat.category_name)}</span>
         ${lockIcon}
       </button>
@@ -3070,6 +3081,7 @@ function renderMovieCategories() {
   strip.innerHTML = html;
   initIcons();
 }
+
 
 function setMovieCategory(catId) {
   const cat = STATE.movieCategories.find(c => String(c.category_id) === String(catId));
@@ -3080,6 +3092,9 @@ function setMovieCategory(catId) {
   STATE.activeMovieCategory = catId;
   renderMovieCategories();
   loadMovies(true);
+  // Close panel after selection on mobile
+  document.getElementById('movies-cat-panel')?.classList.add('hidden');
+  document.getElementById('movies-cat-chevron')?.classList.remove('rotate-180');
 }
 
 async function loadMovies(reset = false) {
@@ -3210,8 +3225,19 @@ function renderSeriesCategories() {
   const strip = document.getElementById('series-categories-strip');
   if (!strip) return;
 
+  // Update the label on dropdown button
+  const label = document.getElementById('series-cat-label');
+  if (label) {
+    if (STATE.activeSeriesCategory === 'all') {
+      label.textContent = 'Tüm Kategoriler';
+    } else {
+      const active = STATE.seriesCategories.find(c => String(c.category_id) === String(STATE.activeSeriesCategory));
+      label.textContent = active ? active.category_name : 'Kategori';
+    }
+  }
+
   let html = `
-    <button onclick="setSeriesCategory('all')" class="vod-cat-pill ${STATE.activeSeriesCategory === 'all' ? 'active' : ''}">
+    <button onclick="setSeriesCategory('all')" class="vod-cat-pill-item ${STATE.activeSeriesCategory === 'all' ? 'active' : ''}">
       Tümü
     </button>
   `;
@@ -3221,12 +3247,12 @@ function renderSeriesCategories() {
     const isAdult = isAdultCategoryItem(cat);
     let lockIcon = '';
     if (isAdult) {
-      lockIcon = STATE.adultUnlocked 
-        ? '<i data-lucide="lock-open" class="w-3.5 h-3.5 text-emerald-400 inline-block ml-1"></i>' 
+      lockIcon = STATE.adultUnlocked
+        ? '<i data-lucide="lock-open" class="w-3.5 h-3.5 text-emerald-400 inline-block ml-1"></i>'
         : '<i data-lucide="lock" class="w-3.5 h-3.5 text-red-400 inline-block ml-1"></i>';
     }
     html += `
-      <button onclick="setSeriesCategory('${cat.category_id}')" class="vod-cat-pill ${isActive ? 'active' : ''} ${isAdult ? 'border border-red-500/40 text-red-300' : ''}">
+      <button onclick="setSeriesCategory('${cat.category_id}')" class="vod-cat-pill-item ${isActive ? 'active' : ''} ${isAdult ? 'text-red-300' : ''}">
         <span>${escapeHtml(cat.category_name)}</span>
         ${lockIcon}
       </button>
@@ -3234,6 +3260,10 @@ function renderSeriesCategories() {
   }
   strip.innerHTML = html;
   initIcons();
+
+  // Close panel after selection on mobile
+  document.getElementById('series-cat-panel')?.classList.add('hidden');
+  document.getElementById('series-cat-chevron')?.classList.remove('rotate-180');
 }
 
 function setSeriesCategory(catId) {
@@ -6215,3 +6245,221 @@ window.saveCurrentProgress = saveCurrentProgress;
 window.openTvLoginModal = openTvLoginModal;
 window.closeTvLoginModal = closeTvLoginModal;
 window.handleClassicLogin = handleClassicLogin;
+
+// ======================================================
+// MOBILE DRAWER
+// ======================================================
+function openMobileDrawer() {
+  const drawer = document.getElementById('mobile-drawer');
+  const overlay = document.getElementById('mobile-drawer-overlay');
+  if (!drawer) return;
+  overlay.classList.remove('hidden');
+  requestAnimationFrame(() => {
+    overlay.classList.add('opacity-100');
+    drawer.classList.remove('-translate-x-full');
+  });
+  document.body.style.overflow = 'hidden';
+  initIcons();
+  updateDrawerActiveState();
+}
+
+function closeMobileDrawer() {
+  const drawer = document.getElementById('mobile-drawer');
+  const overlay = document.getElementById('mobile-drawer-overlay');
+  if (!drawer) return;
+  drawer.classList.add('-translate-x-full');
+  overlay.classList.remove('opacity-100');
+  setTimeout(() => { overlay.classList.add('hidden'); }, 300);
+  document.body.style.overflow = '';
+}
+
+function updateDrawerActiveState() {
+  const tab = STATE.activeTab;
+  const map = { home: 'drawer-nav-home', live: 'drawer-nav-live', guide: 'drawer-nav-guide', movies: 'drawer-nav-movies', series: 'drawer-nav-series' };
+  Object.values(map).forEach(id => document.getElementById(id)?.classList.remove('active'));
+  if (map[tab]) document.getElementById(map[tab])?.classList.add('active');
+  // sync fav count
+  const drawerFav = document.getElementById('drawer-fav-count');
+  const headerFav = document.getElementById('fav-badge-count');
+  if (drawerFav && headerFav) drawerFav.textContent = headerFav.textContent;
+  // sync user name
+  const drawerName = document.getElementById('drawer-user-name');
+  const headerName = document.getElementById('header-user-name');
+  if (drawerName && headerName) drawerName.textContent = headerName.textContent;
+}
+
+window.openMobileDrawer = openMobileDrawer;
+window.closeMobileDrawer = closeMobileDrawer;
+
+// ======================================================
+// MOBILE FULL-SCREEN SEARCH MODAL
+// ======================================================
+let mobileSearchDebounce = null;
+
+function openMobileSearch() {
+  const modal = document.getElementById('mobile-search-modal');
+  if (!modal) return;
+  modal.classList.add('open');
+  document.body.style.overflow = 'hidden';
+  initIcons();
+  setTimeout(() => {
+    const inp = document.getElementById('mobile-search-input');
+    if (inp) inp.focus();
+  }, 150);
+
+  const inp = document.getElementById('mobile-search-input');
+  const clearBtn = document.getElementById('mobile-search-clear');
+  if (inp && !inp._mobileSearchBound) {
+    inp._mobileSearchBound = true;
+    inp.addEventListener('input', (e) => {
+      const val = e.target.value.trim();
+      if (clearBtn) clearBtn.classList.toggle('hidden', !val);
+      clearTimeout(mobileSearchDebounce);
+      mobileSearchDebounce = setTimeout(() => runMobileSearch(val), 350);
+    });
+  }
+  if (clearBtn && !clearBtn._mobileSearchBound) {
+    clearBtn._mobileSearchBound = true;
+    clearBtn.addEventListener('click', () => {
+      inp.value = '';
+      clearBtn.classList.add('hidden');
+      showMobileSearchHint();
+      inp.focus();
+    });
+  }
+
+  // Close on Escape
+  const escHandler = (e) => { if (e.key === 'Escape') { closeMobileSearch(); document.removeEventListener('keydown', escHandler); } };
+  document.addEventListener('keydown', escHandler);
+}
+
+function closeMobileSearch() {
+  const modal = document.getElementById('mobile-search-modal');
+  if (!modal) return;
+  modal.classList.remove('open');
+  document.body.style.overflow = '';
+  const inp = document.getElementById('mobile-search-input');
+  if (inp) inp.value = '';
+  showMobileSearchHint();
+}
+
+function showMobileSearchHint() {
+  const results = document.getElementById('mobile-search-results');
+  if (results) results.innerHTML = `
+    <div class="flex flex-col items-center justify-center h-64 space-y-3 text-gray-600">
+      <i data-lucide="search" class="w-12 h-12 opacity-30"></i>
+      <p class="text-sm">Aramak istediğiniz içeriği yazın</p>
+    </div>`;
+  initIcons();
+}
+
+async function runMobileSearch(query) {
+  if (!query || query.length < 2) { showMobileSearchHint(); return; }
+  const results = document.getElementById('mobile-search-results');
+  if (!results) return;
+  results.innerHTML = `<div class="flex justify-center py-12"><div class="w-6 h-6 rounded-full border-2 border-tv-yellow border-t-transparent animate-spin"></div></div>`;
+
+  try {
+    const [chanRes, movRes, serRes] = await Promise.all([
+      fetch(`/api/channels?search=${encodeURIComponent(query)}&limit=8`).then(r => r.ok ? r.json() : null),
+      fetch(`/api/vod/streams?search=${encodeURIComponent(query)}&limit=8`).then(r => r.ok ? r.json() : null),
+      fetch(`/api/series?search=${encodeURIComponent(query)}&limit=8`).then(r => r.ok ? r.json() : null)
+    ]);
+
+    let html = '';
+
+    const channels = chanRes?.channels || [];
+    const movies = movRes?.movies || [];
+    const series = serRes?.series || [];
+
+    if (channels.length === 0 && movies.length === 0 && series.length === 0) {
+      html = `<div class="flex flex-col items-center justify-center h-48 space-y-2 text-gray-600">
+        <i data-lucide="search-x" class="w-10 h-10 opacity-30"></i>
+        <p class="text-sm">"${escapeHtml(query)}" için sonuç bulunamadı</p>
+      </div>`;
+    } else {
+      if (channels.length) {
+        html += `<div class="mb-4"><p class="text-xs font-bold text-gray-500 uppercase tracking-wider px-1 mb-2">Kanallar</p><div class="space-y-1">`;
+        channels.forEach(ch => {
+          html += `<button onclick="openChannel(${JSON.stringify(ch).replace(/'/g,"&#39;")});closeMobileSearch();" class="flex items-center gap-3 w-full p-3 rounded-xl hover:bg-white/5 transition text-left">
+            <img src="${ch.icon || ''}" onerror="this.src=''" class="w-10 h-10 rounded-lg object-contain bg-white/5 flex-shrink-0">
+            <div><p class="text-sm font-semibold text-white line-clamp-1">${escapeHtml(cleanName(ch.name))}</p><p class="text-xs text-gray-500">${escapeHtml(ch.category || '')}</p></div>
+          </button>`;
+        });
+        html += `</div></div>`;
+      }
+      if (movies.length) {
+        html += `<div class="mb-4"><p class="text-xs font-bold text-gray-500 uppercase tracking-wider px-1 mb-2">Filmler</p><div class="grid grid-cols-3 gap-2">`;
+        movies.forEach(m => {
+          html += `<button onclick='openMediaItem(${JSON.stringify(m).replace(/'/g,"&#39;")}, "movie");closeMobileSearch();' class="rounded-xl overflow-hidden bg-white/5 text-left">
+            <img src="${m.icon || ''}" onerror="this.src=''" class="w-full aspect-[2/3] object-cover">
+            <p class="text-[11px] font-semibold text-white p-1.5 line-clamp-1">${escapeHtml(cleanName(m.name))}</p>
+          </button>`;
+        });
+        html += `</div></div>`;
+      }
+      if (series.length) {
+        html += `<div class="mb-4"><p class="text-xs font-bold text-gray-500 uppercase tracking-wider px-1 mb-2">Diziler</p><div class="grid grid-cols-3 gap-2">`;
+        series.forEach(s => {
+          html += `<button onclick='openSeriesDetail(${JSON.stringify(s).replace(/'/g,"&#39;")});closeMobileSearch();' class="rounded-xl overflow-hidden bg-white/5 text-left">
+            <img src="${s.cover || s.icon || ''}" onerror="this.src=''" class="w-full aspect-[2/3] object-cover">
+            <p class="text-[11px] font-semibold text-white p-1.5 line-clamp-1">${escapeHtml(cleanName(s.name))}</p>
+          </button>`;
+        });
+        html += `</div></div>`;
+      }
+    }
+
+    results.innerHTML = html;
+    initIcons();
+  } catch (err) {
+    results.innerHTML = `<div class="text-center py-8 text-gray-600 text-sm">Arama sırasında hata oluştu.</div>`;
+  }
+}
+
+window.openMobileSearch = openMobileSearch;
+window.closeMobileSearch = closeMobileSearch;
+
+// ======================================================
+// CATEGORY DROPDOWN (Movies & Series)
+// ======================================================
+function toggleMovieCatPanel() {
+  const panel = document.getElementById('movies-cat-panel');
+  const chevron = document.getElementById('movies-cat-chevron');
+  const isOpen = !panel.classList.contains('hidden');
+  // Close series panel if open
+  document.getElementById('series-cat-panel')?.classList.add('hidden');
+  document.getElementById('series-cat-chevron')?.classList.remove('rotate-180');
+  panel.classList.toggle('hidden', isOpen);
+  chevron?.classList.toggle('rotate-180', !isOpen);
+}
+
+function toggleSeriesCatPanel() {
+  const panel = document.getElementById('series-cat-panel');
+  const chevron = document.getElementById('series-cat-chevron');
+  const isOpen = !panel.classList.contains('hidden');
+  document.getElementById('movies-cat-panel')?.classList.add('hidden');
+  document.getElementById('movies-cat-chevron')?.classList.remove('rotate-180');
+  panel.classList.toggle('hidden', isOpen);
+  chevron?.classList.toggle('rotate-180', !isOpen);
+}
+
+// Close panels on outside click
+document.addEventListener('click', (e) => {
+  const movBtn = document.getElementById('movies-cat-btn');
+  const movPanel = document.getElementById('movies-cat-panel');
+  const serBtn = document.getElementById('series-cat-btn');
+  const serPanel = document.getElementById('series-cat-panel');
+  if (movPanel && !movPanel.contains(e.target) && !movBtn?.contains(e.target)) {
+    movPanel.classList.add('hidden');
+    document.getElementById('movies-cat-chevron')?.classList.remove('rotate-180');
+  }
+  if (serPanel && !serPanel.contains(e.target) && !serBtn?.contains(e.target)) {
+    serPanel.classList.add('hidden');
+    document.getElementById('series-cat-chevron')?.classList.remove('rotate-180');
+  }
+});
+
+window.toggleMovieCatPanel = toggleMovieCatPanel;
+window.toggleSeriesCatPanel = toggleSeriesCatPanel;
+
